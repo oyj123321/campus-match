@@ -2,11 +2,11 @@
 {% block content %}
 <div class="hero">
     <h1>校园恋爱匹配</h1>
-    <p class="hero-sub">用学校邮箱注册 → 完成深度问卷 → 算法帮你找到同频的人</p>
+    <p class="hero-sub">用学校邮箱注册 → 完成问卷 → 算法匹配 → 邮件通知结果</p>
 </div>
 
-<!-- Step 1: 邮箱注册 -->
-<div class="card">
+<!-- Step 1: 注册 -->
+<div class="card" id="step1-card">
     <h2>Step 1: 输入学校邮箱</h2>
     <div class="form-group">
         <label for="email">学校邮箱</label>
@@ -15,78 +15,95 @@
     </div>
     <button class="btn btn-primary" id="register-btn" onclick="register()">发送验证码</button>
     <p class="hint" style="margin-top:10px;">
-        目前支持：
-        {% for name in schools %}
-            <span class="tag-badge">{{ name }}</span>
-        {% endfor %}
+        支持：
+        {% for name in schools %}<span class="tag-badge">{{ name }}</span>{% endfor %}
     </p>
 </div>
 
-<!-- 状态提示（始终可见，初始隐藏内容） -->
-<div id="status-area" style="display:none;margin-top:12px;">
-    <div class="card" id="status-card">
-        <p id="status-msg"></p>
+<!-- Step 2: 验证码（注册后显示） -->
+<div class="card" id="step2-card" style="display:none;">
+    <h2>Step 2: 输入验证码</h2>
+    <p id="step2-email" style="color:#2563eb;font-weight:600;"></p>
+    <p class="hint" style="margin-bottom:12px;">验证码已发送到你的学校邮箱，请检查收件箱（和垃圾邮件）</p>
+    <div class="form-group">
+        <label for="token">6 位验证码</label>
+        <input type="text" id="token" placeholder="输入验证码" maxlength="8" autocomplete="one-time-code"
+               style="font-size:1.5em;letter-spacing:6px;text-align:center;"
+               onkeydown="if(event.key==='Enter')verify()">
     </div>
+    <div style="display:flex;gap:8px;">
+        <button class="btn btn-primary" id="verify-btn" onclick="verify()">验证</button>
+        <button class="btn btn-secondary" onclick="register()">重新发送</button>
+    </div>
+    <p id="verify-msg" style="margin-top:10px;"></p>
 </div>
 
-<!-- 路线图 -->
 <div class="insight-box" style="margin-top:16px;">
     <h3>扩展路线图</h3>
     <table style="width:100%;font-size:0.9em;">
-        <tr><td>✅ 澳门大学</td><td>um.edu.mo / umac.mo</td><td>已支持</td></tr>
-        <tr><td>✅ 澳门科技大学</td><td>must.edu.mo</td><td>已支持</td></tr>
-        <tr><td>✅ 澳门理工大学</td><td>mpu.edu.mo</td><td>已支持</td></tr>
-        <tr><td>✅ 澳门旅游大学</td><td>iftm.edu.mo</td><td>已支持</td></tr>
-        <tr><td>🔜 香港大学</td><td>hku.hk</td><td>下一阶段</td></tr>
-        <tr><td>🔜 香港中文大学</td><td>cuhk.edu.hk</td><td>下一阶段</td></tr>
-        <tr><td>🔜 香港科技大学</td><td>ust.hk</td><td>下一阶段</td></tr>
+        <tr><td>✅ 澳门大学</td><td>um.edu.mo</td></tr>
+        <tr><td>✅ 澳门科技大学</td><td>must.edu.mo</td></tr>
+        <tr><td>✅ 澳门理工大学</td><td>mpu.edu.mo</td></tr>
+        <tr><td>✅ 澳门旅游大学</td><td>iftm.edu.mo</td></tr>
+        <tr><td>🔜 香港大学 / 中大 / 科大</td><td>下一阶段</td></tr>
     </table>
 </div>
 
 <script>
+var currentEmail = '';
+
 async function register() {
-    const emailInput = document.getElementById('email');
-    const email = emailInput.value.trim();
-    if (!email) {
-        alert('请输入邮箱地址');
-        return;
-    }
+    var email = document.getElementById('email').value.trim();
+    if (!email) { alert('请输入邮箱地址'); return; }
 
-    const btn = document.getElementById('register-btn');
-    const area = document.getElementById('status-area');
-    const msg = document.getElementById('status-msg');
-
-    // 立即显示加载状态
+    var btn = document.getElementById('register-btn');
     btn.disabled = true;
     btn.textContent = '发送中...';
-    area.style.display = 'block';
-    msg.innerHTML = '<p style="text-align:center;">⏳ 正在发送验证码到 <strong>' + email + '</strong>...</p>';
-    area.scrollIntoView({ behavior: 'smooth' });
 
-    const data = await api('POST', '/api/register', { email });
-
-    // 恢复按钮
+    var data = await api('POST', '/api/register', { email: email });
     btn.disabled = false;
     btn.textContent = '重新发送';
 
-    if (data.ok) {
-        var devInfo = '';
-        if (data.dev_token) {
-            devInfo = '<br><br><div style="background:#fef3c7;padding:12px;border-radius:8px;border:1px solid #fbbf24;">'
-                + '<strong>开发模式</strong> — 验证码：<code style="font-size:1.8em;letter-spacing:6px;background:#fff;padding:4px 12px;border-radius:4px;">'
-                + data.dev_token + '</code></div>';
-        }
-        msg.innerHTML = '<p style="color:#059669;font-size:1.1em;">' + data.message + '</p>' + devInfo;
+    if (!data.ok) {
+        alert(data.error);
+        return;
+    }
 
-        // 自动跳转
-        setTimeout(function() {
-            window.location.href = '/verify?email=' + encodeURIComponent(email);
-        }, devInfo ? 5000 : 1500);
+    // 显示 Step 2
+    currentEmail = email;
+    document.getElementById('step2-email').textContent = email;
+    document.getElementById('step2-card').style.display = 'block';
+    document.getElementById('step2-card').scrollIntoView({ behavior: 'smooth' });
+    document.getElementById('token').focus();
+
+    // 如果有 dev_token（邮件发送失败的降级），显示在页面上
+    if (data.dev_token) {
+        document.getElementById('verify-msg').innerHTML =
+            '<span style="background:#fef3c7;padding:8px 12px;border-radius:8px;">'
+            + '开发模式 — 验证码：<code style="font-size:1.5em;letter-spacing:4px;">' + data.dev_token + '</code></span>';
+    }
+}
+
+async function verify() {
+    var token = document.getElementById('token').value.trim().toUpperCase();
+    if (!token) { alert('请输入验证码'); return; }
+    if (!currentEmail) { alert('请先输入邮箱注册'); return; }
+
+    var btn = document.getElementById('verify-btn');
+    var msg = document.getElementById('verify-msg');
+    btn.disabled = true;
+    btn.textContent = '验证中...';
+    msg.innerHTML = '<span style="color:#999;">验证中...</span>';
+
+    var data = await api('POST', '/api/verify', { email: currentEmail, token: token });
+    btn.disabled = false;
+    btn.textContent = '验证';
+
+    if (data.ok) {
+        msg.innerHTML = '<span style="color:#059669;font-size:1.1em;">验证成功！跳转到问卷...</span>';
+        setTimeout(function() { window.location.href = '/questionnaire'; }, 600);
     } else {
-        msg.innerHTML = '<p style="color:#dc2626;">' + data.error + '</p>';
-        if (data.error.indexOf('不支持') >= 0) {
-            msg.innerHTML += '<p class="hint">尝试用 @um.edu.mo 或 @umac.mo 结尾的澳大邮箱</p>';
-        }
+        msg.innerHTML = '<span style="color:#dc2626;">' + data.error + '</span>';
     }
 }
 </script>
