@@ -1,111 +1,87 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="card">
-    <h2>💘 {{ user.school }} · 匹配中心</h2>
-    <p class="hint">
-        {% if config.MATCH_MODE == 'batch' %}
-        🎯 批量匹配模式：每周二晚 9 点统一执行，每人只匹配一个对象
-        {% else %}
-        ⚡ 实时匹配模式：随时触发，返回 Top-N 匹配
-        {% endif %}
+<div class="card" style="text-align:center;">
+    <h2>{{ user.school }} · 匹配中心</h2>
+    <p style="color:#999;font-size:0.9em;">
+        {{ user.name or '未设置名字' }} ·
+        {{ {'male':'男','female':'女'}.get(user.gender, '未设性别') }} ·
+        {% if user.answers %}已答 {{ user.answers.keys()|length }}/32 题{% else %}未填问卷{% endif %}
     </p>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;">
-        <button class="btn btn-match" id="match-btn" onclick="startMatch()">💘 开始匹配</button>
-        <button class="btn btn-secondary" onclick="loadHistory()">📋 查看历史匹配</button>
-        <a href="/questionnaire" class="btn btn-secondary">✏️ 修改问卷</a>
+    <div style="margin-top:12px;">
+        <button class="btn btn-match" id="match-btn" onclick="doMatch()" style="font-size:1.05em;padding:12px 40px;">开始匹配</button>
+        <button class="btn btn-secondary" onclick="loadHistory()" style="margin-left:6px;">查看历史</button>
+        <a href="/questionnaire" class="btn btn-secondary" style="margin-left:6px;">修改问卷</a>
     </div>
 </div>
 
-<div id="match-result" style="margin-top:16px;"></div>
-<div id="history-result" style="margin-top:16px;"></div>
+<div id="result" style="margin-top:12px;"></div>
 
 <script>
-async function startMatch() {
-    const btn = document.getElementById('match-btn');
-    const div = document.getElementById('match-result');
-    btn.disabled = true;
-    btn.textContent = '匹配中...';
-    div.innerHTML = '<div class="card"><p>⏳ 正在分析你的问卷答案，在全校范围内寻找最合拍的人...</p></div>';
+async function doMatch() {
+    var btn = document.getElementById('match-btn');
+    var div = document.getElementById('result');
+    btn.disabled = true; btn.textContent = '匹配中...';
+    div.innerHTML = '<div class="card" style="text-align:center;"><p>正在全校范围内寻找与你最合拍的人...</p><p style="color:#999;">基于 81 维特征向量 · 余弦相似度 · 一票否决过滤</p></div>';
 
-    const data = await api('POST', '/api/match', {});
-    btn.disabled = false;
-    btn.textContent = '💘 重新匹配';
+    var d = await api('POST', '/api/match', {});
+    btn.disabled = false; btn.textContent = '重新匹配';
 
-    if (!data.ok) {
-        div.innerHTML = `<div class="card error">❌ ${data.error}</div>`;
+    if (!d.ok) { div.innerHTML = '<div class="card" style="text-align:center;color:#dc2626;">' + d.error + '</div>'; return; }
+    if (!d.matches || d.matches.length === 0) {
+        div.innerHTML = '<div class="card" style="text-align:center;"><p style="font-size:1.2em;">暂无匹配</p><p class="hint">校内候选: ' + (d.total_candidates||0) + ' 人</p><p class="hint">邀请更多同学加入试试？</p></div>';
         return;
     }
 
-    if (data.matches.length === 0) {
-        div.innerHTML = `
-        <div class="card" style="text-align:center;">
-            <p style="font-size:1.2em;">😔 ${data.message || '暂无匹配结果'}</p>
-            <p class="hint">当前匹配人数: ${data.total_candidates || 0} 人</p>
-            <p class="hint">试试扩大兴趣范围，或邀请更多同学加入</p>
-        </div>`;
-        return;
-    }
+    var html = '<div class="card" style="background:#f0fdf4;border-left:3px solid #22c55e;"><p>在 ' + d.total_candidates + ' 人中找到 <strong>' + d.matches.length + '</strong> 个匹配。匹配结果已发送到你的学校邮箱。</p></div>';
+    for (var i = 0; i < d.matches.length; i++) {
+        var m = d.matches[i];
+        var pct = Math.round(m.score * 100);
+        var color = pct >= 70 ? '#059669' : pct >= 50 ? '#2563eb' : '#6b7280';
+        html += '<div class="card" style="margin-top:8px;">'
+            + '<div style="display:flex;align-items:center;gap:10px;">'
+            + '<span style="font-size:1.4em;font-weight:800;color:' + color + ';">#' + (i+1) + '</span>'
+            + '<span style="font-size:1.15em;font-weight:700;">' + m.name + '</span>'
+            + '<span>' + (m.gender==='male'?'男':'女') + '</span>'
+            + '<span style="margin-left:auto;font-weight:700;font-size:1.1em;color:' + color + ';">' + pct + '%</span>'
+            + '</div>'
+            + '<div style="margin:8px 0;background:#e5e7eb;border-radius:99px;height:6px;">'
+            + '<div style="background:' + color + ';width:' + pct + '%;height:6px;border-radius:99px;"></div></div>';
 
-    let html = `<div class="card"><p>✅ 扫描 ${data.total_candidates} 人，找到 ${data.matches.length} 个匹配：</p></div>`;
-    data.matches.forEach((m, i) => {
-        const pct = Math.round(m.score * 100);
-        const barColor = pct >= 70 ? '#059669' : pct >= 50 ? '#2563eb' : '#999';
-        html += `
-        <div class="card match-result-card">
-            <div class="match-header">
-                <span class="match-rank-badge">#${i + 1}</span>
-                <span class="match-name">${m.name}</span>
-                <span class="match-gender">${m.gender === 'male' ? '👦' : '👧'}</span>
-                <span class="match-score" style="color:${barColor};">${pct}% 匹配</span>
-            </div>
-            <div style="margin:12px 0;">
-                <div style="background:#e5e7eb;border-radius:99px;height:8px;">
-                    <div style="background:${barColor};width:${pct}%;height:8px;border-radius:99px;"></div>
-                </div>
-            </div>
-            ${m.strengths && m.strengths.length > 0 ? `
-            <div style="margin:8px 0;">
-                <strong>💚 共同点：</strong>
-                ${m.strengths.map(s => `<span class="tag" style="background:#d1fae5;color:#065f46;">${s}</span>`).join(' ')}
-            </div>` : ''}
-            <div style="margin-top:8px;font-size:1.1em;color:#2563eb;font-weight:bold;">
-                📱 微信: ${m.wechat_id || '未填写'}
-            </div>
-            ${m.differences_count > 0 ? `<p class="hint">⚡ 有 ${m.differences_count} 个方面存在差异，沟通时注意包容</p>` : ''}
-        </div>`;
-    });
-    html += '<p class="hint">📧 匹配结果已发送到双方学校邮箱</p>';
+        if (m.strengths && m.strengths.length) {
+            html += '<div style="font-size:0.85em;color:#666;">共同点: ';
+            for (var j = 0; j < Math.min(m.strengths.length, 3); j++) {
+                html += '<span class="tag" style="background:#d1fae5;color:#065f46;">' + m.strengths[j] + '</span> ';
+            }
+            html += '</div>';
+        }
+
+        html += '<div style="margin-top:6px;color:#2563eb;font-weight:700;">微信: ' + (m.wechat_id || '未填写') + '</div>';
+
+        if (m.differences_count > 0) {
+            html += '<p style="color:#999;font-size:0.8em;margin-top:4px;">有 ' + m.differences_count + ' 个方面存在差异 — 沟通时多包容</p>';
+        }
+        html += '</div>';
+    }
     div.innerHTML = html;
 }
 
 async function loadHistory() {
-    const div = document.getElementById('history-result');
-    div.innerHTML = '<p class="hint">⏳ 加载中...</p>';
-
-    const data = await api('GET', '/api/matches');
-    if (!data.ok) {
-        div.innerHTML = `<p class="error">❌ ${data.error}</p>`;
-        return;
+    var div = document.getElementById('result');
+    div.innerHTML = '<p class="hint">加载中...</p>';
+    var d = await api('GET', '/api/matches');
+    if (!d.ok) { div.innerHTML = '<p style="color:#dc2626;">' + d.error + '</p>'; return; }
+    if (!d.matches.length) { div.innerHTML = '<div class="card"><p class="hint">暂无历史匹配记录。点击上方按钮开始匹配。</p></div>'; return; }
+    var html = '';
+    for (var i = 0; i < d.matches.length; i++) {
+        var m = d.matches[i];
+        var pct = Math.round(m.score * 100);
+        html += '<div class="card" style="margin-bottom:6px;">'
+            + '<strong>' + m.name + '</strong> · ' + m.school
+            + ' · <span style="color:#2563eb;">' + pct + '%</span>'
+            + '<div style="color:#2563eb;">微信: ' + m.wechat_id + '</div>'
+            + '<div style="font-size:0.75em;color:#999;">' + (m.matched_at ? new Date(m.matched_at).toLocaleString() : '') + '</div>'
+            + '</div>';
     }
-
-    if (data.matches.length === 0) {
-        div.innerHTML = '<div class="card"><p class="hint">暂无匹配记录</p></div>';
-        return;
-    }
-
-    let html = '';
-    data.matches.forEach(m => {
-        const pct = Math.round(m.score * 100);
-        html += `
-        <div class="card" style="margin-bottom:8px;">
-            <strong>${m.name}</strong> · ${m.school}
-            <span class="tag-badge">${pct}%</span>
-            <span class="tag-badge">${m.mode === 'batch' ? '定时匹配' : '实时匹配'}</span>
-            <div style="margin-top:4px;color:#2563eb;">微信: ${m.wechat_id}</div>
-            ${m.strengths && m.strengths.length > 0 ? `<div style="margin-top:4px;font-size:0.85em;color:#666;">${m.strengths.join(' · ')}</div>` : ''}
-            <div style="font-size:0.75em;color:#999;">${m.matched_at ? new Date(m.matched_at).toLocaleString('zh-CN') : ''}</div>
-        </div>`;
-    });
     div.innerHTML = html;
 }
 

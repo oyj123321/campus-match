@@ -1,211 +1,221 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="card">
-    <div class="progress-bar-container">
-        <div class="progress-bar-fill" id="progress-bar" style="width:0%"></div>
-    </div>
-    <p style="text-align:center;color:#999;font-size:0.85em;" id="progress-text">0/32 题已答</p>
 
-    <h2>📝 Step 3: 深度问卷</h2>
-    <p class="hint">参考 SJTU Date 的 65 题设计，提炼为 32 题四维问卷。<br>每题可点击 ⭐ 标记为"对我很重要"（权重翻倍）。红色题目为一票否决项。</p>
+<h2 style="text-align:center;margin-bottom:16px;">填写资料 & 问卷</h2>
+
+<!-- 基本资料 -->
+<div class="card">
+    <h3>基本信息</h3>
+    <div class="form-row">
+        <div class="form-group" style="flex:1;">
+            <label for="name">昵称 *</label>
+            <input type="text" id="name" value="{{ user.name or '' }}" placeholder="你的名字">
+        </div>
+        <div class="form-group" style="flex:1;">
+            <label for="gender">性别 *</label>
+            <select id="gender">
+                <option value="">请选择</option>
+                <option value="male" {% if user.gender == 'male' %}selected{% endif %}>男</option>
+                <option value="female" {% if user.gender == 'female' %}selected{% endif %}>女</option>
+            </select>
+        </div>
+    </div>
+    <div class="form-row">
+        <div class="form-group" style="flex:1;">
+            <label for="wechat_id">微信号 *</label>
+            <input type="text" id="wechat_id" value="{{ user.wechat_id or '' }}" placeholder="匹配成功后发送给对方">
+        </div>
+        <div class="form-group" style="flex:1;">
+            <label for="bio">一句话介绍</label>
+            <input type="text" id="bio" value="{{ user.bio or '' }}" maxlength="80" placeholder="例：大三心理学在读，喜欢猫咪和下雨天">
+        </div>
+    </div>
+</div>
+
+<!-- 进度条 -->
+<div class="card" style="position:sticky;top:0;z-index:10;">
+    <div style="display:flex;align-items:center;gap:10px;">
+        <span style="font-weight:700;font-size:0.9em;">问卷进度</span>
+        <div class="progress-bar-container" style="flex:1;">
+            <div class="progress-bar-fill" id="progress-bar" style="width:0%"></div>
+        </div>
+        <span id="progress-text" style="font-size:0.85em;color:#999;white-space:nowrap;">0/32</span>
+    </div>
 </div>
 
 <form id="q-form">
-<div id="questions-container">
-    <!-- JS 动态渲染 -->
-</div>
+    <div id="questions-container"><!-- JS 渲染 --></div>
 
-<div class="card" style="text-align:center;">
-    <button type="button" class="btn btn-match" onclick="submitQuestionnaire()" style="font-size:1.1em;padding:14px 48px;">
-        💾 提交问卷 & 开始匹配
-    </button>
-    <p id="save-status" style="margin-top:8px;"></p>
-</div>
+    <div class="card" style="text-align:center;">
+        <button type="button" class="btn btn-match" id="submit-btn" onclick="submitAll()">
+            提交问卷 & 开始匹配
+        </button>
+        <p id="save-status" style="margin-top:8px;"></p>
+    </div>
 </form>
 
 <script>
-// 问卷数据（从服务端渲染）
 const QUESTIONS = {{ questions | tojson | safe }};
 const EXISTING_ANSWERS = {{ user.answers | tojson | safe }};
 const EXISTING_IMPORTANT = {{ user.important_qids | list | tojson | safe }};
 
-const dimensionNames = {
-    'values': '💭 核心价值观',
-    'lifestyle': '🏠 生活习惯',
-    'emotional': '❤️ 情感风格',
-    'interests': '🎯 兴趣爱好',
+const dimNames = {
+    'values': '核心价值观', 'lifestyle': '生活习惯',
+    'emotional': '情感风格', 'interests': '兴趣爱好'
+};
+const dimColors = {
+    'values': '#7c3aed', 'lifestyle': '#059669',
+    'emotional': '#db2777', 'interests': '#2563eb'
 };
 
-const dimensionColors = {
-    'values': '#7c3aed',
-    'lifestyle': '#059669',
-    'emotional': '#db2777',
-    'interests': '#2563eb',
-};
-
-let currentDim = null;
-let currentAnswers = {};
-let currentImportant = new Set(EXISTING_IMPORTANT.map(String));
-
-// 初始化已有答案
+let answers = {};
+let important = new Set(EXISTING_IMPORTANT.map(String));
 {% if user.answers %}
-Object.assign(currentAnswers, {{ user.answers | tojson | safe }});
+Object.assign(answers, {{ user.answers | tojson | safe }});
 {% endif %}
 
-function renderQuestions() {
-    const container = document.getElementById('questions-container');
-    container.innerHTML = '';
+function render() {
+    var c = document.getElementById('questions-container');
+    var html = '';
+    var dim = null;
+    var dimN = 0;
 
-    let dimIdx = 0;
-    QUESTIONS.forEach((q, i) => {
-        const dim = q.dimension;
-        if (dim !== currentDim) {
-            currentDim = dim;
-            dimIdx++;
-            container.innerHTML += `
-            <div class="card dimension-card" style="border-left:4px solid ${dimensionColors[dim]};">
-                <h3 style="color:${dimensionColors[dim]};margin-bottom:4px;">
-                    ${dimensionNames[dim] || dim}
-                </h3>
-                <p style="color:#999;font-size:0.8em;margin-bottom:12px;">维度 ${dimIdx}/4</p>
-            </div>`;
+    for (var i = 0; i < QUESTIONS.length; i++) {
+        var q = QUESTIONS[i];
+        if (q.dimension !== dim) {
+            if (dim) html += '</div>';
+            dim = q.dimension;
+            dimN++;
+            html += '<div class="card dimension-card" style="border-left:4px solid ' + dimColors[dim] + ';">'
+                + '<h3 style="color:' + dimColors[dim] + ';">' + dimNames[dim] + ' (' + dimN + '/4)</h3>';
         }
 
-        const qid = String(q.id);
-        const val = currentAnswers[qid];
-        const isImportant = currentImportant.has(qid);
-        const isDealbreaker = q.dealbreaker;
+        var qid = String(q.id);
+        var val = answers[qid];
+        var imp = important.has(qid);
+        var db = q.dealbreaker;
 
-        let inputHtml = '';
+        html += '<div class="q-item' + (db ? ' q-dealbreaker' : '') + '" id="qcard_' + qid + '">'
+            + '<div class="q-head"><span class="q-num">' + q.id + '</span>'
+            + '<span>' + q.text + '</span>'
+            + (db ? '<span class="q-db">一票否决</span>' : '') + '</div>';
+
         if (q.type === 'scale') {
-            const curVal = val || 3;
-            inputHtml = `
-            <div class="scale-container">
-                <span class="scale-label left">${q.left}</span>
-                <div class="scale-slider-wrapper">
-                    <input type="range" min="1" max="5" value="${curVal}" class="scale-slider"
-                        id="q_${qid}" oninput="updateScaleLabel(this, ${qid})" onchange="onAnswerChange(${qid})">
-                    <div class="scale-ticks">
-                        <span>1</span><span>2</span><span>3</span><span>4</span><span>5</span>
-                    </div>
-                </div>
-                <span class="scale-label right">${q.right}</span>
-                <span class="scale-val" id="scale_val_${qid}">${curVal}</span>
-            </div>`;
+            var v = val !== undefined ? val : 3;
+            html += '<div class="scale-row">'
+                + '<span class="scale-l">' + q.left + '</span>'
+                + '<div class="scale-mid">'
+                + '<input type="range" min="1" max="5" value="' + v + '" class="scale-rng"'
+                + ' id="q_' + qid + '" oninput="updateScale(' + qid + ')">'
+                + '<div class="scale-ticks"><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span></div>'
+                + '</div>'
+                + '<span class="scale-l">' + q.right + '</span>'
+                + '<span class="scale-v" id="sv_' + qid + '">' + v + '</span>'
+                + '</div>';
         } else if (q.type === 'multi') {
-            const selected = Array.isArray(val) ? val : [];
-            inputHtml = '<div class="multi-options">';
-            q.options.forEach(opt => {
-                const checked = selected.includes(opt) ? 'checked' : '';
-                inputHtml += `
-                <label class="multi-option ${checked ? 'selected' : ''}">
-                    <input type="checkbox" value="${opt}" ${checked}
-                        onchange="toggleMulti(this, ${qid})" style="display:none;">
-                    <span>${opt}</span>
-                </label>`;
-            });
-            inputHtml += '</div>';
+            var sel = Array.isArray(val) ? val : [];
+            html += '<div class="multi-row">';
+            for (var j = 0; j < q.options.length; j++) {
+                var opt = q.options[j];
+                var on = sel.indexOf(opt) >= 0;
+                html += '<label class="multi-tag' + (on ? ' on' : '') + '" id="mt_' + qid + '_' + j + '">'
+                    + '<input type="checkbox" value="' + opt + '"' + (on ? ' checked' : '')
+                    + ' onchange="toggleMulti(' + qid + ',' + j + ',this)" style="display:none;">'
+                    + opt + '</label>';
+            }
+            html += '</div>';
         }
 
-        const dealbreakerClass = isDealbreaker ? 'dealbreaker' : '';
-
-        container.innerHTML += `
-        <div class="card question-card ${dealbreakerClass}" id="qcard_${qid}">
-            <div class="q-header">
-                <span class="q-number">${q.id}</span>
-                <span class="q-text">${q.text}</span>
-                ${isDealbreaker ? '<span class="dealbreaker-badge">一票否决</span>' : ''}
-            </div>
-            <div class="q-input">${inputHtml}</div>
-            <button type="button" class="important-toggle ${isImportant ? 'active' : ''}"
-                id="imp_btn_${qid}" onclick="toggleImportant(${qid}, this)">
-                ⭐ ${isImportant ? '对我很重要' : '标记为重要'}
-            </button>
-        </div>`;
-    });
-
-    updateProgress();
-}
-
-function updateScaleLabel(slider, qid) {
-    document.getElementById('scale_val_' + qid).textContent = slider.value;
-}
-
-function onAnswerChange(qid) {
-    const slider = document.getElementById('q_' + qid);
-    if (slider) {
-        currentAnswers[String(qid)] = parseInt(slider.value);
+        html += '<button type="button" class="imp-btn' + (imp ? ' on' : '') + '" id="ib_' + qid
+            + '" onclick="toggleImp(' + qid + ',this)">' + (imp ? '星 很重要' : '星 标记为重要') + '</button>';
     }
+    if (dim) html += '</div>';
+
+    c.innerHTML = html;
     updateProgress();
 }
 
-function toggleMulti(checkbox, qid) {
-    const qidStr = String(qid);
-    if (!currentAnswers[qidStr]) currentAnswers[qidStr] = [];
+function updateScale(qid) {
+    var s = document.getElementById('q_' + qid);
+    document.getElementById('sv_' + qid).textContent = s.value;
+    answers[String(qid)] = parseInt(s.value);
+    updateProgress();
+}
 
-    const val = checkbox.value;
-    if (checkbox.checked) {
-        if (!currentAnswers[qidStr].includes(val)) currentAnswers[qidStr].push(val);
-        checkbox.parentElement.classList.add('selected');
+function toggleMulti(qid, idx, cb) {
+    var qs = String(qid);
+    if (!answers[qs]) answers[qs] = [];
+    var tag = document.getElementById('mt_' + qid + '_' + idx);
+    if (cb.checked) {
+        if (answers[qs].indexOf(cb.value) < 0) answers[qs].push(cb.value);
+        tag.classList.add('on');
     } else {
-        currentAnswers[qidStr] = currentAnswers[qidStr].filter(v => v !== val);
-        checkbox.parentElement.classList.remove('selected');
+        answers[qs] = answers[qs].filter(function(v) { return v !== cb.value; });
+        tag.classList.remove('on');
+        if (answers[qs].length === 0) delete answers[qs];
     }
-    if (currentAnswers[qidStr].length === 0) delete currentAnswers[qidStr];
     updateProgress();
 }
 
-function toggleImportant(qid, btn) {
-    const qidStr = String(qid);
-    if (currentImportant.has(qidStr)) {
-        currentImportant.delete(qidStr);
-        btn.classList.remove('active');
-        btn.innerHTML = '⭐ 标记为重要';
-    } else {
-        currentImportant.add(qidStr);
-        btn.classList.add('active');
-        btn.innerHTML = '⭐ 对我很重要';
-    }
+function toggleImp(qid, btn) {
+    var qs = String(qid);
+    if (important.has(qs)) { important.delete(qs); btn.classList.remove('on'); btn.textContent = '星 标记为重要'; }
+    else { important.add(qs); btn.classList.add('on'); btn.textContent = '星 很重要'; }
 }
 
 function updateProgress() {
-    const answered = Object.keys(currentAnswers).length;
-    const total = QUESTIONS.length;
-    const pct = Math.round(answered / total * 100);
+    var done = Object.keys(answers).length;
+    var pct = Math.round(done / QUESTIONS.length * 100);
     document.getElementById('progress-bar').style.width = pct + '%';
-    document.getElementById('progress-text').textContent = `${answered}/${total} 题已答 (${pct}%)`;
+    document.getElementById('progress-text').textContent = done + '/' + QUESTIONS.length + ' (' + pct + '%)';
 }
 
-async function submitQuestionnaire() {
-    const status = document.getElementById('save-status');
-    status.innerHTML = '⏳ 保存中...';
+async function submitAll() {
+    var name = document.getElementById('name').value.trim();
+    var gender = document.getElementById('gender').value;
+    var wechat = document.getElementById('wechat_id').value.trim();
+    var bio = document.getElementById('bio').value.trim();
+    var status = document.getElementById('save-status');
+    var btn = document.getElementById('submit-btn');
 
-    // 也收集 scale 题的当前值（未 onchange 触发的）
-    QUESTIONS.forEach(q => {
+    if (!name) { alert('请填写名字'); return; }
+    if (!gender) { alert('请选择性别'); return; }
+    if (!wechat) { alert('请填写微信号'); return; }
+
+    btn.disabled = true;
+    btn.textContent = '保存中...';
+    status.innerHTML = '保存中...';
+
+    // 收集所有 scale 题当前值
+    QUESTIONS.forEach(function(q) {
         if (q.type === 'scale') {
-            const slider = document.getElementById('q_' + q.id);
-            if (slider) currentAnswers[String(q.id)] = parseInt(slider.value);
+            var s = document.getElementById('q_' + q.id);
+            if (s) answers[String(q.id)] = parseInt(s.value);
         }
     });
 
-    const data = {
-        answers: currentAnswers,
-        important_qids: Array.from(currentImportant).map(Number),
-    };
+    // 先保存基本资料
+    var r1 = await api('PUT', '/api/me', { name: name, gender: gender, wechat_id: wechat, bio: bio });
+    if (!r1.ok) { status.innerHTML = '基本资料保存失败: ' + r1.error; btn.disabled = false; btn.textContent = '提交问卷 & 开始匹配'; return; }
 
-    const res = await api('POST', '/api/questionnaire', data);
-    if (res.ok) {
-        status.innerHTML = `✅ 已保存！特征向量维度: ${res.vector_dim}`;
-        if (res.completed) {
-            status.innerHTML += '<br>🎉 问卷完成！跳转到匹配页面...';
-            setTimeout(() => { location.href = '/matches'; }, 1000);
-        }
+    // 再保存问卷
+    var r2 = await api('POST', '/api/questionnaire', {
+        answers: answers,
+        important_qids: Array.from(important).map(Number),
+    });
+
+    btn.disabled = false;
+    btn.textContent = '提交问卷 & 开始匹配';
+
+    if (r2.ok) {
+        status.innerHTML = '问卷已保存! 跳转到匹配页面...';
+        setTimeout(function() { location.href = '/matches'; }, 800);
     } else {
-        status.innerHTML = `❌ ${res.error}`;
+        status.innerHTML = '问卷保存失败: ' + r2.error;
     }
 }
 
-// 渲染
-renderQuestions();
+// 初始化
+render();
 </script>
 {% endblock %}
