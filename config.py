@@ -5,6 +5,18 @@ import os
 # 项目根目录
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
+# 加载 .env 文件（不依赖第三方库）
+_ENV_FILE = os.path.join(BASE_DIR, ".env")
+if os.path.exists(_ENV_FILE):
+    with open(_ENV_FILE, "r", encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if line and not line.startswith("#") and "=" in line:
+                key, _, val = line.partition("=")
+                key, val = key.strip(), val.strip().strip('"').strip("'")
+                if key and key not in os.environ:
+                    os.environ[key] = val
+
 # Flask
 SECRET_KEY = os.environ.get("SECRET_KEY", "campus-match-dev-secret-key-change-in-production")
 SQLALCHEMY_DATABASE_URI = os.environ.get(

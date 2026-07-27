@@ -146,7 +146,7 @@ def api_register():
     return jsonify({
         "ok": ok,
         "message": f"验证码已发送至 {email}" if ok else f"发送失败: {info}",
-        "dev_token": token if not MAIL_ENABLED else None,
+        "dev_token": token if not ok else None,
     })
 
 
@@ -200,7 +200,7 @@ def api_resend_verification():
     ok, _ = send_verification_email(email, token, get_mail_config())
     return jsonify({
         "ok": ok,
-        "dev_token": token if not MAIL_ENABLED else None,
+        "dev_token": token if not ok else None,
     })
 
 
