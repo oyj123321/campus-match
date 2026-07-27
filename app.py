@@ -12,7 +12,7 @@ from functools import wraps
 from flask import Flask, request, session, jsonify, render_template, redirect, url_for
 
 from config import (
-    SECRET_KEY, SQLALCHEMY_DATABASE_URI,
+    SECRET_KEY, SQLALCHEMY_DATABASE_URI, PUBLIC_URL,
     SCHOOL_DOMAINS, MATCH_MODE, MATCH_TOP_N, MATCH_MIN_SCORE,
     MATCH_DELAY_SECONDS, VERIFICATION_EXPIRE_SECONDS,
     MAIL_ENABLED, MAIL_SERVER, MAIL_PORT, MAIL_USERNAME, MAIL_PASSWORD, MAIL_FROM,
@@ -37,6 +37,7 @@ def get_mail_config():
     return {
         "enabled": MAIL_ENABLED, "server": MAIL_SERVER, "port": MAIL_PORT,
         "username": MAIL_USERNAME, "password": MAIL_PASSWORD, "mail_from": MAIL_FROM,
+        "public_url": PUBLIC_URL,
     }
 
 

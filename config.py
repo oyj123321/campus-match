@@ -2,17 +2,26 @@
 
 import os
 
+# 项目根目录
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
 # Flask
 SECRET_KEY = os.environ.get("SECRET_KEY", "campus-match-dev-secret-key-change-in-production")
-SQLALCHEMY_DATABASE_URI = os.environ.get("DATABASE_URL", "sqlite:///campus_match.db")
+SQLALCHEMY_DATABASE_URI = os.environ.get(
+    "DATABASE_URL",
+    f"sqlite:///{os.path.join(BASE_DIR, 'instance', 'campus_match.db')}"
+)
 
-# 邮件配置
+# 公网地址（serveo 隧道自动设置，也可手动指定）
+PUBLIC_URL = os.environ.get("PUBLIC_URL", "http://127.0.0.1:5000")
+
+# 邮件配置 — 设置 MAIL_ENABLED=true 并填入 QQ 邮箱 SMTP 授权码即可
 MAIL_ENABLED = os.environ.get("MAIL_ENABLED", "false").lower() == "true"
 MAIL_SERVER = os.environ.get("MAIL_SERVER", "smtp.qq.com")
 MAIL_PORT = int(os.environ.get("MAIL_PORT", "587"))
-MAIL_USERNAME = os.environ.get("MAIL_USERNAME", "")
-MAIL_PASSWORD = os.environ.get("MAIL_PASSWORD", "")
-MAIL_FROM = os.environ.get("MAIL_FROM", "noreply@campus-match.local")
+MAIL_USERNAME = os.environ.get("MAIL_USERNAME", "")       # 你的 QQ 邮箱地址
+MAIL_PASSWORD = os.environ.get("MAIL_PASSWORD", "")       # QQ 邮箱 SMTP 授权码（不是 QQ 密码！）
+MAIL_FROM = os.environ.get("MAIL_FROM", MAIL_USERNAME or "noreply@campus-match.local")
 
 # ============================================================
 # 高校邮箱域名 — 扩展路径：
