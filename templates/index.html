@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="hero">
+    <h1>校园恋爱匹配</h1>
+    <p class="hero-sub">用学校邮箱注册 → 完成深度问卷 → 算法帮你找到同频的人</p>
+</div>
+
+<!-- Step 1: 邮箱注册 -->
+<div class="card">
+    <h2>Step 1: 输入学校邮箱</h2>
+    <div class="form-group">
+        <label for="email">学校邮箱</label>
+        <input type="email" id="email" placeholder="例如：yc12345@um.edu.mo" autocomplete="email"
+               onkeydown="if(event.key==='Enter')register()">
+    </div>
+    <button class="btn btn-primary" id="register-btn" onclick="register()">发送验证码</button>
+    <p class="hint" style="margin-top:10px;">
+        目前支持：
+        {% for name in schools %}
+            <span class="tag-badge">{{ name }}</span>
+        {% endfor %}
+    </p>
+</div>
+
+<!-- 状态提示（始终可见，初始隐藏内容） -->
+<div id="status-area" style="display:none;margin-top:12px;">
+    <div class="card" id="status-card">
+        <p id="status-msg"></p>
+    </div>
+</div>
+
+<!-- 路线图 -->
+<div class="insight-box" style="margin-top:16px;">
+    <h3>扩展路线图</h3>
+    <table style="width:100%;font-size:0.9em;">
+        <tr><td>✅ 澳门大学</td><td>um.edu.mo / umac.mo</td><td>已支持</td></tr>
+        <tr><td>✅ 澳门科技大学</td><td>must.edu.mo</td><td>已支持</td></tr>
+        <tr><td>✅ 澳门理工大学</td><td>mpu.edu.mo</td><td>已支持</td></tr>
+        <tr><td>✅ 澳门旅游大学</td><td>iftm.edu.mo</td><td>已支持</td></tr>
+        <tr><td>🔜 香港大学</td><td>hku.hk</td><td>下一阶段</td></tr>
+        <tr><td>🔜 香港中文大学</td><td>cuhk.edu.hk</td><td>下一阶段</td></tr>
+        <tr><td>🔜 香港科技大学</td><td>ust.hk</td><td>下一阶段</td></tr>
+    </table>
+</div>
+
+<script>
+async function register() {
+    const emailInput = document.getElementById('email');
+    const email = emailInput.value.trim();
+    if (!email) {
+        alert('请输入邮箱地址');
+        return;
+    }
+
+    const btn = document.getElementById('register-btn');
+    const area = document.getElementById('status-area');
+    const msg = document.getElementById('status-msg');
+
+    // 立即显示加载状态
+    btn.disabled = true;
+    btn.textContent = '发送中...';
+    area.style.display = 'block';
+    msg.innerHTML = '<p style="text-align:center;">⏳ 正在发送验证码到 <strong>' + email + '</strong>...</p>';
+    area.scrollIntoView({ behavior: 'smooth' });
+
+    const data = await api('POST', '/api/register', { email });
+
+    // 恢复按钮
+    btn.disabled = false;
+    btn.textContent = '重新发送';
+
+    if (data.ok) {
+        var devInfo = '';
+        if (data.dev_token) {
+            devInfo = '<br><br><div style="background:#fef3c7;padding:12px;border-radius:8px;border:1px solid #fbbf24;">'
+                + '<strong>开发模式</strong> — 验证码：<code style="font-size:1.8em;letter-spacing:6px;background:#fff;padding:4px 12px;border-radius:4px;">'
+                + data.dev_token + '</code></div>';
+        }
+        msg.innerHTML = '<p style="color:#059669;font-size:1.1em;">' + data.message + '</p>' + devInfo;
+
+        // 自动跳转
+        setTimeout(function() {
+            window.location.href = '/verify?email=' + encodeURIComponent(email);
+        }, devInfo ? 5000 : 1500);
+    } else {
+        msg.innerHTML = '<p style="color:#dc2626;">' + data.error + '</p>';
+        if (data.error.indexOf('不支持') >= 0) {
+            msg.innerHTML += '<p class="hint">尝试用 @um.edu.mo 或 @umac.mo 结尾的澳大邮箱</p>';
+        }
+    }
+}
+</script>
+{% endblock %}

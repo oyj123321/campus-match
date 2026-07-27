@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card">
+    <h2>Step 3: 填写个人资料</h2>
+
+    <div class="form-group">
+        <label for="name">昵称 / 名字</label>
+        <input type="text" id="name" value="{{ user.name or '' }}" placeholder="别人会看到的名字">
+    </div>
+
+    <div class="form-group">
+        <label for="gender">性别</label>
+        <select id="gender">
+            <option value="">请选择</option>
+            <option value="male" {% if user.gender == 'male' %}selected{% endif %}>男</option>
+            <option value="female" {% if user.gender == 'female' %}selected{% endif %}>女</option>
+        </select>
+    </div>
+
+    <div class="form-group">
+        <label for="wechat_id">微信号</label>
+        <input type="text" id="wechat_id" value="{{ user.wechat_id or '' }}" placeholder="匹配成功后发送给对方">
+        <p class="hint">这是匹配成功后的联系方式，请认真填写</p>
+    </div>
+
+    <div class="form-group">
+        <label for="bio">个人简介（选填）</label>
+        <textarea id="bio" rows="3" placeholder="简单介绍一下自己...">{{ user.bio or '' }}</textarea>
+    </div>
+
+    <div class="form-group">
+        <label for="tags">兴趣标签</label>
+        <input type="text" id="tags" value="{{ user.tags | map(attribute='tag') | join(', ') }}" placeholder="用逗号或空格分隔，例如：摄影, 编程, 健身, 王者荣耀, 旅行">
+        <p class="hint">标签越多，匹配越精准。至少写 3 个。</p>
+    </div>
+
+    <button class="btn btn-primary" onclick="saveProfile()">💾 保存资料</button>
+    <span id="save-status"></span>
+</div>
+
+<div class="card" style="margin-top:16px;">
+    <h2>Step 4: 开始匹配</h2>
+    <p>保存资料后，点击下方按钮开始匹配。系统会在全校范围内找到与你标签最相似的同学。</p>
+    <button class="btn btn-match" id="match-btn" onclick="startMatch()">💘 开始匹配</button>
+    <div id="match-result" style="margin-top:16px;"></div>
+</div>
+
+<script>
+async function saveProfile() {
+    const tagsRaw = document.getElementById('tags').value;
+    const data = {
+        name: document.getElementById('name').value.trim(),
+        gender: document.getElementById('gender').value,
+        wechat_id: document.getElementById('wechat_id').value.trim(),
+        bio: document.getElementById('bio').value.trim(),
+        tags: tagsRaw,
+    };
+
+    if (!data.name) return alert('请填写名字');
+    if (!data.gender) return alert('请选择性别');
+    if (!data.wechat_id) return alert('请填写微信号');
+    if (!tagsRaw.trim()) return alert('请至少写一个兴趣标签');
+
+    const res = await api('PUT', '/api/profile', data);
+    document.getElementById('save-status').innerHTML = res.ok
+        ? '✅ 已保存'
+        : `❌ ${res.error}`;
+}
+
+async function startMatch() {
+    const btn = document.getElementById('match-btn');
+    const resultDiv = document.getElementById('match-result');
+    btn.disabled = true;
+    btn.textContent = '匹配中...';
+    resultDiv.innerHTML = '<p>⏳ 正在全校范围内寻找与你最合拍的人...</p>';
+
+    const data = await api('POST', '/api/match');
+    btn.disabled = false;
+    btn.textContent = '💘 重新匹配';
+
+    if (!data.ok) {
+        resultDiv.innerHTML = `<p class="error">❌ ${data.error}</p>`;
+        return;
+    }
+
+    if (data.matches.length === 0) {
+        resultDiv.innerHTML = '<p>😔 当前学校暂无匹配结果。试试添加更多标签，或邀请更多同学加入！</p>';
+        return;
+    }
+
+    let html = `<p>✅ 匹配完成！共扫描 ${data.total_candidates} 位候选人，找到 ${data.matches.length} 个匹配：</p>`;
+    data.matches.forEach((m, i) => {
+        html += `
+        <div class="match-card">
+            <div class="match-rank">#${i + 1}</div>
+            <div class="match-info">
+                <strong>${m.name}</strong>
+                <span class="tag-badge">${m.gender === 'male' ? '👦 男' : '👧 女'}</span>
+                <span class="tag-badge">匹配度: ${m.score}</span>
+                <div style="margin-top:4px;">
+                    ${m.tags.map(t => `<span class="tag">${t}</span>`).join(' ')}
+                </div>
+                <div style="margin-top:6px;color:#2563eb;font-weight:bold;">
+                    微信: ${m.wechat_id}
+                </div>
+            </div>
+        </div>`;
+    });
+    html += '<p class="hint" style="margin-top:12px;">📧 匹配结果已发送到双方的学校邮箱</p>';
+    resultDiv.innerHTML = html;
+}
+</script>
+{% endblock %}

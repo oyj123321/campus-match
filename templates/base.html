@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CampusMatch — 校园恋爱匹配</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <nav class="nav">
+        <div class="nav-inner">
+            <a href="/" class="nav-brand">🎓 CampusMatch</a>
+            <div class="nav-right">
+                {% if session.user_id %}
+                    <a href="/matches" class="nav-link">匹配结果</a>
+                    <a href="/questionnaire" class="nav-link">问卷</a>
+                    <a href="#" class="nav-link" onclick="logout(); return false;">退出</a>
+                {% endif %}
+            </div>
+        </div>
+    </nav>
+
+    <main class="main">
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer class="footer">
+        <p>CampusMatch v2 — 深度问卷 · 算法匹配 · 每周二晚 9 点</p>
+    </footer>
+
+    <script>
+        // 全局 Ajax 封装（带错误处理）
+        async function api(method, url, body) {
+            try {
+                const opts = {
+                    method,
+                    headers: { 'Content-Type': 'application/json' },
+                };
+                if (body) opts.body = JSON.stringify(body);
+
+                const res = await fetch(url, opts);
+                if (!res.ok) {
+                    // HTTP 错误（401, 500 等）
+                    const text = await res.text();
+                    try {
+                        const errData = JSON.parse(text);
+                        return { ok: false, error: errData.error || `HTTP ${res.status}` };
+                    } catch {
+                        return { ok: false, error: `服务器错误 (${res.status})` };
+                    }
+                }
+                return await res.json();
+            } catch (e) {
+                console.error('API Error:', e);
+                return { ok: false, error: '网络请求失败，请检查服务器是否运行' };
+            }
+        }
+
+        async function logout() {
+            await api('POST', '/api/logout');
+            window.location.href = '/';
+        }
+    </script>
+</body>
+</html>
