@@ -21,15 +21,16 @@ from config import (
     MATCH_WEEKLY_NEW_LIMIT, MATCH_COOLDOWN_HOURS,
     BATCH_MATCH_DAY, BATCH_MATCH_HOUR, BATCH_SCHEDULER_ENABLED,
     ADMIN_SECRET, WEEKDAY_LABELS,
+    REVEAL_REQUIRE_OPT_IN, INSTANT_MATCH_ENABLED,
     MAIL_ENABLED, MAIL_SERVER, MAIL_PORT, MAIL_USERNAME, MAIL_PASSWORD, MAIL_FROM,
 )
 from models import db, User, UserTag, Match
-from questionnaire import QUESTIONS, build_feature_vector
+from questionnaire import QUESTIONS, build_feature_vector, get_compatibility_insight
 from matcher import real_time_match, batch_match_school, orientation_compatible
 from email_service import send_verification_email, send_match_result_email
 from batch_job import (
     persist_user_matches, count_new_matches_this_week,
-    next_batch_datetime, run_batch_all, schedule_loop,
+    next_batch_datetime, run_batch_all, schedule_loop, current_week_key,
 )
 
 # ---- App Factory ----
@@ -101,7 +102,7 @@ LOOKING_FOR_VALUES = {"male", "female", "both"}
 
 
 def match_quota_status(user):
-    """计算冷却 / 本周额度，供页面与 API 使用。"""
+    """计算冷却 / 本周额度 / 预约揭晓状态。"""
     used = count_new_matches_this_week(user.id)
     remaining = max(0, MATCH_WEEKLY_NEW_LIMIT - used)
     cooldown_left = 0
@@ -112,17 +113,55 @@ def match_quota_status(user):
             cooldown_left = int(need - elapsed)
     nxt = next_batch_datetime()
     mode = MATCH_MODE if MATCH_MODE != "realtime" else "one_to_one"
+    week = current_week_key()
+    opted_in = (user.opt_in_week == week)
+    now = datetime.now()
+    # 本周是否已过揭晓时刻（周二 BATCH_MATCH_HOUR 之后）
+    reveal_happened_this_week = now.weekday() > BATCH_MATCH_DAY or (
+        now.weekday() == BATCH_MATCH_DAY and now.hour >= BATCH_MATCH_HOUR
+    )
+
+    active_match = Match.query.filter(
+        ((Match.user1_id == user.id) | (Match.user2_id == user.id)),
+        Match.active.is_(True),
+    ).first()
+
     return {
         "weekly_limit": MATCH_WEEKLY_NEW_LIMIT,
         "weekly_used": used,
         "weekly_remaining": remaining,
         "cooldown_hours": MATCH_COOLDOWN_HOURS,
         "cooldown_seconds_left": cooldown_left,
-        "can_match_now": remaining > 0 and cooldown_left <= 0,
+        "can_match_now": remaining > 0 and cooldown_left <= 0 and INSTANT_MATCH_ENABLED,
+        "instant_match_enabled": INSTANT_MATCH_ENABLED,
         "next_batch_at": nxt.isoformat(timespec="minutes"),
         "next_batch_label": f"每{WEEKDAY_LABELS[BATCH_MATCH_DAY]} {BATCH_MATCH_HOUR}:00",
         "match_mode": mode,
+        "week_key": week,
+        "opted_in": opted_in,
+        "reveal_require_opt_in": REVEAL_REQUIRE_OPT_IN,
+        "reveal_happened_this_week": reveal_happened_this_week,
+        "has_active_match": bool(active_match),
+        "seconds_to_reveal": max(0, int((nxt - now).total_seconds())) if not reveal_happened_this_week else 0,
         "explain": _match_explain_text(mode),
+    }
+
+
+def serialize_match_payload(other, score, insight, active=True):
+    """统一匹配结果 JSON（含相处说明书 + 破冰）。"""
+    insight = insight or {}
+    return {
+        "name": other.name if active else "（已失效的配对）",
+        "gender": other.gender if active else None,
+        "school": getattr(other, "school", None) if active else None,
+        "wechat_id": other.wechat_id if active else None,
+        "score": score,
+        "summary": insight.get("summary") if active else None,
+        "strengths": insight.get("strengths", [])[:6] if active else [],
+        "differences": insight.get("differences", [])[:4] if active else [],
+        "icebreakers": insight.get("icebreakers", [])[:3] if active else [],
+        "shared_tags": insight.get("shared_tags", [])[:6] if active else [],
+        "differences_count": insight.get("total_differences", 0) if active else 0,
     }
 
 
@@ -415,6 +454,13 @@ def api_match():
             return jsonify({"ok": False, "error": "请先填写微信号"}), 400
         return jsonify({"ok": False, "error": "资料不完整，请返回问卷页补全"}), 400
 
+    if not INSTANT_MATCH_ENABLED:
+        return jsonify({
+            "ok": False,
+            "error": "当前为「每周揭晓」模式，请先预约本周匹配，等待统一揭晓。",
+            "quota": match_quota_status(user),
+        }), 403
+
     quota = match_quota_status(user)
     if quota["cooldown_seconds_left"] > 0:
         mins = max(1, quota["cooldown_seconds_left"] // 60)
@@ -488,15 +534,7 @@ def api_match():
         "ok": True,
         "mode": mode,
         "matches": [
-            {
-                "name": u.name,
-                "gender": u.gender,
-                "wechat_id": u.wechat_id,
-                "score": s,
-                "strengths": insight.get("strengths", [])[:3],
-                "differences": insight.get("differences", [])[:3],
-                "differences_count": insight.get("total_differences", 0),
-            }
+            serialize_match_payload(u, s, insight, active=True)
             for u, s, insight in saved
         ],
         "total_candidates": len(candidates),
@@ -510,6 +548,32 @@ def api_match():
         "quota": match_quota_status(user),
         "explain": _match_explain_text(mode),
         "note": "结果以本页为准；邮件仅作通知。种子/无效邮箱常会发送失败，你的真实学校邮箱应能收到。",
+    })
+
+
+@app.route("/api/match/opt-in", methods=["POST", "DELETE"])
+@login_required
+def api_match_opt_in():
+    """预约 / 取消本周批量匹配。"""
+    user = get_current_user()
+    if not user.ready_to_match():
+        return jsonify({"ok": False, "error": "请先完成问卷、性别、取向与微信号"}), 400
+
+    week = current_week_key()
+    if request.method == "DELETE":
+        if user.opt_in_week == week:
+            user.opt_in_week = None
+            db.session.commit()
+        return jsonify({"ok": True, "opted_in": False, "quota": match_quota_status(user)})
+
+    user.opt_in_week = week
+    db.session.commit()
+    return jsonify({
+        "ok": True,
+        "opted_in": True,
+        "week_key": week,
+        "message": f"已预约本周匹配，将在 {match_quota_status(user)['next_batch_label']} 揭晓",
+        "quota": match_quota_status(user),
     })
 
 
@@ -531,28 +595,27 @@ def api_get_matches():
     for m in records:
         other = m.user2 if m.user1_id == user.id else m.user1
         insight = json.loads(m.insight_json) if m.insight_json else {}
-        item = {
-            "name": other.name if m.active else "（已失效的配对）",
-            "gender": other.gender if m.active else None,
-            "school": other.school if m.active else None,
-            "score": m.score,
-            "strengths": insight.get("strengths", [])[:3] if m.active else [],
-            "differences": insight.get("differences", [])[:3] if m.active else [],
-            "differences_count": insight.get("total_differences", 0) if m.active else 0,
-            "matched_at": m.created_at.isoformat() if m.created_at else None,
-            "mode": m.mode,
-            "notified": bool(m.notified),
-            "active": bool(m.active),
-        }
-        # 只有当前有效配对才返回微信号，避免泄露未配对/已失效对象的联系方式
-        item["wechat_id"] = other.wechat_id if m.active else None
+        # 旧记录补全相处说明书 / 破冰（不改库则仅本次响应增强；有 active 则回写）
+        if m.active and (not insight.get("icebreakers") or not insight.get("summary")):
+            insight = get_compatibility_insight(
+                user.feature_vector, other.feature_vector,
+                user.answers, other.answers,
+                score=m.score,
+            )
+            m.insight_json = json.dumps(insight, ensure_ascii=False)
+            db.session.commit()
+        item = serialize_match_payload(other, m.score, insight, active=bool(m.active))
+        item["matched_at"] = m.created_at.isoformat() if m.created_at else None
+        item["mode"] = m.mode
+        item["notified"] = bool(m.notified)
+        item["active"] = bool(m.active)
         results.append(item)
 
     return jsonify({
         "ok": True,
         "matches": results,
         "quota": match_quota_status(user),
-        "note": "一对一：你只能看到当前有效配对的微信号；其他人的联系方式不会展示。",
+        "note": "一对一：你只能看到当前有效配对；打开相处说明书与破冰话题再加微信。",
     })
 
 
@@ -664,6 +727,11 @@ def ensure_schema():
         db.session.execute(text("ALTER TABLE users ADD COLUMN looking_for VARCHAR(16)"))
         db.session.commit()
         print("[CampusMatch] migrated: users.looking_for")
+
+    if "opt_in_week" not in user_cols:
+        db.session.execute(text("ALTER TABLE users ADD COLUMN opt_in_week VARCHAR(16)"))
+        db.session.commit()
+        print("[CampusMatch] migrated: users.opt_in_week")
 
     if "active" not in match_cols:
         db.session.execute(text("ALTER TABLE matches ADD COLUMN active BOOLEAN DEFAULT 1"))

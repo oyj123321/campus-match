@@ -38,6 +38,8 @@ class User(db.Model):
     # 时间戳
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     last_matched_at = db.Column(db.DateTime, nullable=True)
+    # 本周预约匹配：ISO 周键，如 "2026-W31"；与当前周相同表示已 opt-in
+    opt_in_week = db.Column(db.String(16))
 
     tags = db.relationship("UserTag", backref="user", lazy="joined", cascade="all, delete-orphan")
 
@@ -151,6 +153,7 @@ class User(db.Model):
             "questionnaire_completed": self.questionnaire_completed(),
             "answers": self.answers,
             "important_qids": list(self.important_qids),
+            "opt_in_week": self.opt_in_week,
         }
 
 

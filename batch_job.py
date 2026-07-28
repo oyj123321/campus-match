@@ -125,6 +125,7 @@ def persist_user_matches(user, scored_pairs, mode, mail_cfg, weekly_new_limit=No
         insight = get_compatibility_insight(
             user.feature_vector, other.feature_vector,
             user.answers, other.answers,
+            score=score,
         )
 
         existing = Match.query.filter(
@@ -206,7 +207,13 @@ def persist_user_matches(user, scored_pairs, mode, mail_cfg, weekly_new_limit=No
     }
 
 
-def ready_users(school=None):
+def current_week_key(now=None):
+    """ISO 周键，如 2026-W31。"""
+    now = now or datetime.now()
+    return now.strftime("%G-W%V")
+
+
+def ready_users(school=None, require_opt_in=False):
     q = User.query.filter(
         User.email_verified == True,
         User.feature_vector_json.isnot(None),
@@ -216,12 +223,16 @@ def ready_users(school=None):
     )
     if school:
         q = q.filter(User.school == school)
-    return [u for u in q.all() if u.ready_to_match()]
+    users = [u for u in q.all() if u.ready_to_match()]
+    if require_opt_in:
+        week = current_week_key()
+        users = [u for u in users if u.opt_in_week == week]
+    return users
 
 
-def run_batch_school(school, mail_cfg):
+def run_batch_school(school, mail_cfg, require_opt_in=False):
     """对单校执行一对一批量匹配。返回摘要。"""
-    users = ready_users(school)
+    users = ready_users(school, require_opt_in=require_opt_in)
     if len(users) < 2:
         return {"school": school, "users": len(users), "pairs": 0, "created": 0, "updated": 0}
 
@@ -240,6 +251,7 @@ def run_batch_school(school, mail_cfg):
 
         insight = get_compatibility_insight(
             a.feature_vector, b.feature_vector, a.answers, b.answers,
+            score=score,
         )
         m, is_new = _get_or_create_pair(a, b, score, insight, mode="batch")
         enforce_one_to_one_active(a, b, m)
@@ -270,11 +282,14 @@ def run_batch_school(school, mail_cfg):
     }
 
 
-def run_batch_all(mail_cfg):
+def run_batch_all(mail_cfg, require_opt_in=None):
+    from config import REVEAL_REQUIRE_OPT_IN
+    if require_opt_in is None:
+        require_opt_in = REVEAL_REQUIRE_OPT_IN
     schools = list(SCHOOL_DOMAINS.keys())
     results = []
     for school in schools:
-        summary = run_batch_school(school, mail_cfg)
+        summary = run_batch_school(school, mail_cfg, require_opt_in=require_opt_in)
         results.append(summary)
         print(
             f"  [{school}] users={summary['users']} pairs={summary.get('pairs', 0)} "

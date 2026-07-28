@@ -8,30 +8,39 @@
         想找{{ {'male':'男生','female':'女生','both':'男女均可'}.get(user.effective_looking_for(), '未设取向') }} ·
         {% if user.answers %}已答 {{ user.answers.keys()|length }}/32 题{% else %}未填问卷{% endif %}
     </p>
-    <div id="quota-box" class="hint" style="margin-top:10px;line-height:1.7;">
+
+    <div id="reveal-box" class="card" style="margin-top:14px;text-align:left;background:#f8fafc;">
+        <h3 style="margin-bottom:8px;">本周揭晓仪式</h3>
+        <p class="hint" id="reveal-hint">每周二晚统一揭晓，制造期待；不是随时刷脸。</p>
+        <p style="margin:8px 0;">下次揭晓：<strong id="q-next-label">{{ quota.next_batch_label }}</strong>
+            · <span id="q-countdown">计算中…</span></p>
+        <p class="hint">本周预约状态：<strong id="q-optin">{{ '已预约' if quota.opted_in else '未预约' }}</strong></p>
+        <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">
+            <button type="button" class="btn btn-primary" id="optin-btn" onclick="toggleOptIn()">预约本周匹配</button>
+            <button type="button" class="btn btn-secondary" onclick="loadHistory()">查看当前配对</button>
+            <a href="/questionnaire" class="btn btn-secondary">修改问卷</a>
+        </div>
+    </div>
+
+    <div id="quota-box" class="hint" style="margin-top:12px;line-height:1.7;">
         模式：<strong id="q-mode">{{ quota.match_mode }}</strong>
         · 本周额度：<strong id="q-remain">{{ quota.weekly_remaining }}</strong> / {{ quota.weekly_limit }}
         · 冷却 {{ quota.cooldown_hours }} 小时
-        · 批量：{{ quota.next_batch_label }}
-        <br>
-        <span id="q-next">下次批量约 {{ quota.next_batch_at }}</span>
     </div>
-    <div style="margin-top:12px;">
-        <button class="btn btn-match" id="match-btn" onclick="doMatch()" style="font-size:1.05em;padding:12px 40px;">开始匹配（一对一）</button>
-        <button class="btn btn-secondary" onclick="loadHistory()" style="margin-left:6px;">当前配对</button>
-        <a href="/questionnaire" class="btn btn-secondary" style="margin-left:6px;">修改问卷</a>
+
+    <div style="margin-top:12px;" id="instant-wrap">
+        <button class="btn btn-match" id="match-btn" onclick="doMatch()" style="font-size:1.05em;padding:12px 40px;">提前揭晓（冷启动）</button>
+        <p class="hint" style="margin-top:8px;">冷启动阶段保留即时配对；正式运营可关掉，只走每周揭晓。</p>
     </div>
-    <p class="hint" style="margin-top:10px;">默认只配 <strong>1 个人</strong>。结果以本页为准；成功后会尝试发邮件到你的学校邮箱。</p>
 </div>
 
 <details class="card" style="text-align:left;">
-    <summary style="cursor:pointer;font-weight:700;">匹配是怎么算的？（开发者说明）</summary>
+    <summary style="cursor:pointer;font-weight:700;">匹配是怎么算的？</summary>
     <div id="explain-box" class="hint" style="margin-top:10px;line-height:1.75;">
         <p id="explain-summary">{{ quota.explain.summary }}</p>
         <ol id="explain-steps" style="padding-left:18px;margin:8px 0;">
             {% for s in quota.explain.steps %}<li>{{ s }}</li>{% endfor %}
         </ol>
-        <p><strong>匈牙利算法一句话：</strong>把全校候选人排成表格，算两两合拍分，再统一分配，让「每人最多 1 个对象」且尽量整体合拍——像排课不要撞车。点按钮时的一对一，是「当前池子里对你分数最高的那一个」，不是全校一起排。全校一对一在每周二批量任务里做。</p>
         <p id="explain-email">{{ quota.explain.email_note }}</p>
     </div>
 </details>
@@ -45,32 +54,55 @@ function esc(s) {
         .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
+function fmtCountdown(sec) {
+    if (sec <= 0) return '已到揭晓时段（或请查看当前配对）';
+    var d = Math.floor(sec / 86400);
+    var h = Math.floor((sec % 86400) / 3600);
+    var m = Math.floor((sec % 3600) / 60);
+    if (d > 0) return '还有 ' + d + ' 天 ' + h + ' 小时';
+    return '还有 ' + h + ' 小时 ' + m + ' 分钟';
+}
+
 function renderQuota(q) {
     if (!q) return;
     document.getElementById('q-remain').textContent = q.weekly_remaining;
-    document.getElementById('q-next').textContent = '下次批量约 ' + q.next_batch_at;
+    document.getElementById('q-next-label').textContent = q.next_batch_label + '（' + q.next_batch_at + '）';
+    document.getElementById('q-countdown').textContent = fmtCountdown(q.seconds_to_reveal || 0);
+    document.getElementById('q-optin').textContent = q.opted_in ? '已预约 ✓' : '未预约';
     if (q.match_mode) document.getElementById('q-mode').textContent = q.match_mode;
+
+    var optBtn = document.getElementById('optin-btn');
+    optBtn.textContent = q.opted_in ? '取消本周预约' : '预约本周匹配';
+    optBtn.className = q.opted_in ? 'btn btn-secondary' : 'btn btn-primary';
+
+    var wrap = document.getElementById('instant-wrap');
+    var btn = document.getElementById('match-btn');
+    if (!q.instant_match_enabled) {
+        wrap.style.display = 'none';
+    } else {
+        wrap.style.display = 'block';
+        if (q.cooldown_seconds_left > 0) {
+            btn.disabled = true;
+            btn.textContent = '冷却中（约 ' + Math.ceil(q.cooldown_seconds_left / 60) + ' 分钟）';
+        } else if (q.weekly_remaining <= 0) {
+            btn.disabled = true;
+            btn.textContent = '本周额度已用完';
+        } else {
+            btn.disabled = false;
+            btn.textContent = '提前揭晓（冷启动）';
+        }
+    }
+
     if (q.explain) {
         document.getElementById('explain-summary').textContent = q.explain.summary || '';
         if (q.explain.email_note) document.getElementById('explain-email').textContent = q.explain.email_note;
-    }
-    var btn = document.getElementById('match-btn');
-    if (q.cooldown_seconds_left > 0) {
-        btn.disabled = true;
-        btn.textContent = '冷却中（约 ' + Math.ceil(q.cooldown_seconds_left / 60) + ' 分钟）';
-    } else if (q.weekly_remaining <= 0) {
-        btn.disabled = true;
-        btn.textContent = '本周额度已用完';
-    } else {
-        btn.disabled = false;
-        btn.textContent = '开始匹配（一对一）';
     }
 }
 
 function renderMailBox(d) {
     if (!d.mail_details || !d.mail_details.length) {
         if (d.mail_fail_count) {
-            return '<div class="card" style="border-left:3px solid #f59e0b;"><p>邮件发送有失败（' + d.mail_fail_count + '）。请检查垃圾箱；演示账号邮箱无效是正常的。</p></div>';
+            return '<div class="card" style="border-left:3px solid #f59e0b;"><p>邮件发送有失败（' + d.mail_fail_count + '）。演示邮箱失败正常。</p></div>';
         }
         return '';
     }
@@ -80,11 +112,11 @@ function renderMailBox(d) {
         html += '<li>发给你（' + esc(m.to_self) + '）：'
             + (m.self_ok ? '<span style="color:#059669;">成功</span>' : '<span style="color:#dc2626;">失败</span> — ' + esc(m.self_info))
             + '</li>';
-        html += '<li>发给对方 ' + esc(m.partner_name) + '（' + esc(m.to_partner) + '）：'
-            + (m.partner_ok ? '<span style="color:#059669;">成功</span>' : '<span style="color:#dc2626;">失败</span> — ' + esc(m.partner_info))
+        html += '<li>发给对方 ' + esc(m.partner_name) + '：'
+            + (m.partner_ok ? '<span style="color:#059669;">成功</span>' : '<span style="color:#dc2626;">失败</span>')
             + '</li>';
     }
-    html += '</ul><p class="hint">对方若是 alice@um.edu.mo 这类演示号，学校邮箱不存在，失败正常；你自己的真实学校邮箱成功才算通知到你。</p></div>';
+    html += '</ul></div>';
     return html;
 }
 
@@ -94,9 +126,9 @@ function renderMatchCards(matches, headerHtml) {
         var m = matches[i];
         var pct = Math.round(m.score * 100);
         var color = pct >= 70 ? '#059669' : pct >= 50 ? '#2563eb' : '#6b7280';
-        html += '<div class="card" style="margin-top:8px;">'
+        html += '<div class="card" style="margin-top:8px;text-align:left;">'
             + '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">'
-            + '<span style="font-size:1.4em;font-weight:800;color:' + color + ';">配对成功</span>'
+            + '<span style="font-size:1.25em;font-weight:800;color:' + color + ';">系统派单</span>'
             + '<span style="font-size:1.15em;font-weight:700;">' + esc(m.name) + '</span>'
             + '<span>' + (m.gender === 'male' ? '男' : m.gender === 'female' ? '女' : '') + '</span>'
             + '<span style="margin-left:auto;font-weight:700;font-size:1.1em;color:' + color + ';">' + pct + '%</span>'
@@ -104,24 +136,39 @@ function renderMatchCards(matches, headerHtml) {
             + '<div style="margin:8px 0;background:#e5e7eb;border-radius:99px;height:6px;">'
             + '<div style="background:' + color + ';width:' + pct + '%;height:6px;border-radius:99px;"></div></div>';
 
-        if (m.strengths && m.strengths.length) {
-            html += '<div style="font-size:0.85em;color:#666;margin-bottom:4px;">共同点: ';
-            for (var j = 0; j < Math.min(m.strengths.length, 3); j++) {
-                html += '<span class="tag" style="background:#d1fae5;color:#065f46;">' + esc(m.strengths[j]) + '</span> ';
-            }
-            html += '</div>';
-        }
-        if (m.differences && m.differences.length) {
-            html += '<div style="font-size:0.85em;color:#666;">差异: ';
-            for (var k = 0; k < Math.min(m.differences.length, 3); k++) {
-                html += '<span class="tag" style="background:#ffedd5;color:#9a3412;">' + esc(m.differences[k]) + '</span> ';
-            }
-            html += '</div>';
+        if (m.summary) {
+            html += '<div style="background:#eff6ff;border-radius:8px;padding:12px 14px;margin:10px 0;">'
+                + '<strong style="color:#1d4ed8;">相处说明书</strong>'
+                + '<p class="hint" style="margin:6px 0 0;">' + esc(m.summary) + '</p></div>';
         }
 
-        html += '<div style="margin-top:6px;color:#2563eb;font-weight:700;">微信: ' + esc(m.wechat_id || '未填写') + '</div>';
+        if (m.strengths && m.strengths.length) {
+            html += '<div style="margin-top:8px;"><strong style="color:#059669;">共同点</strong><ul class="hint" style="padding-left:18px;margin:6px 0;">';
+            for (var j = 0; j < m.strengths.length; j++) {
+                html += '<li>' + esc(m.strengths[j]) + '</li>';
+            }
+            html += '</ul></div>';
+        }
+        if (m.differences && m.differences.length) {
+            html += '<div style="margin-top:8px;"><strong style="color:#92400e;">需要包容的差异</strong><ul class="hint" style="padding-left:18px;margin:6px 0;">';
+            for (var k = 0; k < m.differences.length; k++) {
+                html += '<li>' + esc(m.differences[k]) + '</li>';
+            }
+            html += '</ul></div>';
+        }
+        if (m.icebreakers && m.icebreakers.length) {
+            html += '<div style="background:#fdf2f8;border-radius:8px;padding:12px 14px;margin-top:10px;">'
+                + '<strong style="color:#be185d;">破冰话题（别让聊天死掉）</strong><ol class="hint" style="padding-left:18px;margin:6px 0;">';
+            for (var t = 0; t < m.icebreakers.length; t++) {
+                html += '<li style="margin:4px 0;">' + esc(m.icebreakers[t]) + '</li>';
+            }
+            html += '</ol></div>';
+        }
+
+        html += '<div style="margin-top:12px;font-size:1.05em;color:#2563eb;font-weight:700;">微信: ' + esc(m.wechat_id || '未填写') + '</div>';
+        html += '<p class="hint" style="margin-top:6px;">开口可以很简单：「嗨，CampusMatch 匹配到的，看到破冰话题想先问你第一个…」</p>';
         if (m.matched_at) {
-            html += '<div style="font-size:0.75em;color:#999;margin-top:4px;">' + new Date(m.matched_at).toLocaleString() + (m.mode ? ' · ' + m.mode : '') + '</div>';
+            html += '<div style="font-size:0.75em;color:#999;margin-top:4px;">' + new Date(m.matched_at).toLocaleString() + '</div>';
         }
         html += '</div>';
     }
@@ -133,12 +180,23 @@ async function refreshQuota() {
     if (d.ok) renderQuota(d.quota);
 }
 
+async function toggleOptIn() {
+    var opted = document.getElementById('q-optin').textContent.indexOf('已预约') >= 0;
+    var d = opted
+        ? await api('DELETE', '/api/match/opt-in')
+        : await api('POST', '/api/match/opt-in', {});
+    if (!d.ok) { alert(d.error || '操作失败'); return; }
+    if (d.quota) renderQuota(d.quota);
+    else await refreshQuota();
+    alert(opted ? '已取消本周预约' : (d.message || '已预约本周匹配'));
+}
+
 async function doMatch() {
     var btn = document.getElementById('match-btn');
     var div = document.getElementById('result');
     btn.disabled = true;
     btn.textContent = '匹配中...';
-    div.innerHTML = '<div class="card" style="text-align:center;"><p>正在一对一寻找最合拍的人...</p><p style="color:#999;">相似度 · 取向双向 · 一票否决 · 只返回 1 人</p></div>';
+    div.innerHTML = '<div class="card" style="text-align:center;"><p>正在一对一寻找最合拍的人...</p></div>';
 
     var d = await api('POST', '/api/match', {});
     if (d.quota) renderQuota(d.quota);
@@ -150,13 +208,12 @@ async function doMatch() {
     }
     if (!d.matches || d.matches.length === 0) {
         div.innerHTML = '<div class="card" style="text-align:center;"><p style="font-size:1.2em;">暂无匹配</p>'
-            + '<p class="hint">校内候选: ' + (d.total_candidates || 0) + ' 人</p>'
-            + '<p class="hint">一票否决跳过: ' + (d.dealbreaker_skipped || 0) + ' 人</p></div>';
+            + '<p class="hint">候选 ' + (d.total_candidates || 0) + ' 人 · 可先预约本周批量揭晓</p></div>';
         return;
     }
 
-    var header = '<div class="card" style="background:#f0fdf4;border-left:3px solid #22c55e;"><p>一对一匹配完成'
-        + '（候选 ' + d.total_candidates + ' 人 · 模式 ' + esc(d.mode) + '）</p></div>';
+    var header = '<div class="card" style="background:#f0fdf4;border-left:3px solid #22c55e;"><p>配对完成（候选 '
+        + d.total_candidates + ' 人）。下面是相处说明书与破冰话题。</p></div>';
     header += renderMailBox(d);
     div.innerHTML = renderMatchCards(d.matches, header);
 }
@@ -167,16 +224,16 @@ async function loadHistory() {
     var d = await api('GET', '/api/matches');
     if (d.quota) renderQuota(d.quota);
     if (!d.ok) { div.innerHTML = '<p style="color:#dc2626;">' + esc(d.error) + '</p>'; return; }
-    var header = '<div class="card"><p><strong>当前有效配对</strong>（一对一，仅此人可见微信号）</p>'
-        + '<p class="hint">' + esc(d.note || '') + '</p></div>';
     if (!d.matches.length) {
-        div.innerHTML = '<div class="card"><p class="hint">暂无有效配对。点击「开始匹配」进行一对一配对。</p></div>';
+        div.innerHTML = '<div class="card"><p class="hint">暂无有效配对。先「预约本周匹配」，或冷启动时用「提前揭晓」。</p></div>';
         return;
     }
+    var header = '<div class="card"><p><strong>当前有效配对</strong></p><p class="hint">' + esc(d.note || '') + '</p></div>';
     div.innerHTML = renderMatchCards(d.matches, header);
 }
 
 renderQuota({{ quota | tojson }});
 loadHistory();
+setInterval(refreshQuota, 60000);
 </script>
 {% endblock %}

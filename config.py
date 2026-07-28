@@ -77,6 +77,9 @@ MATCH_WEEKLY_NEW_LIMIT = int(os.environ.get("MATCH_WEEKLY_NEW_LIMIT", "1"))
 MATCH_COOLDOWN_HOURS = int(os.environ.get("MATCH_COOLDOWN_HOURS", "12"))
 BATCH_SCHEDULER_ENABLED = os.environ.get("BATCH_SCHEDULER_ENABLED", "false").lower() == "true"
 ADMIN_SECRET = os.environ.get("ADMIN_SECRET", "")
+# 揭晓仪式：需本周 opt-in 才进批量池；冷启动仍可开即时匹配
+REVEAL_REQUIRE_OPT_IN = os.environ.get("REVEAL_REQUIRE_OPT_IN", "true").lower() == "true"
+INSTANT_MATCH_ENABLED = os.environ.get("INSTANT_MATCH_ENABLED", "true").lower() == "true"
 
 # 验证码
 VERIFICATION_EXPIRE_SECONDS = 600  # 10 分钟

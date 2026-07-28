@@ -72,6 +72,12 @@ def send_match_result_email(to_email, matches, mail_config, insight=None):
 
         insight_html = ""
         if insight:
+            if insight.get("summary"):
+                insight_html += (
+                    f"<div style='background:#eff6ff;border-radius:8px;padding:12px 16px;margin-top:16px;'>"
+                    f"<strong style='color:#1d4ed8;'>相处说明书</strong>"
+                    f"<p style='margin:8px 0 0;font-size:14px;line-height:1.6;'>{insight['summary']}</p></div>"
+                )
             strengths = insight.get("strengths", [])[:5]
             differences = insight.get("differences", [])[:3]
             if strengths:
@@ -80,6 +86,10 @@ def send_match_result_email(to_email, matches, mail_config, insight=None):
             if differences:
                 items = "".join(f"<li style='margin:4px 0;'>{d}</li>" for d in differences)
                 insight_html += f"<div style='background:#fffbeb;border-radius:8px;padding:12px 16px;margin-top:10px;'><strong style='color:#92400e;'>需要注意的差异</strong><ul style='margin:8px 0 0;padding-left:18px;font-size:14px;'>{items}</ul></div>"
+            ice = insight.get("icebreakers", [])[:3]
+            if ice:
+                items = "".join(f"<li style='margin:4px 0;'>{x}</li>" for x in ice)
+                insight_html += f"<div style='background:#fdf2f8;border-radius:8px;padding:12px 16px;margin-top:10px;'><strong style='color:#be185d;'>破冰话题（别让聊天死掉）</strong><ul style='margin:8px 0 0;padding-left:18px;font-size:14px;'>{items}</ul></div>"
 
         body = f"""<!DOCTYPE html>
 <html lang="zh-CN">

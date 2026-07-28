@@ -416,17 +416,19 @@ def check_dealbreakers(answers1, answers2, threshold=0.6):
     return triggered
 
 
-def get_compatibility_insight(user_vec, match_vec, answers, match_answers):
+def get_compatibility_insight(user_vec, match_vec, answers, match_answers, score=None):
     """
-    生成匹配理由——找出相似度最高和最低的维度，给出可读解释。
+    生成「相处说明书」：共同点、差异、一句话总结、破冰话题。
 
     Returns:
-        dict with 'strengths' (共同点) and 'differences' (需要注意的差异)
+        dict: summary, strengths, differences, icebreakers, totals
     """
     answers = _norm_answers(answers)
     match_answers = _norm_answers(match_answers)
     strengths = []
     differences = []
+    icebreakers = []
+    shared_tags = []
 
     for q in QUESTIONS:
         qid = q["id"]
@@ -438,21 +440,67 @@ def get_compatibility_insight(user_vec, match_vec, answers, match_answers):
                 continue
             diff = abs(v1 - v2)
             if diff <= 1:
-                strengths.append(f"「{q['text']}」观点相近")
+                mid = (v1 + v2) / 2
+                lean = q.get("left", "左侧") if mid <= 3 else q.get("right", "右侧")
+                strengths.append(f"在「{q['text']}」上很接近，都更偏向「{lean}」一侧")
+                if len(icebreakers) < 3 and diff == 0:
+                    icebreakers.append(
+                        f"你们对「{q['text']}」看法几乎一样——可以聊聊：平时遇到这种情况你会怎么做？"
+                    )
             elif diff >= 3:
-                differences.append(f"「{q['text']}」差异较大")
+                differences.append(
+                    f"「{q['text']}」差异较大（你偏「{q.get('left','一端')}」方向，对方偏「{q.get('right','另一端')}」方向）——见面时多问问对方真实习惯"
+                )
         elif q["type"] == "multi":
             s1 = set(answers.get(qid, []) or [])
             s2 = set(match_answers.get(qid, []) or [])
-            common = s1 & s2
-            if len(common) >= 2:
-                strengths.append(f"「{q['text']}」都喜欢：{'、'.join(list(common)[:3])}")
+            common = list(s1 & s2)
+            if common:
+                shared_tags.extend(common[:3])
+                show = "、".join(common[:3])
+                strengths.append(f"「{q['text']}」都喜欢：{show}")
+                if len(icebreakers) < 5:
+                    tip = common[0]
+                    icebreakers.append(f"你们都喜欢「{tip}」——可以问问：最近有没有相关的安利/体验想分享？")
+
+    # 补足破冰到 3 条
+    fallbacks = [
+        "先从「最近校园里有什么想去但一个人懒得去的活动」聊起？",
+        "互相问问对方问卷里「标记为很重要」的那几题，为什么在意？",
+        "约一个低压力场景：咖啡/食堂/散步 30 分钟，不聊太深也没关系。",
+    ]
+    for fb in fallbacks:
+        if len(icebreakers) >= 3:
+            break
+        if fb not in icebreakers:
+            icebreakers.append(fb)
+
+    pct = int(round((score or 0) * 100)) if score is not None else None
+    if pct is not None:
+        summary = (
+            f"系统派单合拍度约 {pct}%：找到 {len(strengths)} 处相近、"
+            f"{len(differences)} 处需要包容的差异。"
+            "算法只能帮你们认识，剩下的靠聊天。"
+        )
+    else:
+        summary = (
+            f"找到 {len(strengths)} 处相近、{len(differences)} 处差异。"
+            "把这次当作「系统给的开口理由」，轻松一点就好。"
+        )
+
+    if shared_tags:
+        uniq = list(dict.fromkeys(shared_tags))[:4]
+        summary += f" 共同兴趣关键词：{'、'.join(uniq)}。"
 
     return {
-        "strengths": strengths[:5],    # top 5
-        "differences": differences[:3],  # top 3
+        "summary": summary,
+        "strengths": strengths[:6],
+        "differences": differences[:4],
+        "icebreakers": icebreakers[:3],
+        "shared_tags": list(dict.fromkeys(shared_tags))[:6],
         "total_strengths": len(strengths),
         "total_differences": len(differences),
+        "score_pct": pct,
     }
 
 
