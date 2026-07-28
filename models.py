@@ -19,7 +19,9 @@ class User(db.Model):
 
     # 基本信息
     name = db.Column(db.String(32))
-    gender = db.Column(db.String(16))       # male / female / other
+    gender = db.Column(db.String(16))       # male / female
+    # 择偶取向：想匹配的性别 male / female / both（男女不限）
+    looking_for = db.Column(db.String(16))
     wechat_id = db.Column(db.String(32))
     bio = db.Column(db.Text)
 
@@ -104,9 +106,35 @@ class User(db.Model):
         self.verification_sent_at = datetime.utcnow()
         return self.verification_token
 
+    def effective_looking_for(self):
+        """未设置时按异性默认，兼容旧数据。"""
+        if self.looking_for in ("male", "female", "both"):
+            return self.looking_for
+        if self.gender == "male":
+            return "female"
+        if self.gender == "female":
+            return "male"
+        return "both"
+
+    def accepts_gender(self, other_gender):
+        pref = self.effective_looking_for()
+        if pref == "both":
+            return other_gender in ("male", "female")
+        return pref == other_gender
+
     def questionnaire_completed(self):
         """检查是否完成了问卷"""
         return bool(self.answers and len(self.answers) >= 20)  # 至少回答 20 题
+
+    def ready_to_match(self):
+        return bool(
+            self.email_verified
+            and self.questionnaire_completed()
+            and self.gender in ("male", "female")
+            and self.looking_for in ("male", "female", "both")
+            and self.wechat_id
+            and self.feature_vector
+        )
 
     def to_dict(self):
         return {
@@ -116,6 +144,7 @@ class User(db.Model):
             "email_verified": self.email_verified,
             "name": self.name,
             "gender": self.gender,
+            "looking_for": self.effective_looking_for(),
             "wechat_id": self.wechat_id,
             "bio": self.bio,
             "tags": [t.tag for t in self.tags],

@@ -2,7 +2,7 @@
 {% block content %}
 
 <h2 style="text-align:center;margin-bottom:8px;">填写资料 & 问卷</h2>
-<p class="hint" style="text-align:center;margin-bottom:16px;">共 32 题 · 请认真选择，滑块默认不会自动计入进度</p>
+<p class="hint" style="text-align:center;margin-bottom:16px;">共 32 题 · 请点选作答；未选不算已答</p>
 
 <!-- 基本资料 -->
 <div class="card" id="profile-card">
@@ -13,13 +13,23 @@
             <input type="text" id="name" value="{{ user.name or '' }}" placeholder="你的名字" autocomplete="nickname">
         </div>
         <div class="form-group" style="flex:1;">
-            <label for="gender">性别 *</label>
+            <label for="gender">我的性别 *</label>
             <select id="gender">
                 <option value="">请选择</option>
                 <option value="male" {% if user.gender == 'male' %}selected{% endif %}>男</option>
                 <option value="female" {% if user.gender == 'female' %}selected{% endif %}>女</option>
             </select>
         </div>
+    </div>
+    <div class="form-group">
+        <label for="looking_for">希望匹配的性别（择偶取向）*</label>
+        <select id="looking_for">
+            <option value="">请选择</option>
+            <option value="male" {% if user.looking_for == 'male' %}selected{% endif %}>男</option>
+            <option value="female" {% if user.looking_for == 'female' %}selected{% endif %}>女</option>
+            <option value="both" {% if user.looking_for == 'both' %}selected{% endif %}>男女都可以</option>
+        </select>
+        <p class="hint">男生可选男或女，女生也可选男或女；匹配需双方取向互相接受。</p>
     </div>
     <div class="form-row">
         <div class="form-group" style="flex:1;">
@@ -261,6 +271,7 @@ function highlightMissing() {
 async function submitAll() {
     var name = document.getElementById('name').value.trim();
     var gender = document.getElementById('gender').value;
+    var lookingFor = document.getElementById('looking_for').value;
     var wechat = document.getElementById('wechat_id').value.trim();
     var bio = document.getElementById('bio').value.trim();
     var status = document.getElementById('save-status');
@@ -273,8 +284,13 @@ async function submitAll() {
         return;
     }
     if (!gender) {
-        alert('请选择性别');
+        alert('请选择你的性别');
         document.getElementById('gender').focus();
+        return;
+    }
+    if (!lookingFor) {
+        alert('请选择希望匹配的性别（择偶取向）');
+        document.getElementById('looking_for').focus();
         return;
     }
     if (!wechat) {
@@ -296,7 +312,9 @@ async function submitAll() {
     btn.textContent = '保存中...';
     status.innerHTML = '<span style="color:#64748b;">保存中...</span>';
 
-    var r1 = await api('PUT', '/api/me', { name: name, gender: gender, wechat_id: wechat, bio: bio });
+    var r1 = await api('PUT', '/api/me', {
+        name: name, gender: gender, looking_for: lookingFor, wechat_id: wechat, bio: bio
+    });
     if (!r1.ok) {
         status.innerHTML = '<span class="error">基本资料保存失败: ' + esc(r1.error || '') + '</span>';
         btn.disabled = false;

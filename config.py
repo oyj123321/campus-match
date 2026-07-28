@@ -19,6 +19,7 @@ if os.path.exists(_ENV_FILE):
 
 # Flask
 SECRET_KEY = os.environ.get("SECRET_KEY", "campus-match-dev-secret-key-change-in-production")
+FLASK_DEBUG = os.environ.get("FLASK_DEBUG", "true").lower() == "true"
 SQLALCHEMY_DATABASE_URI = os.environ.get(
     "DATABASE_URL",
     f"sqlite:///{os.path.join(BASE_DIR, 'instance', 'campus_match.db')}"
@@ -72,3 +73,6 @@ MATCH_DELAY_SECONDS = 0      # 匹配延迟（秒），防止瞬时并发
 
 # 验证码
 VERIFICATION_EXPIRE_SECONDS = 600  # 10 分钟
+# 注册/重发验证码限流（同一邮箱）
+REGISTER_RATE_LIMIT = int(os.environ.get("REGISTER_RATE_LIMIT", "5"))  # 窗口内最多次数
+REGISTER_RATE_WINDOW = int(os.environ.get("REGISTER_RATE_WINDOW", "3600"))  # 秒

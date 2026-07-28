@@ -25,6 +25,15 @@ def cosine_similarity(vec1, vec2):
     return dot / (norm1 * norm2)
 
 
+def orientation_compatible(user_a, user_b):
+    """双向择偶取向兼容：双方都愿意匹配对方的性别。"""
+    if not hasattr(user_a, "accepts_gender") or not hasattr(user_b, "accepts_gender"):
+        return True
+    if not user_a.gender or not user_b.gender:
+        return False
+    return user_a.accepts_gender(user_b.gender) and user_b.accepts_gender(user_a.gender)
+
+
 def real_time_match(user, candidates, top_n=5, min_score=0.15):
     """
     实时匹配：余弦相似度 Top-N。
@@ -43,6 +52,8 @@ def real_time_match(user, candidates, top_n=5, min_score=0.15):
         if c.id == user.id:
             continue
         if not c.feature_vector:
+            continue
+        if not orientation_compatible(user, c):
             continue
         sim = cosine_similarity(uv, c.feature_vector)
         if sim >= min_score:
@@ -155,62 +166,55 @@ def hungarian_match(group_a, group_b, score_matrix):
 
 def batch_match_school(users, filter_same_gender=True):
     """
-    对学校内所有用户执行全局最优匹配（匈牙利算法）。
+    对学校内用户做全局匹配。
 
-    流程：
-      1. 按性别分成两组
-      2. 计算两两之间的余弦相似度作为分数
-      3. 匈牙利算法求解最大权匹配
-      4. 返回 (user_a, user_b, score)
-
-    Args:
-        users: list of User objects (必须有 .feature_vector 和 .gender)
-        filter_same_gender: 是否只匹配异性
+    - 默认按择偶取向双向过滤后贪心配对（支持同性/双性取向）
+    - filter_same_gender=True 且全部为「异性取向」时，仍可用匈牙利二部图
 
     Returns:
         list of (user1, user2, score)
     """
-    if filter_same_gender:
-        group_a = [u for u in users if u.gender == "female"]
-        group_b = [u for u in users if u.gender == "male"]
-    else:
-        # 不区分性别时，随机分成两组
-        mid = len(users) // 2
-        group_a = users[:mid]
-        group_b = users[mid:]
+    pool = [u for u in users if u.feature_vector and u.gender]
 
-    if len(group_a) == 0 or len(group_b) == 0:
-        return []
+    # 经典异性池：双方都明确只要异性 → 匈牙利
+    hetero = [
+        u for u in pool
+        if (u.gender == "female" and u.effective_looking_for() == "male")
+        or (u.gender == "male" and u.effective_looking_for() == "female")
+    ]
+    has_non_hetero = any(u.effective_looking_for() in ("both", u.gender) for u in pool)
 
-    # 构建分数矩阵
-    n, m = len(group_a), len(group_b)
-    score_matrix = [[0.0] * m for _ in range(n)]
+    if filter_same_gender and hetero and not has_non_hetero:
+        group_a = [u for u in hetero if u.gender == "female"]
+        group_b = [u for u in hetero if u.gender == "male"]
+        if group_a and group_b:
+            n, m = len(group_a), len(group_b)
+            score_matrix = [[0.0] * m for _ in range(n)]
+            for i in range(n):
+                for j in range(m):
+                    if not orientation_compatible(group_a[i], group_b[j]):
+                        continue
+                    score_matrix[i][j] = cosine_similarity(
+                        group_a[i].feature_vector, group_b[j].feature_vector
+                    )
+            return hungarian_match(group_a, group_b, score_matrix)
 
-    for i in range(n):
-        ua = group_a[i]
-        if not ua.feature_vector:
-            continue
-        for j in range(m):
-            ub = group_b[j]
-            if not ub.feature_vector:
-                continue
-            score_matrix[i][j] = cosine_similarity(
-                ua.feature_vector, ub.feature_vector
-            )
-
-    return hungarian_match(group_a, group_b, score_matrix)
+    # 含同性/不限取向：贪心最大权匹配
+    return greedy_match_all(pool, min_score=0.0, require_orientation=True)
 
 
-def greedy_match_all(users, min_score=0.15):
+def greedy_match_all(users, min_score=0.15, require_orientation=True):
     """
-    贪心匹配（不限性别时使用）。
+    贪心匹配。
 
     对所有用户两两计算相似度，按分数从高到低贪心配对。
-    每人只能匹配一次。
+    每人只能匹配一次。require_orientation 时要求双向择偶兼容。
     """
     pairs = []
     for u1, u2 in combinations(users, 2):
         if not u1.feature_vector or not u2.feature_vector:
+            continue
+        if require_orientation and not orientation_compatible(u1, u2):
             continue
         sim = cosine_similarity(u1.feature_vector, u2.feature_vector)
         if sim >= min_score:

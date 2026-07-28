@@ -6,15 +6,18 @@ CampusMatch v2 — 校园恋爱匹配系统
 """
 
 import time, json
+from collections import defaultdict, deque
 from datetime import datetime, timedelta
 from functools import wraps
 
 from flask import Flask, request, session, jsonify, render_template, redirect, url_for
+from sqlalchemy import inspect, text
 
 from config import (
-    SECRET_KEY, SQLALCHEMY_DATABASE_URI, PUBLIC_URL,
+    SECRET_KEY, FLASK_DEBUG, SQLALCHEMY_DATABASE_URI, PUBLIC_URL,
     SCHOOL_DOMAINS, MATCH_MODE, MATCH_TOP_N, MATCH_MIN_SCORE,
     MATCH_DELAY_SECONDS, VERIFICATION_EXPIRE_SECONDS,
+    REGISTER_RATE_LIMIT, REGISTER_RATE_WINDOW,
     MAIL_ENABLED, MAIL_SERVER, MAIL_PORT, MAIL_USERNAME, MAIL_PASSWORD, MAIL_FROM,
 )
 from models import db, User, UserTag, Match
@@ -22,7 +25,7 @@ from questionnaire import (
     QUESTIONS, build_feature_vector, check_dealbreakers,
     get_compatibility_insight,
 )
-from matcher import real_time_match, batch_match_school, greedy_match_all
+from matcher import real_time_match, batch_match_school, orientation_compatible
 from email_service import send_verification_email, send_match_result_email
 
 # ---- App Factory ----
@@ -30,7 +33,14 @@ app = Flask(__name__)
 app.config["SECRET_KEY"] = SECRET_KEY
 app.config["SQLALCHEMY_DATABASE_URI"] = SQLALCHEMY_DATABASE_URI
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+app.config["SESSION_COOKIE_HTTPONLY"] = True
+app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+if PUBLIC_URL.startswith("https://"):
+    app.config["SESSION_COOKIE_SECURE"] = True
 db.init_app(app)
+
+# 邮箱 → 近期请求时间戳（进程内限流，MVP 够用）
+_register_hits = defaultdict(deque)
 
 
 def get_mail_config():
@@ -68,6 +78,22 @@ def get_current_user():
     if user_id:
         return db.session.get(User, user_id)
     return None
+
+
+def check_register_rate(email):
+    """同一邮箱在窗口内发送验证码次数限制。返回 (ok, error_msg)。"""
+    now = time.time()
+    key = email.strip().lower()
+    q = _register_hits[key]
+    while q and now - q[0] > REGISTER_RATE_WINDOW:
+        q.popleft()
+    if len(q) >= REGISTER_RATE_LIMIT:
+        return False, f"发送过于频繁，请 {REGISTER_RATE_WINDOW // 60} 分钟后再试"
+    q.append(now)
+    return True, None
+
+
+LOOKING_FOR_VALUES = {"male", "female", "both"}
 
 
 # ============================================================
@@ -121,7 +147,7 @@ def matches_page():
 @app.route("/api/register", methods=["POST"])
 def api_register():
     data = request.get_json() or {}
-    email = (data.get("email") or "").strip()
+    email = (data.get("email") or "").strip().lower()
 
     if not email or "@" not in email:
         return jsonify({"ok": False, "error": "请输入有效的邮箱地址"}), 400
@@ -133,6 +159,10 @@ def api_register():
             "error": "暂不支持该学校邮箱。目前支持: " + "、".join(SCHOOL_DOMAINS.keys()),
         }), 400
 
+    ok_rate, rate_err = check_register_rate(email)
+    if not ok_rate:
+        return jsonify({"ok": False, "error": rate_err}), 429
+
     user = User.query.filter_by(email=email).first()
     if not user:
         user = User(email=email, school=school)
@@ -142,11 +172,13 @@ def api_register():
     token = user.generate_token()
     db.session.commit()
 
-    ok, info = send_verification_email(email, token, get_mail_config())
+    mail_ok, info = send_verification_email(email, token, get_mail_config())
+    # 邮件失败仍允许进入验证步骤（开发/收件箱拒信时用页面展示验证码）
     return jsonify({
-        "ok": ok,
-        "message": f"验证码已发送至 {email}" if ok else f"发送失败: {info}",
-        "dev_token": token if not ok else None,
+        "ok": True,
+        "mail_sent": mail_ok,
+        "message": f"验证码已发送至 {email}" if mail_ok else f"邮件发送失败，请使用页面验证码。详情: {info}",
+        "dev_token": None if (mail_ok and MAIL_ENABLED) else token,
     })
 
 
@@ -187,7 +219,7 @@ def api_verify():
 @app.route("/api/resend-verification", methods=["POST"])
 def api_resend_verification():
     data = request.get_json() or {}
-    email = (data.get("email") or "").strip()
+    email = (data.get("email") or "").strip().lower()
 
     user = User.query.filter_by(email=email).first()
     if not user:
@@ -195,12 +227,16 @@ def api_resend_verification():
     if user.email_verified:
         return jsonify({"ok": True, "message": "已验证"})
 
+    ok_rate, rate_err = check_register_rate(email)
+    if not ok_rate:
+        return jsonify({"ok": False, "error": rate_err}), 429
+
     token = user.generate_token()
     db.session.commit()
     ok, _ = send_verification_email(email, token, get_mail_config())
     return jsonify({
         "ok": ok,
-        "dev_token": token if not ok else None,
+        "dev_token": token if not (ok and MAIL_ENABLED) else None,
     })
 
 
@@ -291,12 +327,16 @@ def api_match():
     """触发匹配（实时模式或批量模式）"""
     user = get_current_user()
 
-    if not user.email_verified:
-        return jsonify({"ok": False, "error": "请先验证邮箱"}), 400
-    if not user.questionnaire_completed():
-        return jsonify({"ok": False, "error": "请先完成问卷（至少回答 20 题）"}), 400
-    if not user.feature_vector:
-        return jsonify({"ok": False, "error": "特征向量未生成，请重新提交问卷"}), 400
+    if not user.ready_to_match():
+        if not user.email_verified:
+            return jsonify({"ok": False, "error": "请先验证邮箱"}), 400
+        if not user.questionnaire_completed() or not user.feature_vector:
+            return jsonify({"ok": False, "error": "请先完成问卷并提交"}), 400
+        if not user.gender or user.effective_looking_for() not in LOOKING_FOR_VALUES:
+            return jsonify({"ok": False, "error": "请先在问卷页设置性别与择偶取向"}), 400
+        if not user.wechat_id:
+            return jsonify({"ok": False, "error": "请先填写微信号"}), 400
+        return jsonify({"ok": False, "error": "资料不完整，请返回问卷页补全"}), 400
 
     if MATCH_DELAY_SECONDS > 0:
         time.sleep(MATCH_DELAY_SECONDS)
@@ -305,32 +345,31 @@ def api_match():
     if request.is_json:
         body = request.get_json(silent=True) or {}
         mode = body.get("mode", MATCH_MODE)
-    other_gender = "female" if user.gender == "male" else "male" if user.gender == "female" else None
 
-    # 获取同校候选人
-    query = User.query.filter(
+    # 同校已验证候选人，再按双向择偶取向过滤
+    pool = User.query.filter(
         User.school == user.school,
         User.id != user.id,
         User.email_verified == True,
         User.feature_vector_json.isnot(None),
-    )
-    if other_gender:
-        query = query.filter(User.gender == other_gender)
-
-    candidates = query.all()
+        User.gender.isnot(None),
+    ).all()
+    candidates = [c for c in pool if orientation_compatible(user, c)]
 
     if not candidates:
-        return jsonify({"ok": True, "matches": [], "message": "当前学校暂无其他可匹配用户"})
+        return jsonify({
+            "ok": True,
+            "matches": [],
+            "message": "当前学校暂无符合你择偶取向的可匹配用户",
+            "total_candidates": 0,
+            "pool_size": len(pool),
+        })
 
     if mode == "batch":
-        # 批量模式：匈牙利算法全局最优匹配
-        # 把自己加入候选池
         all_users = candidates + [user]
         results = batch_match_school(all_users, filter_same_gender=True)
-        # 只返回包含当前用户的结果
         my_matches = [(a if b.id == user.id else b, s) for a, b, s in results if a.id == user.id or b.id == user.id]
     else:
-        # 实时模式：余弦相似度 Top-N
         my_matches = real_time_match(user, candidates, top_n=MATCH_TOP_N, min_score=MATCH_MIN_SCORE)
 
     # 保存匹配记录 + 发送邮件
@@ -450,7 +489,12 @@ def api_me():
     # PUT: 更新基本信息（不含问卷）
     data = request.get_json() or {}
     user.name = (data.get("name") or "").strip() or user.name
-    user.gender = (data.get("gender") or "").strip() or user.gender
+    gender = (data.get("gender") or "").strip()
+    if gender in ("male", "female"):
+        user.gender = gender
+    looking_for = (data.get("looking_for") or "").strip()
+    if looking_for in LOOKING_FOR_VALUES:
+        user.looking_for = looking_for
     user.wechat_id = (data.get("wechat_id") or "").strip() or user.wechat_id
     user.bio = (data.get("bio") or "").strip() or user.bio
     db.session.commit()
@@ -461,6 +505,23 @@ def api_me():
 def api_logout():
     session.clear()
     return jsonify({"ok": True})
+
+
+@app.route("/api/health", methods=["GET"])
+def api_health():
+    """运维探活"""
+    try:
+        db.session.execute(text("SELECT 1"))
+        db_ok = True
+    except Exception:
+        db_ok = False
+    return jsonify({
+        "ok": db_ok,
+        "service": "campus-match",
+        "mail_enabled": MAIL_ENABLED,
+        "match_mode": MATCH_MODE,
+        "debug": FLASK_DEBUG,
+    }), (200 if db_ok else 503)
 
 
 # ============================================================
@@ -494,9 +555,22 @@ def api_school_tags(school_name):
 # 初始化
 # ============================================================
 
+def ensure_schema():
+    """create_all + 轻量迁移（SQLite 补 looking_for 列）"""
+    db.create_all()
+    try:
+        cols = {c["name"] for c in inspect(db.engine).get_columns("users")}
+    except Exception:
+        return
+    if "looking_for" not in cols:
+        db.session.execute(text("ALTER TABLE users ADD COLUMN looking_for VARCHAR(16)"))
+        db.session.commit()
+        print("[CampusMatch] migrated: users.looking_for")
+
+
 def init_db():
     with app.app_context():
-        db.create_all()
+        ensure_schema()
         print("[CampusMatch v2] DB initialized")
 
 
@@ -504,6 +578,7 @@ if __name__ == "__main__":
     init_db()
     print("  CampusMatch v2 启动!")
     print(f"  模式: {'批量匹配(每周二晚9点)' if MATCH_MODE == 'batch' else '实时匹配'}")
+    print(f"  Debug: {FLASK_DEBUG}")
     print(f"  支持学校: {', '.join(SCHOOL_DOMAINS.keys())}")
     print(f"  邮件: {'真实发送' if MAIL_ENABLED else '开发模式'}")
-    app.run(debug=True, host="127.0.0.1", port=5000)
+    app.run(debug=FLASK_DEBUG, host="127.0.0.1", port=5000)

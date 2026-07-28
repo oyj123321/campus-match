@@ -5,6 +5,7 @@
     <p style="color:#999;font-size:0.9em;">
         {{ user.name or '未设置名字' }} ·
         {{ {'male':'男','female':'女'}.get(user.gender, '未设性别') }} ·
+        想找{{ {'male':'男生','female':'女生','both':'男女均可'}.get(user.effective_looking_for(), '未设取向') }} ·
         {% if user.answers %}已答 {{ user.answers.keys()|length }}/32 题{% else %}未填问卷{% endif %}
     </p>
     <div style="margin-top:12px;">

@@ -131,6 +131,10 @@ def seed(refresh=False):
         refreshed = 0
         for name, gender, wechat, school, email, bio, answers in SEEDS:
             existing = User.query.filter_by(email=email).first()
+            # 演示数据默认异性取向；个别账号可在此覆盖以测同性匹配
+            looking_for = "female" if gender == "male" else "male"
+            if email == "emma@um.edu.mo":
+                looking_for = "both"
 
             # 为 Q1-Q24 填默认值（scale 题）
             full_answers = {}
@@ -159,6 +163,7 @@ def seed(refresh=False):
                     continue
                 existing.name = name
                 existing.gender = gender
+                existing.looking_for = looking_for
                 existing.wechat_id = wechat
                 existing.school = school
                 existing.bio = bio
@@ -166,7 +171,7 @@ def seed(refresh=False):
                 existing.answers = full_answers
                 existing.feature_vector = vec
                 refreshed += 1
-                print(f"  REFRESH: {name} ({gender}) @ {school} — {len(vec)}d vector")
+                print(f"  REFRESH: {name} ({gender}->{looking_for}) @ {school} — {len(vec)}d vector")
                 continue
 
             user = User(
@@ -175,6 +180,7 @@ def seed(refresh=False):
                 email_verified=True,
                 name=name,
                 gender=gender,
+                looking_for=looking_for,
                 wechat_id=wechat,
                 bio=bio,
             )
@@ -182,7 +188,7 @@ def seed(refresh=False):
             user.feature_vector = vec
             db.session.add(user)
             count += 1
-            print(f"  ADD: {name} ({gender}) @ {school} — {len(vec)}d vector")
+            print(f"  ADD: {name} ({gender}->{looking_for}) @ {school} — {len(vec)}d vector")
 
         db.session.commit()
         print(f"\nSeeded {count} users, refreshed {refreshed} (skipped {len(SEEDS) - count - refreshed})")
