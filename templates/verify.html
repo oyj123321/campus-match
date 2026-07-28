@@ -1,18 +1,18 @@
 {% extends "base.html" %}
 {% block content %}
 <div class="card">
-    <h2>② 验证邮箱</h2>
-    <p>验证码已发送至 <strong>{{ email }}</strong></p>
-    <p class="hint">检查收件箱和垃圾邮件文件夹。开发模式下验证码打印在服务器终端。</p>
+    <h2 data-i18n="vf.title">② 验证邮箱</h2>
+    <p><span data-i18n="vf.sentTo">验证码已发送至</span> <strong>{{ email }}</strong></p>
+    <p class="hint" data-i18n="vf.spam">检查收件箱和垃圾邮件文件夹。开发模式下验证码打印在服务器终端。</p>
 
     <div class="form-group">
-        <label for="token">验证码（6 位）</label>
-        <input type="text" id="token" placeholder="输入验证码" maxlength="8" autocomplete="one-time-code"
+        <label for="token" data-i18n="form.token">验证码（6 位）</label>
+        <input type="text" id="token" placeholder="输入验证码" data-i18n-ph="form.token.ph" maxlength="8" autocomplete="one-time-code"
                style="font-size:1.4em;letter-spacing:4px;text-align:center;"
                onkeydown="if(event.key==='Enter')verify()" autofocus>
     </div>
-    <button class="btn btn-primary" id="verify-btn" onclick="verify()">验证</button>
-    <button class="btn btn-secondary" onclick="resend()">重新发送</button>
+    <button class="btn btn-primary" id="verify-btn" onclick="verify()"><span data-i18n="btn.verify">验证</span></button>
+    <button class="btn btn-secondary" onclick="resend()"><span data-i18n="btn.resendCode">重新发送</span></button>
 
     <div id="status-area" style="margin-top:16px;">
         <p id="verify-status"></p>
@@ -22,14 +22,14 @@
 <script>
 async function verify() {
     const token = document.getElementById('token').value.trim();
-    if (!token) { alert('请输入验证码'); return; }
+    if (!token) { alert(t('msg.enterToken')); return; }
 
     const btn = document.getElementById('verify-btn');
     const status = document.getElementById('verify-status');
 
     btn.disabled = true;
-    btn.textContent = '验证中...';
-    status.innerHTML = '<span class="t-dim">验证中...</span>';
+    btn.textContent = t('msg.verifying');
+    status.innerHTML = '<span class="t-dim">' + t('msg.verifying') + '</span>';
 
     const data = await api('POST', '/api/verify', {
         email: '{{ email }}',
@@ -37,10 +37,10 @@ async function verify() {
     });
 
     btn.disabled = false;
-    btn.textContent = '验证';
+    btn.textContent = t('btn.verify');
 
     if (data.ok) {
-        status.innerHTML = '<span class="t-ok">验证成功！跳转中...</span>';
+        status.innerHTML = '<span class="t-ok">' + t('vf.ok') + '</span>';
         setTimeout(function() {
             window.location.href = '/questionnaire';
         }, 600);
@@ -51,16 +51,16 @@ async function verify() {
 
 async function resend() {
     const status = document.getElementById('verify-status');
-    status.innerHTML = '<span class="t-dim">重新发送中...</span>';
+    status.innerHTML = '<span class="t-dim">' + t('vf.resending') + '</span>';
 
     const data = await api('POST', '/api/resend-verification', {
         email: '{{ email }}',
     });
 
     if (data.ok) {
-        var info = '已重新发送';
+        var info = t('vf.resent');
         if (data.dev_token) {
-            info += '<br><span class="code-chip">验证码：<code style="font-size:1.4em;">' + data.dev_token + '</code></span>';
+            info += '<br><span class="code-chip">' + t('vf.code') + '<code style="font-size:1.4em;">' + data.dev_token + '</code></span>';
         }
         status.innerHTML = '<span class="t-ok">' + info + '</span>';
     } else {

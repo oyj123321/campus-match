@@ -1,55 +1,55 @@
 {% extends "base.html" %}
 {% block content %}
 <div class="card" style="text-align:center;">
-    <h2>{{ user.school }} · 匹配中心</h2>
+    <h2><span data-school="{{ user.school }}">{{ user.school }}</span> · <span data-i18n="m.center">匹配中心</span></h2>
     <p class="hint" style="font-size:0.9em;">
-        {{ user.name or '未设置名字' }} ·
-        {{ {'male':'男','female':'女'}.get(user.gender, '未设性别') }} ·
-        想找{{ {'male':'男生','female':'女生','both':'男女均可'}.get(user.effective_looking_for(), '未设取向') }} ·
-        {% if user.answers %}已答 {{ user.answers.keys()|length }} 题{% else %}未填问卷{% endif %}
-        · 跨校 {{ '开' if user.allow_cross_school else '关' }}
+        {{ user.name or '—' }} ·
+        <span data-i18n="{{ {'male':'g.male','female':'g.female'}.get(user.gender, 'g.unset') }}">性别</span> ·
+        <span data-i18n="{{ {'male':'lf.male','female':'lf.female','both':'lf.both'}.get(user.effective_looking_for(), 'lf.unset') }}">取向</span> ·
+        {% if user.answers %}<span data-i18n="hdr.answered">已答</span> {{ user.answers.keys()|length }} <span data-i18n="hdr.q">题</span>{% else %}<span data-i18n="hdr.noq">未填问卷</span>{% endif %}
+        · <span data-i18n="hdr.cross">跨校</span> <span data-i18n="{{ 'on' if user.allow_cross_school else 'off' }}">开</span>
     </p>
 
     <div id="reveal-box" class="card box-dim" style="margin-top:14px;text-align:left;">
-        <h3 style="margin-bottom:8px;">本周揭晓仪式</h3>
-        <p class="hint" id="reveal-hint">每周二晚统一揭晓，制造期待；不是随时刷脸。</p>
-        <p style="margin:8px 0;">下次揭晓：<strong id="q-next-label">{{ quota.next_batch_label }}</strong>
-            · <span id="q-countdown">计算中…</span></p>
-        <p class="hint">本周预约状态：<strong id="q-optin">{{ '已预约' if quota.opted_in else '未预约' }}</strong>
-            · 跨校偏好：<strong id="q-cross">{{ '已开启' if quota.allow_cross_school else '仅同校' }}</strong></p>
+        <h3 style="margin-bottom:8px;" data-i18n="rv.title">本周揭晓仪式</h3>
+        <p class="hint" id="reveal-hint" data-i18n="rv.hint">每周二晚统一揭晓，制造期待；不是随时刷脸。</p>
+        <p style="margin:8px 0;"><span data-i18n="rv.next">下次揭晓：</span><strong id="q-next-label">{{ quota.next_batch_label }}</strong>
+            · <span id="q-countdown" data-i18n="rv.calc">计算中…</span></p>
+        <p class="hint"><span data-i18n="rv.optin">本周预约状态：</span><strong id="q-optin">…</strong>
+            · <span data-i18n="rv.crosspref">跨校偏好：</span><strong id="q-cross">…</strong></p>
         <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">
-            <button type="button" class="btn btn-primary" id="optin-btn" onclick="toggleOptIn()">预约本周匹配</button>
-            <button type="button" class="btn btn-secondary" id="cross-btn" onclick="toggleCross()">切换跨校</button>
-            <button type="button" class="btn btn-secondary" onclick="loadHistory()">查看当前配对</button>
-            <a href="/questionnaire" class="btn btn-secondary">修改问卷</a>
+            <button type="button" class="btn btn-primary" id="optin-btn" onclick="toggleOptIn()" data-i18n="btn.optin">预约本周匹配</button>
+            <button type="button" class="btn btn-secondary" id="cross-btn" onclick="toggleCross()" data-i18n="btn.crossToggle">切换跨校</button>
+            <button type="button" class="btn btn-secondary" onclick="loadHistory()" data-i18n="btn.current">查看当前配对</button>
+            <a href="/questionnaire" class="btn btn-secondary" data-i18n="btn.editQ">修改问卷</a>
         </div>
     </div>
 
     <div id="quota-box" class="hint" style="margin-top:12px;line-height:1.7;">
-        模式：<strong id="q-mode">{{ quota.match_mode }}</strong>
-        · 本周额度：<strong id="q-remain">{{ quota.weekly_remaining }}</strong> / {{ quota.weekly_limit }}
-        · 冷却 {{ quota.cooldown_hours }} 小时
+        <span data-i18n="q.mode">模式：</span><strong id="q-mode">{{ quota.match_mode }}</strong>
+        · <span data-i18n="q.quota">本周额度：</span><strong id="q-remain">{{ quota.weekly_remaining }}</strong> / {{ quota.weekly_limit }}
+        · <span data-i18n="q.cool">冷却</span> {{ quota.cooldown_hours }} <span data-i18n="q.hours">小时</span>
     </div>
 
     <div style="margin-top:12px;" id="instant-wrap">
-        <button class="btn btn-match" id="match-btn" onclick="doMatch()" style="font-size:1.05em;padding:12px 40px;">提前揭晓（冷启动）</button>
-        <p class="hint" style="margin-top:8px;">冷启动阶段保留即时配对；正式运营可关掉，只走每周揭晓。</p>
+        <button class="btn btn-match" id="match-btn" onclick="doMatch()" style="font-size:1.05em;padding:12px 40px;" data-i18n="btn.instant">提前揭晓（冷启动）</button>
+        <p class="hint" style="margin-top:8px;" data-i18n="instant.hint">冷启动阶段保留即时配对；正式运营可关掉，只走每周揭晓。</p>
     </div>
 </div>
 
 <div class="card" style="text-align:left;">
-    <h3 style="margin-bottom:8px;">不想匹配的人</h3>
-    <p class="hint">输入对方<strong>昵称</strong>搜索后点选确认（也可输完整学校邮箱）。不要只靠裸姓名字符串，避免撞名误伤。</p>
+    <h3 style="margin-bottom:8px;" data-i18n="bl.title">不想匹配的人</h3>
+    <p class="hint" data-i18n="bl.hint">输入对方昵称搜索后点选确认（也可输完整学校邮箱），避免撞名误伤。</p>
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;">
-        <input type="text" id="block-q" placeholder="昵称或邮箱" style="flex:1;min-width:160px;" onkeydown="if(event.key==='Enter')searchBlock()">
-        <button type="button" class="btn btn-secondary" onclick="searchBlock()">搜索</button>
+        <input type="text" id="block-q" placeholder="昵称或邮箱" data-i18n-ph="bl.ph" style="flex:1;min-width:160px;" onkeydown="if(event.key==='Enter')searchBlock()">
+        <button type="button" class="btn btn-secondary" onclick="searchBlock()" data-i18n="btn.search">搜索</button>
     </div>
     <div id="block-search" style="margin-top:8px;"></div>
     <div id="block-list" style="margin-top:10px;"></div>
 </div>
 
 <details class="card" style="text-align:left;">
-    <summary style="cursor:pointer;font-weight:700;">匹配是怎么算的？</summary>
+    <summary style="cursor:pointer;font-weight:700;"><span data-i18n="ex.title">匹配是怎么算的？</span> <span class="hint" id="ex-note"></span></summary>
     <div id="explain-box" class="hint" style="margin-top:10px;line-height:1.75;">
         <p id="explain-summary">{{ quota.explain.summary }}</p>
         <ol id="explain-steps" style="padding-left:18px;margin:8px 0;">
@@ -62,6 +62,8 @@
 <div id="result" style="margin-top:12px;"></div>
 
 <script>
+var lastQuota = null;
+
 function esc(s) {
     return String(s == null ? '' : s)
         .replace(/&/g, '&amp;').replace(/</g, '&lt;')
@@ -69,25 +71,26 @@ function esc(s) {
 }
 
 function fmtCountdown(sec) {
-    if (sec <= 0) return '已到揭晓时段（或请查看当前配对）';
+    if (sec <= 0) return t('cd.over');
     var d = Math.floor(sec / 86400);
     var h = Math.floor((sec % 86400) / 3600);
     var m = Math.floor((sec % 3600) / 60);
-    if (d > 0) return '还有 ' + d + ' 天 ' + h + ' 小时';
-    return '还有 ' + h + ' 小时 ' + m + ' 分钟';
+    if (d > 0) return tf('cd.dh', { d: d, h: h });
+    return tf('cd.hm', { h: h, m: m });
 }
 
 function renderQuota(q) {
     if (!q) return;
+    lastQuota = q;
     document.getElementById('q-remain').textContent = q.weekly_remaining;
-    document.getElementById('q-next-label').textContent = q.next_batch_label + '（' + q.next_batch_at + '）';
+    document.getElementById('q-next-label').textContent = tBatch(q.next_batch_label) + '（' + q.next_batch_at + '）';
     document.getElementById('q-countdown').textContent = fmtCountdown(q.seconds_to_reveal || 0);
-    document.getElementById('q-optin').textContent = q.opted_in ? '已预约 ✓' : '未预约';
-    document.getElementById('q-cross').textContent = q.allow_cross_school ? '已开启' : '仅同校';
+    document.getElementById('q-optin').textContent = q.opted_in ? t('opt.yes') : t('opt.no');
+    document.getElementById('q-cross').textContent = q.allow_cross_school ? t('cross.on') : t('cross.off');
     if (q.match_mode) document.getElementById('q-mode').textContent = q.match_mode;
 
     var optBtn = document.getElementById('optin-btn');
-    optBtn.textContent = q.opted_in ? '取消本周预约' : '预约本周匹配';
+    optBtn.textContent = q.opted_in ? t('btn.optout') : t('btn.optin');
     optBtn.className = q.opted_in ? 'btn btn-secondary' : 'btn btn-primary';
 
     var crossBtn = document.getElementById('cross-btn');
@@ -95,7 +98,7 @@ function renderQuota(q) {
         crossBtn.style.display = 'none';
     } else {
         crossBtn.style.display = '';
-        crossBtn.textContent = q.allow_cross_school ? '关闭跨校' : '开启跨校';
+        crossBtn.textContent = q.allow_cross_school ? t('btn.crossOff') : t('btn.crossOn');
     }
 
     var wrap = document.getElementById('instant-wrap');
@@ -106,13 +109,13 @@ function renderQuota(q) {
         wrap.style.display = 'block';
         if (q.cooldown_seconds_left > 0) {
             btn.disabled = true;
-            btn.textContent = '冷却中（约 ' + Math.ceil(q.cooldown_seconds_left / 60) + ' 分钟）';
+            btn.textContent = tf('btn.cooling', { m: Math.ceil(q.cooldown_seconds_left / 60) });
         } else if (q.weekly_remaining <= 0) {
             btn.disabled = true;
-            btn.textContent = '本周额度已用完';
+            btn.textContent = t('btn.quotaOut');
         } else {
             btn.disabled = false;
-            btn.textContent = '提前揭晓（冷启动）';
+            btn.textContent = t('btn.instant');
         }
     }
 
@@ -120,23 +123,25 @@ function renderQuota(q) {
         document.getElementById('explain-summary').textContent = q.explain.summary || '';
         if (q.explain.email_note) document.getElementById('explain-email').textContent = q.explain.email_note;
     }
+    // 算法说明由后端生成，暂只有中文
+    document.getElementById('ex-note').textContent = (window.CM_LANG !== 'zh') ? t('ex.zhOnly') : '';
 }
 
 function renderMailBox(d) {
     if (!d.mail_details || !d.mail_details.length) {
         if (d.mail_fail_count) {
-            return '<div class="card box-warn"><p>邮件发送有失败（' + d.mail_fail_count + '）。演示邮箱失败正常。</p></div>';
+            return '<div class="card box-warn"><p>' + tf('mail.failN', { n: d.mail_fail_count }) + '</p></div>';
         }
         return '';
     }
-    var html = '<div class="card box-info" style="text-align:left;"><p><strong>邮件通知状态</strong></p><ul class="hint" style="padding-left:18px;">';
+    var html = '<div class="card box-info" style="text-align:left;"><p><strong>' + t('mail.title') + '</strong></p><ul class="hint" style="padding-left:18px;">';
     for (var i = 0; i < d.mail_details.length; i++) {
         var m = d.mail_details[i];
-        html += '<li>发给你（' + esc(m.to_self) + '）：'
-            + (m.self_ok ? '<span class="t-ok">成功</span>' : '<span class="t-err">失败</span> — ' + esc(m.self_info))
+        html += '<li>' + t('mail.you') + esc(m.to_self) + '）：'
+            + (m.self_ok ? '<span class="t-ok">' + t('ok') + '</span>' : '<span class="t-err">' + t('fail') + '</span> — ' + esc(m.self_info))
             + '</li>';
-        html += '<li>发给对方 ' + esc(m.partner_name) + '：'
-            + (m.partner_ok ? '<span class="t-ok">成功</span>' : '<span class="t-err">失败</span>')
+        html += '<li>' + t('mail.partner') + esc(m.partner_name) + '：'
+            + (m.partner_ok ? '<span class="t-ok">' + t('ok') + '</span>' : '<span class="t-err">' + t('fail') + '</span>')
             + '</li>';
     }
     html += '</ul></div>';
@@ -151,29 +156,29 @@ function renderMatchCards(matches, headerHtml) {
         var color = pct >= 70 ? '#059669' : pct >= 50 ? '#2563eb' : '#64748b';
         html += '<div class="card" style="margin-top:8px;text-align:left;">'
             + '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">'
-            + '<span style="font-size:1.25em;font-weight:800;color:' + color + ';">系统派单</span>'
+            + '<span style="font-size:1.25em;font-weight:800;color:' + color + ';">' + t('card.assigned') + '</span>'
             + '<span style="font-size:1.15em;font-weight:700;">' + esc(m.name) + '</span>'
-            + '<span>' + (m.gender === 'male' ? '男' : m.gender === 'female' ? '女' : '') + '</span>'
-            + (m.school ? '<span class="hint">' + esc(m.school) + '</span>' : '')
+            + '<span>' + (m.gender === 'male' ? t('g.male') : m.gender === 'female' ? t('g.female') : '') + '</span>'
+            + (m.school ? '<span class="hint">' + esc(tSchool(m.school)) + '</span>' : '')
             + '<span style="margin-left:auto;font-weight:700;font-size:1.1em;color:' + color + ';">' + pct + '%</span>'
             + '</div>'
             + '<div class="meter"><div class="meter-fill" style="width:' + pct + '%;"></div></div>';
 
         if (m.summary) {
             html += '<div class="box box-info">'
-                + '<strong style="color:#1d4ed8;">相处说明书</strong>'
+                + '<strong style="color:#1d4ed8;">' + t('card.manual') + '</strong>'
                 + '<p class="hint" style="margin:6px 0 0;">' + esc(m.summary) + '</p></div>';
         }
 
         if (m.strengths && m.strengths.length) {
-            html += '<div style="margin-top:8px;"><strong class="t-ok">共同点</strong><ul class="hint" style="padding-left:18px;margin:6px 0;">';
+            html += '<div style="margin-top:8px;"><strong class="t-ok">' + t('card.strengths') + '</strong><ul class="hint" style="padding-left:18px;margin:6px 0;">';
             for (var j = 0; j < m.strengths.length; j++) {
                 html += '<li>' + esc(m.strengths[j]) + '</li>';
             }
             html += '</ul></div>';
         }
         if (m.differences && m.differences.length) {
-            html += '<div style="margin-top:8px;"><strong style="color:#b45309;">需要包容的差异</strong><ul class="hint" style="padding-left:18px;margin:6px 0;">';
+            html += '<div style="margin-top:8px;"><strong style="color:#b45309;">' + t('card.diff') + '</strong><ul class="hint" style="padding-left:18px;margin:6px 0;">';
             for (var k = 0; k < m.differences.length; k++) {
                 html += '<li>' + esc(m.differences[k]) + '</li>';
             }
@@ -181,17 +186,17 @@ function renderMatchCards(matches, headerHtml) {
         }
         if (m.icebreakers && m.icebreakers.length) {
             html += '<div class="box box-ice">'
-                + '<strong style="color:#db2777;">破冰话题（别让聊天死掉）</strong><ol class="hint" style="padding-left:18px;margin:6px 0;">';
-            for (var t = 0; t < m.icebreakers.length; t++) {
-                html += '<li style="margin:4px 0;">' + esc(m.icebreakers[t]) + '</li>';
+                + '<strong style="color:#db2777;">' + t('card.ice') + '</strong><ol class="hint" style="padding-left:18px;margin:6px 0;">';
+            for (var ib = 0; ib < m.icebreakers.length; ib++) {
+                html += '<li style="margin:4px 0;">' + esc(m.icebreakers[ib]) + '</li>';
             }
             html += '</ol></div>';
         }
 
-        html += '<div class="wechat-line">微信: ' + esc(m.wechat_id || '未填写') + '</div>';
-        html += '<p class="hint" style="margin-top:6px;">开口可以很简单：「嗨，CampusMatch 匹配到的，看到破冰话题想先问你第一个…」</p>';
+        html += '<div class="wechat-line">' + t('card.wechat') + esc(m.wechat_id || t('card.nowechat')) + '</div>';
+        html += '<p class="hint" style="margin-top:6px;">' + t('card.opener') + '</p>';
         if (m.id) {
-            html += '<button type="button" class="btn btn-secondary" style="margin-top:8px;" onclick="blockUser(' + m.id + ', this)">不再匹配此人</button>';
+            html += '<button type="button" class="btn btn-secondary" style="margin-top:8px;" onclick="blockUser(' + m.id + ', this)">' + t('btn.noMore') + '</button>';
         }
         if (m.matched_at) {
             html += '<div class="hint" style="font-size:0.75em;margin-top:4px;">' + new Date(m.matched_at).toLocaleString() + '</div>';
@@ -207,44 +212,44 @@ async function refreshQuota() {
 }
 
 async function toggleOptIn() {
-    var opted = document.getElementById('q-optin').textContent.indexOf('已预约') >= 0;
+    var opted = !!(lastQuota && lastQuota.opted_in);
     var d = opted
         ? await api('DELETE', '/api/match/opt-in')
         : await api('POST', '/api/match/opt-in', {});
-    if (!d.ok) { alert(d.error || '操作失败'); return; }
+    if (!d.ok) { alert(d.error || t('al.fail')); return; }
     if (d.quota) renderQuota(d.quota);
     else await refreshQuota();
-    alert(opted ? '已取消本周预约' : (d.message || '已预约本周匹配'));
+    alert(opted ? t('al.optout') : (d.message || t('al.optin')));
 }
 
 async function toggleCross() {
-    var on = document.getElementById('q-cross').textContent.indexOf('已开启') >= 0;
+    var on = !!(lastQuota && lastQuota.allow_cross_school);
     var d = await api('PUT', '/api/me', { allow_cross_school: !on });
-    if (!d.ok) { alert(d.error || '失败'); return; }
+    if (!d.ok) { alert(d.error || t('al.fail')); return; }
     await refreshQuota();
-    alert(!on ? '已开启跨校（对方也要开才会配对）' : '已关闭跨校，仅同校匹配');
+    alert(!on ? t('al.crossOn') : t('al.crossOff'));
 }
 
 async function searchBlock() {
     var q = document.getElementById('block-q').value.trim();
     var box = document.getElementById('block-search');
-    if (!q) { alert('请输入昵称或邮箱'); return; }
-    box.innerHTML = '<p class="hint">搜索中…</p>';
+    if (!q) { alert(t('bl.enter')); return; }
+    box.innerHTML = '<p class="hint">' + t('bl.searching') + '</p>';
     var d = await api('GET', '/api/users/search?q=' + encodeURIComponent(q));
     if (!d.ok) { box.innerHTML = '<p class="t-err">' + esc(d.error) + '</p>'; return; }
     if (!d.results.length) {
-        box.innerHTML = '<p class="hint">没有找到。请确认对方已注册且昵称拼写正确；也可用完整邮箱。</p>';
+        box.innerHTML = '<p class="hint">' + t('bl.none') + '</p>';
         return;
     }
     var html = '<ul style="list-style:none;padding:0;margin:0;">';
     for (var i = 0; i < d.results.length; i++) {
         var u = d.results[i];
         html += '<li class="list-row">'
-            + '<span><strong>' + esc(u.name) + '</strong> · ' + esc(u.school)
-            + ' · ' + (u.gender === 'male' ? '男' : u.gender === 'female' ? '女' : '') + '</span>'
+            + '<span><strong>' + esc(u.name) + '</strong> · ' + esc(tSchool(u.school))
+            + ' · ' + (u.gender === 'male' ? t('g.male') : u.gender === 'female' ? t('g.female') : '') + '</span>'
             + (u.already_blocked
-                ? '<span class="hint" style="margin-left:auto;">已拉黑</span>'
-                : '<button type="button" class="btn btn-secondary" style="margin-left:auto;" onclick="blockUser(' + u.id + ')">拉黑</button>')
+                ? '<span class="hint" style="margin-left:auto;">' + t('bl.blocked') + '</span>'
+                : '<button type="button" class="btn btn-secondary" style="margin-left:auto;" onclick="blockUser(' + u.id + ')">' + t('btn.block') + '</button>')
             + '</li>';
     }
     html += '</ul>';
@@ -256,15 +261,15 @@ async function loadBlocklist() {
     var d = await api('GET', '/api/blocklist');
     if (!d.ok) { box.innerHTML = ''; return; }
     if (!d.blocklist.length) {
-        box.innerHTML = '<p class="hint">黑名单为空。</p>';
+        box.innerHTML = '<p class="hint">' + t('bl.empty') + '</p>';
         return;
     }
-    var html = '<p><strong>当前黑名单</strong></p><ul style="list-style:none;padding:0;">';
+    var html = '<p><strong>' + t('bl.cur') + '</strong></p><ul style="list-style:none;padding:0;">';
     for (var i = 0; i < d.blocklist.length; i++) {
         var b = d.blocklist[i];
         html += '<li class="list-row">'
-            + '<span>' + esc(b.name) + ' · ' + esc(b.school || '') + '</span>'
-            + '<button type="button" class="btn btn-secondary" style="margin-left:auto;" onclick="unblockUser(' + b.id + ')">移除</button>'
+            + '<span>' + esc(b.name) + ' · ' + esc(tSchool(b.school || '')) + '</span>'
+            + '<button type="button" class="btn btn-secondary" style="margin-left:auto;" onclick="unblockUser(' + b.id + ')">' + t('btn.remove') + '</button>'
             + '</li>';
     }
     html += '</ul>';
@@ -272,18 +277,18 @@ async function loadBlocklist() {
 }
 
 async function blockUser(id, btn) {
-    if (!confirm('确认拉黑？之后不会再匹配此人；若已有配对将失效。')) return;
+    if (!confirm(t('bl.confirm'))) return;
     var d = await api('POST', '/api/blocklist', { user_id: id });
-    if (!d.ok) { alert(d.error || '失败'); return; }
+    if (!d.ok) { alert(d.error || t('al.fail')); return; }
     if (btn) btn.disabled = true;
-    alert(d.message || '已拉黑');
+    alert(d.message || t('bl.blocked'));
     await loadBlocklist();
     await loadHistory();
 }
 
 async function unblockUser(id) {
     var d = await api('DELETE', '/api/blocklist', { user_id: id });
-    if (!d.ok) { alert(d.error || '失败'); return; }
+    if (!d.ok) { alert(d.error || t('al.fail')); return; }
     await loadBlocklist();
 }
 
@@ -291,8 +296,8 @@ async function doMatch() {
     var btn = document.getElementById('match-btn');
     var div = document.getElementById('result');
     btn.disabled = true;
-    btn.textContent = '匹配中...';
-    div.innerHTML = '<div class="card" style="text-align:center;"><p>正在一对一寻找最合拍的人...</p></div>';
+    btn.textContent = '…';
+    div.innerHTML = '<div class="card" style="text-align:center;"><p>' + t('res.matching') + '</p></div>';
 
     var d = await api('POST', '/api/match', {});
     if (d.quota) renderQuota(d.quota);
@@ -303,28 +308,28 @@ async function doMatch() {
         return;
     }
     if (!d.matches || d.matches.length === 0) {
-        div.innerHTML = '<div class="card" style="text-align:center;"><p style="font-size:1.2em;">暂无匹配</p>'
-            + '<p class="hint">' + esc(d.message || '') + ' · 候选 ' + (d.total_candidates || 0) + ' 人</p></div>';
+        div.innerHTML = '<div class="card" style="text-align:center;"><p style="font-size:1.2em;">' + t('res.none') + '</p>'
+            + '<p class="hint">' + esc(d.message || '') + ' · ' + t('res.cand') + ' ' + (d.total_candidates || 0) + ' ' + t('res.people') + '</p></div>';
         return;
     }
 
-    var header = '<div class="card box-ok"><p>配对完成（候选 '
-        + d.total_candidates + ' 人）。下面是相处说明书与破冰话题。</p></div>';
+    var header = '<div class="card box-ok"><p>' + t('res.done1') + ' '
+        + d.total_candidates + ' ' + t('res.done2') + '</p></div>';
     header += renderMailBox(d);
     div.innerHTML = renderMatchCards(d.matches, header);
 }
 
 async function loadHistory() {
     var div = document.getElementById('result');
-    div.innerHTML = '<p class="hint">加载中...</p>';
+    div.innerHTML = '<p class="hint">' + t('res.loading') + '</p>';
     var d = await api('GET', '/api/matches');
     if (d.quota) renderQuota(d.quota);
     if (!d.ok) { div.innerHTML = '<p class="t-err">' + esc(d.error) + '</p>'; return; }
     if (!d.matches.length) {
-        div.innerHTML = '<div class="card"><p class="hint">暂无有效配对。先「预约本周匹配」，或冷启动时用「提前揭晓」。</p></div>';
+        div.innerHTML = '<div class="card"><p class="hint">' + t('res.noactive') + '</p></div>';
         return;
     }
-    var header = '<div class="card"><p><strong>当前有效配对</strong></p><p class="hint">' + esc(d.note || '') + '</p></div>';
+    var header = '<div class="card"><p><strong>' + t('res.active') + '</strong></p><p class="hint">' + esc(d.note || '') + '</p></div>';
     div.innerHTML = renderMatchCards(d.matches, header);
 }
 
@@ -332,5 +337,13 @@ renderQuota({{ quota | tojson }});
 loadHistory();
 loadBlocklist();
 setInterval(refreshQuota, 60000);
+
+// 切换语言时重渲染动态区域
+window.addEventListener('cm:lang', function () {
+    if (lastQuota) renderQuota(lastQuota);
+    loadHistory();
+    loadBlocklist();
+    document.getElementById('block-search').innerHTML = '';
+});
 </script>
 {% endblock %}

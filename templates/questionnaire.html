@@ -1,59 +1,59 @@
 {% extends "base.html" %}
 {% block content %}
 
-<h2 style="text-align:center;margin-bottom:8px;">填写资料 & 问卷</h2>
-<p class="hint" style="text-align:center;margin-bottom:16px;">共 {{ questions|length }} 题 · 请点选作答；未选不算已答</p>
+<h2 style="text-align:center;margin-bottom:8px;" data-i18n="qn.title">填写资料 & 问卷</h2>
+<p class="hint" style="text-align:center;margin-bottom:16px;"><span data-i18n="qn.sub1">共</span> {{ questions|length }} <span data-i18n="qn.sub2">题 · 请点选作答；未选不算已答</span></p>
 
 <!-- 基本资料 -->
 <div class="card" id="profile-card">
-    <h3>基本信息</h3>
+    <h3 data-i18n="qn.basic">基本信息</h3>
     <div class="form-row">
         <div class="form-group" style="flex:1;">
-            <label for="name">昵称 *</label>
-            <input type="text" id="name" value="{{ user.name or '' }}" placeholder="你的名字" autocomplete="nickname">
+            <label for="name" data-i18n="qn.name">昵称 *</label>
+            <input type="text" id="name" value="{{ user.name or '' }}" placeholder="你的名字" data-i18n-ph="qn.name.ph" autocomplete="nickname">
         </div>
         <div class="form-group" style="flex:1;">
-            <label for="gender">我的性别 *</label>
+            <label for="gender" data-i18n="qn.gender">我的性别 *</label>
             <select id="gender">
-                <option value="">请选择</option>
-                <option value="male" {% if user.gender == 'male' %}selected{% endif %}>男</option>
-                <option value="female" {% if user.gender == 'female' %}selected{% endif %}>女</option>
+                <option value="" data-i18n="qn.select">请选择</option>
+                <option value="male" {% if user.gender == 'male' %}selected{% endif %} data-i18n="qn.male">男</option>
+                <option value="female" {% if user.gender == 'female' %}selected{% endif %} data-i18n="qn.female">女</option>
             </select>
         </div>
     </div>
     <div class="form-group">
-        <label for="looking_for">希望匹配的性别（择偶取向）*</label>
+        <label for="looking_for" data-i18n="qn.lf">希望匹配的性别（择偶取向）*</label>
         <select id="looking_for">
-            <option value="">请选择</option>
-            <option value="male" {% if user.looking_for == 'male' %}selected{% endif %}>男</option>
-            <option value="female" {% if user.looking_for == 'female' %}selected{% endif %}>女</option>
-            <option value="both" {% if user.looking_for == 'both' %}selected{% endif %}>男女都可以</option>
+            <option value="" data-i18n="qn.select">请选择</option>
+            <option value="male" {% if user.looking_for == 'male' %}selected{% endif %} data-i18n="qn.male">男</option>
+            <option value="female" {% if user.looking_for == 'female' %}selected{% endif %} data-i18n="qn.female">女</option>
+            <option value="both" {% if user.looking_for == 'both' %}selected{% endif %} data-i18n="qn.lf.both">男女都可以</option>
         </select>
-        <p class="hint">男生可选男或女，女生也可选男或女；匹配需双方取向互相接受。</p>
+        <p class="hint" data-i18n="qn.lf.hint">男生可选男或女，女生也可选男或女；匹配需双方取向互相接受。</p>
     </div>
     <div class="form-row">
         <div class="form-group" style="flex:1;">
-            <label for="wechat_id">微信号 *</label>
-            <input type="text" id="wechat_id" value="{{ user.wechat_id or '' }}" placeholder="匹配成功后发送给对方" autocomplete="off">
+            <label for="wechat_id" data-i18n="qn.wechat">微信号 *</label>
+            <input type="text" id="wechat_id" value="{{ user.wechat_id or '' }}" placeholder="匹配成功后发送给对方" data-i18n-ph="qn.wechat.ph" autocomplete="off">
         </div>
         <div class="form-group" style="flex:1;">
-            <label for="bio">一句话介绍</label>
-            <input type="text" id="bio" value="{{ user.bio or '' }}" maxlength="80" placeholder="例：大三心理学在读，喜欢猫咪和下雨天">
+            <label for="bio" data-i18n="qn.bio">一句话介绍</label>
+            <input type="text" id="bio" value="{{ user.bio or '' }}" maxlength="80" placeholder="例：大三心理学在读，喜欢猫咪和下雨天" data-i18n-ph="qn.bio.ph">
         </div>
     </div>
     <div class="form-group" style="margin-top:8px;">
         <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
             <input type="checkbox" id="allow_cross_school" {% if user.allow_cross_school %}checked{% endif %}>
-            允许跨校匹配（双方都开才生效）
+            <span data-i18n="qn.cross">允许跨校匹配（双方都开才生效）</span>
         </label>
-        <p class="hint">默认同校；勾选后可与其它支持学校的同学配对。</p>
+        <p class="hint" data-i18n="qn.cross.hint">默认同校；勾选后可与其它支持学校的同学配对。</p>
     </div>
 </div>
 
 <!-- 进度条 -->
 <div class="card progress-sticky" id="progress-card">
     <div style="display:flex;align-items:center;gap:10px;">
-        <span style="font-weight:700;font-size:0.9em;">问卷进度</span>
+        <span style="font-weight:700;font-size:0.9em;" data-i18n="qn.progress">问卷进度</span>
         <div class="progress-bar-container" style="flex:1;margin-bottom:0;">
             <div class="progress-bar-fill" id="progress-bar" style="width:0%"></div>
         </div>
@@ -66,7 +66,7 @@
     <div id="questions-container"><!-- JS 渲染 --></div>
 
     <div class="card" style="text-align:center;">
-        <button type="button" class="btn btn-match" id="submit-btn" onclick="submitAll()">
+        <button type="button" class="btn btn-match" id="submit-btn" onclick="submitAll()" data-i18n="qn.submit">
             提交问卷 & 开始匹配
         </button>
         <p id="save-status" style="margin-top:8px;"></p>
@@ -78,11 +78,6 @@ const QUESTIONS = {{ questions | tojson }};
 const EXISTING_ANSWERS = {{ (user.answers or {}) | tojson }};
 const EXISTING_IMPORTANT = {{ user.important_qids | list | tojson }};
 
-const dimNames = {
-    'values': '核心价值观', 'lifestyle': '生活习惯',
-    'emotional': '情感风格', 'interests': '兴趣爱好',
-    'expectations': '相处预期'
-};
 const dimColors = {
     'values': '#7c3aed', 'lifestyle': '#059669',
     'emotional': '#db2777', 'interests': '#2563eb',
@@ -130,7 +125,7 @@ function render() {
             dim = q.dimension;
             dimN++;
             html += '<div class="card dimension-card" style="border-left:4px solid ' + dimColors[dim] + ';">'
-                + '<h3 style="color:' + dimColors[dim] + ';">' + (dimNames[dim] || dim) + ' <span class="dim-count">(' + dimN + '/5)</span></h3>';
+                + '<h3 style="color:' + dimColors[dim] + ';">' + t('dim.' + dim) + ' <span class="dim-count">(' + dimN + '/5)</span></h3>';
         }
 
         var qid = String(q.id);
@@ -141,38 +136,40 @@ function render() {
 
         html += '<div class="q-item' + (db ? ' q-dealbreaker' : '') + (done ? ' q-done' : ' q-todo') + '" id="qcard_' + qid + '" data-qid="' + qid + '">'
             + '<div class="q-head"><span class="q-num">' + q.id + '</span>'
-            + '<span class="q-text">' + esc(q.text) + '</span>'
-            + (db ? '<span class="q-db">一票否决</span>' : '')
-            + '<span class="q-status" id="qs_' + qid + '">' + (done ? '已答' : '未答') + '</span></div>';
+            + '<span class="q-text">' + esc(qi(q, 'text')) + '</span>'
+            + (db ? '<span class="q-db">' + t('qn.db') + '</span>' : '')
+            + '<span class="q-status" id="qs_' + qid + '">' + (done ? t('qn.done') : t('qn.todo')) + '</span></div>';
 
         if (q.type === 'scale') {
             html += '<div class="likert-row">'
-                + '<span class="scale-l scale-l-left">' + esc(q.left) + '</span>'
-                + '<div class="likert-opts" role="radiogroup" aria-label="' + esc(q.text) + '">';
+                + '<span class="scale-l scale-l-left">' + esc(qi(q, 'left')) + '</span>'
+                + '<div class="likert-opts" role="radiogroup" aria-label="' + esc(qi(q, 'text')) + '">';
             for (var s = 1; s <= 5; s++) {
                 var on = (val !== undefined && Number(val) === s);
                 html += '<button type="button" class="likert-btn' + (on ? ' on' : '') + '" id="lb_' + qid + '_' + s + '"'
                     + ' onclick="setScale(' + q.id + ',' + s + ')" aria-pressed="' + (on ? 'true' : 'false') + '">' + s + '</button>';
             }
             html += '</div>'
-                + '<span class="scale-l scale-l-right">' + esc(q.right) + '</span>'
+                + '<span class="scale-l scale-l-right">' + esc(qi(q, 'right')) + '</span>'
                 + '</div>';
         } else if (q.type === 'multi') {
             var sel = Array.isArray(val) ? val : [];
+            var labels = qOptLabels(q);
             html += '<div class="multi-row">';
             for (var j = 0; j < q.options.length; j++) {
+                // 展示当前语言标签，提交仍存简体原值（q.options[j]）
                 var opt = q.options[j];
                 var selected = sel.indexOf(opt) >= 0;
                 html += '<label class="multi-tag' + (selected ? ' on' : '') + '" id="mt_' + qid + '_' + j + '">'
                     + '<input type="checkbox" value="' + esc(opt) + '"' + (selected ? ' checked' : '')
                     + ' onchange="toggleMulti(' + q.id + ',' + j + ',this)" style="display:none;">'
-                    + esc(opt) + '</label>';
+                    + esc(labels[j]) + '</label>';
             }
             html += '</div>';
         }
 
         html += '<button type="button" class="imp-btn' + (imp ? ' on' : '') + '" id="ib_' + qid
-            + '" onclick="toggleImp(' + q.id + ',this)">' + (imp ? '★ 很重要' : '☆ 标记为重要') + '</button>';
+            + '" onclick="toggleImp(' + q.id + ',this)">' + (imp ? t('qn.imp.on') : t('qn.imp.off')) + '</button>';
         html += '</div>';
     }
     if (dim) html += '</div>';
@@ -198,7 +195,7 @@ function markCard(qid) {
         card.classList.toggle('q-todo', !done);
         card.classList.remove('q-error');
     }
-    if (status) status.textContent = done ? '已答' : '未答';
+    if (status) status.textContent = done ? t('qn.done') : t('qn.todo');
 }
 
 function setScale(qid, value) {
@@ -236,11 +233,11 @@ function toggleImp(qid, btn) {
     if (important.has(qs)) {
         important.delete(qs);
         btn.classList.remove('on');
-        btn.textContent = '☆ 标记为重要';
+        btn.textContent = t('qn.imp.off');
     } else {
         important.add(qs);
         btn.classList.add('on');
-        btn.textContent = '★ 很重要';
+        btn.textContent = t('qn.imp.on');
     }
 }
 
@@ -254,9 +251,9 @@ function updateProgress() {
     document.getElementById('progress-text').textContent = done + '/' + QUESTIONS.length + ' (' + pct + '%)';
     var hint = document.getElementById('progress-hint');
     if (done < QUESTIONS.length) {
-        hint.textContent = '还需完成 ' + (QUESTIONS.length - done) + ' 题（量表点选数字，兴趣至少选 1 项）';
+        hint.textContent = t('qn.left') + ' ' + (QUESTIONS.length - done) + ' ' + t('qn.left2');
     } else {
-        hint.textContent = '全部完成，可以提交啦';
+        hint.textContent = t('qn.alldone');
     }
 }
 
@@ -287,23 +284,23 @@ async function submitAll() {
     var btn = document.getElementById('submit-btn');
 
     if (!name) {
-        alert('请填写昵称');
+        alert(t('qn.needName'));
         document.getElementById('name').focus();
         document.getElementById('profile-card').scrollIntoView({ behavior: 'smooth', block: 'center' });
         return;
     }
     if (!gender) {
-        alert('请选择你的性别');
+        alert(t('qn.needGender'));
         document.getElementById('gender').focus();
         return;
     }
     if (!lookingFor) {
-        alert('请选择希望匹配的性别（择偶取向）');
+        alert(t('qn.needLf'));
         document.getElementById('looking_for').focus();
         return;
     }
     if (!wechat) {
-        alert('请填写微信号（匹配成功后会发给对方）');
+        alert(t('qn.needWechat'));
         document.getElementById('wechat_id').focus();
         return;
     }
@@ -311,24 +308,24 @@ async function submitAll() {
     var missing = firstUnanswered();
     if (missing) {
         highlightMissing();
-        status.innerHTML = '<span class="error">还有未完成的题目，请先答完再提交</span>';
+        status.innerHTML = '<span class="error">' + t('qn.missing') + '</span>';
         var el = document.getElementById('qcard_' + missing.id);
         if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
         return;
     }
 
     btn.disabled = true;
-    btn.textContent = '保存中...';
-    status.innerHTML = '<span class="t-dim">保存中...</span>';
+    btn.textContent = t('qn.saving');
+    status.innerHTML = '<span class="t-dim">' + t('qn.saving') + '</span>';
 
     var r1 = await api('PUT', '/api/me', {
         name: name, gender: gender, looking_for: lookingFor, wechat_id: wechat, bio: bio,
         allow_cross_school: document.getElementById('allow_cross_school').checked
     });
     if (!r1.ok) {
-        status.innerHTML = '<span class="error">基本资料保存失败: ' + esc(r1.error || '') + '</span>';
+        status.innerHTML = '<span class="error">' + t('qn.profileFail') + esc(r1.error || '') + '</span>';
         btn.disabled = false;
-        btn.textContent = '提交问卷 & 开始匹配';
+        btn.textContent = t('qn.submit');
         return;
     }
 
@@ -338,16 +335,19 @@ async function submitAll() {
     });
 
     btn.disabled = false;
-    btn.textContent = '提交问卷 & 开始匹配';
+    btn.textContent = t('qn.submit');
 
     if (r2.ok) {
-        status.innerHTML = '<span class="t-ok">问卷已保存！正在跳转匹配页...</span>';
+        status.innerHTML = '<span class="t-ok">' + t('qn.saved') + '</span>';
         setTimeout(function () { location.href = '/matches'; }, 600);
     } else {
-        status.innerHTML = '<span class="error">问卷保存失败: ' + esc(r2.error || '未知错误') + '</span>';
+        status.innerHTML = '<span class="error">' + t('qn.saveFail') + esc(r2.error || '') + '</span>';
     }
 }
 
 render();
+
+// 切换语言时就地重渲染题目（答案保存在内存，不丢失）
+window.addEventListener('cm:lang', function () { render(); });
 </script>
 {% endblock %}

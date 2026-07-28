@@ -75,12 +75,51 @@ body {
     mask-image: radial-gradient(ellipse 90% 55% at 50% 0%, #000 30%, transparent 75%);
 }
 
-/* ── 大湾区天际线（澳门塔/大三巴/新葡京/港珠澳大桥/广州塔/香港楼群）── */
-.skyline {
-    position: fixed; left: 0; right: 0; bottom: 0; z-index: -1;
-    pointer-events: none; color: #6d74e8; opacity: 0.13;
+/* ── 大湾区地标（上半屏主视觉）：澳门塔 / 新葡京 / 大三巴 / 科学馆 + 香港楼群 ── */
+.gba-hero {
+    position: fixed; left: 0; right: 0; top: 0; z-index: -1;
+    pointer-events: none; opacity: 0.22;
+    -webkit-mask-image: linear-gradient(to bottom, #000 72%, transparent 98%);
+    mask-image: linear-gradient(to bottom, #000 72%, transparent 98%);
 }
-.skyline svg { width: 100%; height: clamp(110px, 17vw, 210px); display: block; }
+.gba-hero svg { width: 100%; height: auto; max-height: 76vh; display: block; }
+
+/* ── 下侧：海面波浪 + 港珠澳大桥 ── */
+.sea {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: -1;
+    pointer-events: none; overflow: hidden; height: 150px;
+}
+.sea .bridge {
+    position: absolute; left: 0; right: 0; bottom: 52px;
+    color: #6d74e8; opacity: 0.20;
+}
+.sea .bridge svg { width: 100%; height: 80px; display: block; }
+.sea .wave {
+    position: absolute; bottom: 0; left: 0; width: 200%; height: 78px;
+}
+.sea .wave svg { width: 100%; height: 100%; display: block; }
+.sea .w1 { color: #8fd8ee; opacity: 0.35; animation: seaDrift 22s linear infinite; }
+.sea .w2 { color: #a5b4fc; opacity: 0.28; animation: seaDrift 14s linear infinite reverse; bottom: -14px; }
+@keyframes seaDrift {
+    from { transform: translateX(0); }
+    to   { transform: translateX(-50%); }
+}
+
+/* ── 右上角语言切换 ── */
+.lang-select {
+    appearance: none; -webkit-appearance: none;
+    background: rgba(255, 255, 255, 0.7);
+    border: 1px solid rgba(109, 116, 232, 0.35);
+    color: #37415c; font-size: 13px; font-weight: 600;
+    border-radius: 999px; padding: 5px 26px 5px 12px; cursor: pointer;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%236d74e8' stroke-width='1.6' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 10px center;
+    transition: border-color .2s, box-shadow .2s;
+}
+.lang-select:hover, .lang-select:focus {
+    border-color: #6d74e8; outline: none;
+    box-shadow: 0 0 0 3px rgba(109, 116, 232, 0.14);
+}
 
 @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { animation: none !important; transition: none !important; }
