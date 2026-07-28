@@ -2,8 +2,8 @@
 {% block content %}
 <div class="hero">
     <span class="kicker">Campus Match · 澳门 & 大湾区</span>
-    <h1>不用刷脸不用滑，<br><span class="grad-text">让算法把对的人送到你面前</span></h1>
-    <p class="hero-sub">学校邮箱验证在校身份 → 40 题深度问卷 → 每周一对一揭晓，附相处说明书与破冰话题。</p>
+    <h1>在你的校园里，<br><span class="grad-text">遇见那个刚好合拍的人</span></h1>
+    <p class="hero-sub">学校邮箱验证在校身份 → 40 题走心问卷 → 每周一对一揭晓，附相处说明书与破冰话题。慢一点，但更认真。</p>
     <div class="stat-chip">
         <span class="dot"></span>
         已有 <strong>&nbsp;{{ total_users }}&nbsp;</strong> 位同学验证加入 · 批量揭晓 {{ batch_label }}
@@ -19,18 +19,20 @@
                onkeydown="if(event.key==='Enter')register()">
     </div>
     <button class="btn btn-primary" id="register-btn" onclick="register()">发送验证码</button>
-    <p class="hint" style="margin-top:10px;">
-        支持学校（已验证人数）：
-        {% for name in schools %}
-        <span class="tag-badge">{{ name }} · {{ school_stats.get(name, 0) }}</span>
+    <p class="hint" style="margin-top:12px;margin-bottom:0;">支持学校（已验证人数）：</p>
+    {% set rows = [] %}
+    {% for name in schools %}{% set _ = rows.append((school_stats.get(name, 0), name)) %}{% endfor %}
+    <div class="school-list">
+        {% for cnt, name in rows|sort(reverse=True) %}
+        <span class="school-pill"><span class="live-dot"></span>{{ name }} <span class="cnt">{{ cnt }}</span></span>
         {% endfor %}
-    </p>
+    </div>
 </div>
 
 <!-- Step 2: 验证码（注册后显示） -->
 <div class="card" id="step2-card" style="display:none;">
     <h2>② 输入验证码</h2>
-    <p id="step2-email" style="color:#a5b4fc;font-weight:600;"></p>
+    <p id="step2-email" style="color:#4f46e5;font-weight:600;"></p>
     <p class="hint" style="margin-bottom:12px;">验证码已发送到你的学校邮箱，请检查收件箱（和垃圾邮件）</p>
     <div class="form-group">
         <label for="token">6 位验证码</label>

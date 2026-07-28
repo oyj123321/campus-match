@@ -7,13 +7,65 @@
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-    <!-- 动态背景：光晕 + 网格 -->
+    <!-- 动态背景：柔光晕 + 网格 -->
     <div class="bg-decor" aria-hidden="true">
         <div class="orb orb-a"></div>
         <div class="orb orb-b"></div>
         <div class="orb orb-c"></div>
     </div>
     <div class="grid-overlay" aria-hidden="true"></div>
+
+    <!-- 大湾区天际线剪影：澳门塔 / 新葡京 / 大三巴 / 港珠澳大桥 / 广州塔 / 香港楼群 -->
+    <div class="skyline" aria-hidden="true">
+        <svg viewBox="0 0 1440 220" preserveAspectRatio="xMidYMax slice" xmlns="http://www.w3.org/2000/svg">
+            <!-- 远景楼群（更淡） -->
+            <g fill="currentColor" opacity="0.45">
+                <rect x="0" y="158" width="52" height="62"/>
+                <rect x="60" y="142" width="34" height="78"/>
+                <rect x="200" y="150" width="30" height="70"/>
+                <rect x="330" y="146" width="36" height="74"/>
+                <rect x="480" y="156" width="30" height="64"/>
+                <rect x="840" y="150" width="30" height="70"/>
+                <rect x="960" y="140" width="28" height="80"/>
+                <rect x="1240" y="150" width="34" height="70"/>
+                <rect x="1290" y="132" width="26" height="88"/>
+                <rect x="1330" y="156" width="46" height="64"/>
+                <rect x="1390" y="140" width="36" height="80"/>
+            </g>
+            <!-- 近景地标 -->
+            <g fill="currentColor">
+                <!-- 澳门旅游塔 -->
+                <rect x="137" y="26" width="6" height="194"/>
+                <rect x="139" y="8" width="2" height="20"/>
+                <ellipse cx="140" cy="76" rx="20" ry="13"/>
+                <rect x="120" y="86" width="40" height="6" rx="3"/>
+                <!-- 新葡京（莲花轮廓） -->
+                <path d="M244 220 L264 96 Q280 42 296 96 L316 220 Z"/>
+                <!-- 大三巴牌坊 -->
+                <rect x="388" y="168" width="88" height="52"/>
+                <rect x="400" y="140" width="64" height="28"/>
+                <rect x="412" y="116" width="40" height="24"/>
+                <path d="M408 116 L432 92 L456 116 Z"/>
+                <rect x="430" y="78" width="4" height="14"/>
+                <rect x="425" y="82" width="14" height="4"/>
+                <!-- 港珠澳大桥 -->
+                <rect x="520" y="184" width="320" height="6" rx="3"/>
+                <rect x="607" y="128" width="6" height="60"/>
+                <path d="M534 184 L610 130 L686 184 Z" opacity="0.32"/>
+                <rect x="747" y="128" width="6" height="60"/>
+                <path d="M674 184 L750 130 L826 184 Z" opacity="0.32"/>
+                <!-- 广州塔（小蛮腰） -->
+                <path d="M886 220 L895 128 L890 70 L900 24 L910 70 L905 128 L914 220 Z"/>
+                <rect x="899" y="8" width="2" height="16"/>
+                <!-- 香港：IFC / 中银 / ICC -->
+                <path d="M1002 220 L1002 96 L1010 82 L1032 82 L1040 96 L1040 220 Z"/>
+                <path d="M1090 220 L1090 122 L1122 76 L1122 220 Z"/>
+                <path d="M1122 76 L1132 94 L1132 220 L1122 220 Z" opacity="0.7"/>
+                <rect x="1168" y="98" width="42" height="122"/>
+                <path d="M1168 98 L1189 84 L1210 98 Z"/>
+            </g>
+        </svg>
+    </div>
 
     <nav class="nav">
         <div class="nav-inner">

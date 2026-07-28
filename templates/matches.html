@@ -148,7 +148,7 @@ function renderMatchCards(matches, headerHtml) {
     for (var i = 0; i < matches.length; i++) {
         var m = matches[i];
         var pct = Math.round(m.score * 100);
-        var color = pct >= 70 ? '#34d399' : pct >= 50 ? '#60a5fa' : '#94a3b8';
+        var color = pct >= 70 ? '#059669' : pct >= 50 ? '#2563eb' : '#64748b';
         html += '<div class="card" style="margin-top:8px;text-align:left;">'
             + '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">'
             + '<span style="font-size:1.25em;font-weight:800;color:' + color + ';">系统派单</span>'
@@ -161,7 +161,7 @@ function renderMatchCards(matches, headerHtml) {
 
         if (m.summary) {
             html += '<div class="box box-info">'
-                + '<strong style="color:#93c5fd;">相处说明书</strong>'
+                + '<strong style="color:#1d4ed8;">相处说明书</strong>'
                 + '<p class="hint" style="margin:6px 0 0;">' + esc(m.summary) + '</p></div>';
         }
 
@@ -173,7 +173,7 @@ function renderMatchCards(matches, headerHtml) {
             html += '</ul></div>';
         }
         if (m.differences && m.differences.length) {
-            html += '<div style="margin-top:8px;"><strong style="color:#fbbf24;">需要包容的差异</strong><ul class="hint" style="padding-left:18px;margin:6px 0;">';
+            html += '<div style="margin-top:8px;"><strong style="color:#b45309;">需要包容的差异</strong><ul class="hint" style="padding-left:18px;margin:6px 0;">';
             for (var k = 0; k < m.differences.length; k++) {
                 html += '<li>' + esc(m.differences[k]) + '</li>';
             }
@@ -181,7 +181,7 @@ function renderMatchCards(matches, headerHtml) {
         }
         if (m.icebreakers && m.icebreakers.length) {
             html += '<div class="box box-ice">'
-                + '<strong style="color:#f9a8d4;">破冰话题（别让聊天死掉）</strong><ol class="hint" style="padding-left:18px;margin:6px 0;">';
+                + '<strong style="color:#db2777;">破冰话题（别让聊天死掉）</strong><ol class="hint" style="padding-left:18px;margin:6px 0;">';
             for (var t = 0; t < m.icebreakers.length; t++) {
                 html += '<li style="margin:4px 0;">' + esc(m.icebreakers[t]) + '</li>';
             }

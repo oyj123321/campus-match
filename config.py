@@ -55,12 +55,6 @@ SCHOOL_DOMAINS = {
     # "香港理工大学":   ["polyu.edu.hk", "connect.polyu.hk"],
     # "香港城市大学":   ["cityu.edu.hk"],
     # "香港浸会大学":   ["hkbu.edu.hk"],
-
-    # ---- 上海（参考案例，已验证可行）----
-    "上海交通大学":   ["sjtu.edu.cn"],
-    "复旦大学":       ["fudan.edu.cn"],
-    "同济大学":       ["tongji.edu.cn"],
-    "华东师范大学":   ["ecnu.edu.cn"],
 }
 
 # 匹配配置
