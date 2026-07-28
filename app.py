@@ -111,6 +111,7 @@ def match_quota_status(user):
         if elapsed < need:
             cooldown_left = int(need - elapsed)
     nxt = next_batch_datetime()
+    mode = MATCH_MODE if MATCH_MODE != "realtime" else "one_to_one"
     return {
         "weekly_limit": MATCH_WEEKLY_NEW_LIMIT,
         "weekly_used": used,
@@ -120,7 +121,31 @@ def match_quota_status(user):
         "can_match_now": remaining > 0 and cooldown_left <= 0,
         "next_batch_at": nxt.isoformat(timespec="minutes"),
         "next_batch_label": f"每{WEEKDAY_LABELS[BATCH_MATCH_DAY]} {BATCH_MATCH_HOUR}:00",
-        "match_mode": MATCH_MODE,
+        "match_mode": mode,
+        "explain": _match_explain_text(mode),
+    }
+
+
+def _match_explain_text(mode):
+    """给开发者/用户看的通俗说明（不讲公式也能懂）。"""
+    return {
+        "mode": mode,
+        "summary": (
+            "一对一：在同校、取向互相接受的人里，算问卷相似度，只给你得分最高的 1 人。"
+            if mode in ("one_to_one", "realtime") else
+            "Top-N：按相似度返回多人（调试用）。"
+            if mode == "top_n" else
+            "批量匈牙利：全校一起算，尽量让每人最多配到 1 人，且总体更优（像排课/分配名额）。"
+        ),
+        "steps": [
+            "1. 问卷答案变成一串数字（特征向量），「对我很重要」的题权重更大。",
+            "2. 余弦相似度：两串数字方向越接近，匹配分越高（可理解为口味有多像）。",
+            "3. 一票否决：婚姻/孩子/出轨/抽烟等题差太大直接跳过。",
+            "4. 择偶取向：双方都愿意匹配对方的性别才进入候选。",
+            "5. 点按钮默认只配对 1 人；每周二批量模式才用匈牙利做全校一对一分配。",
+        ],
+        "why_not_many": "以前默认 Top-5 会一次出很多人，现已改为默认一对一。",
+        "email_note": "匹配成功会尝试给你和对方发邮件；对方若是演示账号（假学校邮箱）常会失败，你的真实学校邮箱应能收到。",
     }
 
 
@@ -413,6 +438,10 @@ def api_match():
         body = request.get_json(silent=True) or {}
         mode = body.get("mode", MATCH_MODE)
 
+    # 兼容旧配置名 realtime → one_to_one
+    if mode == "realtime":
+        mode = "one_to_one"
+
     pool = User.query.filter(
         User.school == user.school,
         User.id != user.id,
@@ -430,6 +459,7 @@ def api_match():
             "total_candidates": 0,
             "pool_size": len(pool),
             "quota": match_quota_status(user),
+            "explain": _match_explain_text(mode),
             "note": "结果以本页为准；邮件仅作通知，发送失败不影响查看。",
         })
 
@@ -442,8 +472,10 @@ def api_match():
             if a.id == user.id or b.id == user.id
         ]
     else:
+        # one_to_one：只取 1 人；top_n：可多人（调试）
+        top_n = 1 if mode != "top_n" else max(1, MATCH_TOP_N)
         my_matches = real_time_match(
-            user, candidates, top_n=MATCH_TOP_N, min_score=MATCH_MIN_SCORE
+            user, candidates, top_n=top_n, min_score=MATCH_MIN_SCORE
         )
 
     summary = persist_user_matches(
@@ -474,8 +506,10 @@ def api_match():
         "quota_skipped": summary["quota_skipped"],
         "mail_ok_count": summary["mail_ok_count"],
         "mail_fail_count": summary["mail_fail_count"],
+        "mail_details": summary.get("mail_details", []),
         "quota": match_quota_status(user),
-        "note": "结果以本页为准；邮件仅作通知，发送失败不影响查看。",
+        "explain": _match_explain_text(mode),
+        "note": "结果以本页为准；邮件仅作通知。种子/无效邮箱常会发送失败，你的真实学校邮箱应能收到。",
     })
 
 
@@ -652,7 +686,7 @@ def os_environ_is_reloader_main():
 if __name__ == "__main__":
     init_db()
     print("  CampusMatch v2 启动!")
-    print(f"  模式: {'批量匹配' if MATCH_MODE == 'batch' else '实时匹配'} · {WEEKDAY_LABELS[BATCH_MATCH_DAY]} {BATCH_MATCH_HOUR}:00 批量")
+    print(f"  模式: {MATCH_MODE} · {WEEKDAY_LABELS[BATCH_MATCH_DAY]} {BATCH_MATCH_HOUR}:00 批量")
     print(f"  额度: 每周新建 ≤{MATCH_WEEKLY_NEW_LIMIT} · 冷却 {MATCH_COOLDOWN_HOURS}h")
     print(f"  Debug: {FLASK_DEBUG}")
     print(f"  支持学校: {', '.join(SCHOOL_DOMAINS.keys())}")

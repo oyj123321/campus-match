@@ -113,7 +113,9 @@ def persist_user_matches(user, scored_pairs, mode, mail_cfg, weekly_new_limit=No
             existing.mode = mode
             existing.insight_json = json.dumps(insight, ensure_ascii=False)
             updated_existing += 1
-            saved.append((other, score, insight))
+            saved.append((other, score, insight, existing))
+            # 用户主动点「开始匹配」时再次尝试发信（冷却限制频率）
+            to_notify.append((other, score, insight, existing))
             continue
 
         if weekly_new_limit is not None and new_this_week >= weekly_new_limit:
@@ -124,10 +126,11 @@ def persist_user_matches(user, scored_pairs, mode, mail_cfg, weekly_new_limit=No
             user1_id=user.id, user2_id=other.id,
             score=score, mode=mode,
             insight_json=json.dumps(insight, ensure_ascii=False),
+            notified=False,
         )
         db.session.add(m)
-        saved.append((other, score, insight))
-        to_notify.append((other, score, insight))
+        saved.append((other, score, insight, m))
+        to_notify.append((other, score, insight, m))
         new_this_week += 1
 
     if saved:
@@ -136,33 +139,41 @@ def persist_user_matches(user, scored_pairs, mode, mail_cfg, weekly_new_limit=No
 
     mail_ok_count = 0
     mail_fail_count = 0
-    for other, score, insight in to_notify:
-        ok1, _ = send_match_result_email(user.email, [(other, score)], mail_cfg, insight)
-        ok2, _ = send_match_result_email(other.email, [(user, score)], mail_cfg, insight)
+    mail_details = []
+    for other, score, insight, mrec in to_notify:
+        ok1, info1 = send_match_result_email(user.email, [(other, score)], mail_cfg, insight)
+        ok2, info2 = send_match_result_email(other.email, [(user, score)], mail_cfg, insight)
+        mail_details.append({
+            "to_self": user.email,
+            "self_ok": bool(ok1),
+            "self_info": str(info1)[:120],
+            "to_partner": other.email,
+            "partner_ok": bool(ok2),
+            "partner_info": str(info2)[:120],
+            "partner_name": other.name,
+        })
         if ok1:
             mail_ok_count += 1
+            # 只有「你自己」的邮箱发送成功，才算通知成功（对方种子邮箱常会 550）
+            mrec.notified = True
         else:
             mail_fail_count += 1
+            mrec.notified = False
         if not ok2:
             mail_fail_count += 1
-        mrec = Match.query.filter(
-            ((Match.user1_id == user.id) & (Match.user2_id == other.id)) |
-            ((Match.user1_id == other.id) & (Match.user2_id == user.id))
-        ).first()
-        if mrec:
-            # 邮件失败也不影响页面结果；仅标记是否尝试通知过
-            mrec.notified = True
+
     if to_notify:
         db.session.commit()
 
     return {
-        "saved": saved,
+        "saved": [(o, s, insight) for o, s, insight, _ in saved],
         "updated_existing": updated_existing,
-        "newly_notified": len(to_notify),
+        "newly_notified": sum(1 for d in mail_details if d["self_ok"]),
         "dealbreaker_skipped": skipped_dealbreaker,
         "quota_skipped": skipped_quota,
         "mail_ok_count": mail_ok_count,
         "mail_fail_count": mail_fail_count,
+        "mail_details": mail_details,
     }
 
 
@@ -211,10 +222,12 @@ def run_batch_school(school, mail_cfg):
         b.last_matched_at = datetime.utcnow()
 
         if is_new or not m.notified:
-            send_match_result_email(a.email, [(b, score)], mail_cfg, insight)
-            send_match_result_email(b.email, [(a, score)], mail_cfg, insight)
-            m.notified = True
-            notified += 1
+            ok_a, _ = send_match_result_email(a.email, [(b, score)], mail_cfg, insight)
+            ok_b, _ = send_match_result_email(b.email, [(a, score)], mail_cfg, insight)
+            # 任一方发送成功都先记上，避免「失败却标已通知」后永远不重试
+            m.notified = bool(ok_a and ok_b)
+            if ok_a or ok_b:
+                notified += 1
 
     db.session.commit()
     return {
