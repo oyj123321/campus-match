@@ -7,7 +7,7 @@ CampusMatch v2 — 校园恋爱匹配系统
 
 import time, json, threading
 from collections import defaultdict, deque
-from datetime import datetime, timedelta
+from datetime import datetime
 from functools import wraps
 
 from flask import Flask, request, session, jsonify, render_template, redirect, url_for
@@ -24,10 +24,7 @@ from config import (
     MAIL_ENABLED, MAIL_SERVER, MAIL_PORT, MAIL_USERNAME, MAIL_PASSWORD, MAIL_FROM,
 )
 from models import db, User, UserTag, Match
-from questionnaire import (
-    QUESTIONS, build_feature_vector, check_dealbreakers,
-    get_compatibility_insight,
-)
+from questionnaire import QUESTIONS, build_feature_vector
 from matcher import real_time_match, batch_match_school, orientation_compatible
 from email_service import send_verification_email, send_match_result_email
 from batch_job import (

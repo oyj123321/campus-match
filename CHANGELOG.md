@@ -17,6 +17,7 @@ All notable changes to CampusMatch.
 - **Improved / 匹配页**：额度与下次批量时间、共同点+差异、邮件失败仍展示结果提示
 - **Improved / 首页**：各校已验证人数 + 总人数 + 批量匹配时间说明
 - **Docs**：更新 `docs/mvp-roadmap.md`、`.env.example`
+- **Chore**：清理 `app.py` 未使用导入
 
 ---
 
