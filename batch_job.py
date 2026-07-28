@@ -18,11 +18,13 @@ from datetime import datetime, timedelta
 
 from config import (
     BATCH_MATCH_DAY, BATCH_MATCH_HOUR, MATCH_MIN_SCORE, SCHOOL_DOMAINS,
+    CROSS_SCHOOL_MATCHING_ENABLED,
 )
 from models import db, User, Match
 from matcher import batch_match_school, orientation_compatible
 from questionnaire import check_dealbreakers, get_compatibility_insight
 from email_service import send_match_result_email
+from match_pool import is_blocked_pair, school_compatible, vectors_aligned
 
 
 WEEKDAY_NAMES = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"]
@@ -118,6 +120,8 @@ def persist_user_matches(user, scored_pairs, mode, mail_cfg, weekly_new_limit=No
     new_this_week = count_new_matches_this_week(user.id) if weekly_new_limit is not None else 0
 
     for other, score in scored_pairs:
+        if is_blocked_pair(user.id, other.id):
+            continue
         if check_dealbreakers(user.answers, other.answers):
             skipped_dealbreaker += 1
             continue
@@ -230,21 +234,31 @@ def ready_users(school=None, require_opt_in=False):
     return users
 
 
-def run_batch_school(school, mail_cfg, require_opt_in=False):
-    """对单校执行一对一批量匹配。返回摘要。"""
-    users = ready_users(school, require_opt_in=require_opt_in)
+def run_batch_school(school, mail_cfg, require_opt_in=False, exclude_ids=None):
+    """对单校执行一对一批量匹配。返回摘要（含 matched_ids）。"""
+    exclude_ids = set(exclude_ids or ())
+    users = [u for u in ready_users(school, require_opt_in=require_opt_in) if u.id not in exclude_ids]
     if len(users) < 2:
-        return {"school": school, "users": len(users), "pairs": 0, "created": 0, "updated": 0}
+        return {"school": school, "users": len(users), "pairs": 0, "created": 0, "updated": 0, "matched_ids": set()}
 
     pairs = batch_match_school(users, filter_same_gender=True)
     created = 0
     updated = 0
     notified = 0
+    matched_ids = set()
 
     for a, b, score in pairs:
         if score < MATCH_MIN_SCORE:
             continue
+        if a.id in exclude_ids or b.id in exclude_ids:
+            continue
         if not orientation_compatible(a, b):
+            continue
+        if not school_compatible(a, b):
+            continue
+        if is_blocked_pair(a.id, b.id):
+            continue
+        if not vectors_aligned(a, b):
             continue
         if check_dealbreakers(a.answers, b.answers):
             continue
@@ -255,6 +269,8 @@ def run_batch_school(school, mail_cfg, require_opt_in=False):
         )
         m, is_new = _get_or_create_pair(a, b, score, insight, mode="batch")
         enforce_one_to_one_active(a, b, m)
+        matched_ids.add(a.id)
+        matched_ids.add(b.id)
         if is_new:
             created += 1
         else:
@@ -266,7 +282,6 @@ def run_batch_school(school, mail_cfg, require_opt_in=False):
         if is_new or not m.notified:
             ok_a, _ = send_match_result_email(a.email, [(b, score)], mail_cfg, insight)
             ok_b, _ = send_match_result_email(b.email, [(a, score)], mail_cfg, insight)
-            # 任一方发送成功都先记上，避免「失败却标已通知」后永远不重试
             m.notified = bool(ok_a and ok_b)
             if ok_a or ok_b:
                 notified += 1
@@ -279,6 +294,87 @@ def run_batch_school(school, mail_cfg, require_opt_in=False):
         "created": created,
         "updated": updated,
         "notified": notified,
+        "matched_ids": matched_ids,
+    }
+
+
+def run_batch_cross(mail_cfg, require_opt_in=False, exclude_ids=None):
+    """跨校池：仅双方都开 allow_cross_school 的用户。"""
+    if not CROSS_SCHOOL_MATCHING_ENABLED:
+        return {"school": "跨校", "users": 0, "pairs": 0, "created": 0, "updated": 0, "matched_ids": set()}
+
+    exclude_ids = set(exclude_ids or ())
+    users = [
+        u for u in ready_users(None, require_opt_in=require_opt_in)
+        if u.id not in exclude_ids and getattr(u, "allow_cross_school", False)
+    ]
+    # 至少要有 2 所学校才有意义
+    schools = {u.school for u in users}
+    if len(users) < 2 or len(schools) < 2:
+        return {
+            "school": "跨校",
+            "users": len(users),
+            "pairs": 0,
+            "created": 0,
+            "updated": 0,
+            "matched_ids": set(),
+            "note": "跨校池人数不足或同校",
+        }
+
+    # 复用 school 批量逻辑：临时把 school 标签忽略，靠 school_compatible 过滤
+    # 直接跑匈牙利，再过滤非跨校对
+    pairs = batch_match_school(users, filter_same_gender=True)
+    created = updated = notified = 0
+    matched_ids = set()
+    kept = 0
+
+    for a, b, score in pairs:
+        if score < MATCH_MIN_SCORE:
+            continue
+        if a.school == b.school:
+            continue  # 同校留给校内轮
+        if not school_compatible(a, b):
+            continue
+        if is_blocked_pair(a.id, b.id):
+            continue
+        if not orientation_compatible(a, b):
+            continue
+        if not vectors_aligned(a, b):
+            continue
+        if check_dealbreakers(a.answers, b.answers):
+            continue
+
+        insight = get_compatibility_insight(
+            a.feature_vector, b.feature_vector, a.answers, b.answers,
+            score=score,
+        )
+        m, is_new = _get_or_create_pair(a, b, score, insight, mode="batch")
+        enforce_one_to_one_active(a, b, m)
+        matched_ids.add(a.id)
+        matched_ids.add(b.id)
+        kept += 1
+        if is_new:
+            created += 1
+        else:
+            updated += 1
+        a.last_matched_at = datetime.utcnow()
+        b.last_matched_at = datetime.utcnow()
+        if is_new or not m.notified:
+            ok_a, _ = send_match_result_email(a.email, [(b, score)], mail_cfg, insight)
+            ok_b, _ = send_match_result_email(b.email, [(a, score)], mail_cfg, insight)
+            m.notified = bool(ok_a and ok_b)
+            if ok_a or ok_b:
+                notified += 1
+
+    db.session.commit()
+    return {
+        "school": "跨校",
+        "users": len(users),
+        "pairs": kept,
+        "created": created,
+        "updated": updated,
+        "notified": notified,
+        "matched_ids": matched_ids,
     }
 
 
@@ -288,13 +384,21 @@ def run_batch_all(mail_cfg, require_opt_in=None):
         require_opt_in = REVEAL_REQUIRE_OPT_IN
     schools = list(SCHOOL_DOMAINS.keys())
     results = []
+    already = set()
     for school in schools:
-        summary = run_batch_school(school, mail_cfg, require_opt_in=require_opt_in)
+        summary = run_batch_school(school, mail_cfg, require_opt_in=require_opt_in, exclude_ids=already)
+        already |= summary.get("matched_ids") or set()
         results.append(summary)
         print(
             f"  [{school}] users={summary['users']} pairs={summary.get('pairs', 0)} "
             f"created={summary.get('created', 0)} updated={summary.get('updated', 0)}"
         )
+    cross = run_batch_cross(mail_cfg, require_opt_in=require_opt_in, exclude_ids=already)
+    results.append(cross)
+    print(
+        f"  [跨校] users={cross['users']} pairs={cross.get('pairs', 0)} "
+        f"created={cross.get('created', 0)} updated={cross.get('updated', 0)}"
+    )
     return results
 
 

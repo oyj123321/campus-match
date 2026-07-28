@@ -40,6 +40,8 @@ class User(db.Model):
     last_matched_at = db.Column(db.DateTime, nullable=True)
     # 本周预约匹配：ISO 周键，如 "2026-W31"；与当前周相同表示已 opt-in
     opt_in_week = db.Column(db.String(16))
+    # 是否愿意参与跨校匹配（需双方都开，且全局 CROSS_SCHOOL_MATCHING_ENABLED）
+    allow_cross_school = db.Column(db.Boolean, default=False)
 
     tags = db.relationship("UserTag", backref="user", lazy="joined", cascade="all, delete-orphan")
 
@@ -154,6 +156,7 @@ class User(db.Model):
             "answers": self.answers,
             "important_qids": list(self.important_qids),
             "opt_in_week": self.opt_in_week,
+            "allow_cross_school": bool(self.allow_cross_school),
         }
 
 
@@ -185,3 +188,19 @@ class Match(db.Model):
 
     user1 = db.relationship("User", foreign_keys=[user1_id])
     user2 = db.relationship("User", foreign_keys=[user2_id])
+
+
+class Blocklist(db.Model):
+    """不想再匹配的人（双向生效：任一方拉黑则不再配对）。"""
+    __tablename__ = "blocklist"
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
+    blocked_user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    blocked = db.relationship("User", foreign_keys=[blocked_user_id])
+
+    __table_args__ = (
+        db.UniqueConstraint("user_id", "blocked_user_id", name="uq_block_pair"),
+    )

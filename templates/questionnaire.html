@@ -2,7 +2,7 @@
 {% block content %}
 
 <h2 style="text-align:center;margin-bottom:8px;">填写资料 & 问卷</h2>
-<p class="hint" style="text-align:center;margin-bottom:16px;">共 32 题 · 请点选作答；未选不算已答</p>
+<p class="hint" style="text-align:center;margin-bottom:16px;">共 {{ questions|length }} 题 · 请点选作答；未选不算已答</p>
 
 <!-- 基本资料 -->
 <div class="card" id="profile-card">
@@ -41,6 +41,13 @@
             <input type="text" id="bio" value="{{ user.bio or '' }}" maxlength="80" placeholder="例：大三心理学在读，喜欢猫咪和下雨天">
         </div>
     </div>
+    <div class="form-group" style="margin-top:8px;">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+            <input type="checkbox" id="allow_cross_school" {% if user.allow_cross_school %}checked{% endif %}>
+            允许跨校匹配（双方都开才生效）
+        </label>
+        <p class="hint">默认同校；勾选后可与其它支持学校的同学配对。</p>
+    </div>
 </div>
 
 <!-- 进度条 -->
@@ -73,11 +80,13 @@ const EXISTING_IMPORTANT = {{ user.important_qids | list | tojson }};
 
 const dimNames = {
     'values': '核心价值观', 'lifestyle': '生活习惯',
-    'emotional': '情感风格', 'interests': '兴趣爱好'
+    'emotional': '情感风格', 'interests': '兴趣爱好',
+    'expectations': '相处预期'
 };
 const dimColors = {
     'values': '#7c3aed', 'lifestyle': '#059669',
-    'emotional': '#db2777', 'interests': '#2563eb'
+    'emotional': '#db2777', 'interests': '#2563eb',
+    'expectations': '#d97706'
 };
 
 let answers = {};
@@ -121,7 +130,7 @@ function render() {
             dim = q.dimension;
             dimN++;
             html += '<div class="card dimension-card" style="border-left:4px solid ' + dimColors[dim] + ';">'
-                + '<h3 style="color:' + dimColors[dim] + ';">' + dimNames[dim] + ' <span class="dim-count">(' + dimN + '/4)</span></h3>';
+                + '<h3 style="color:' + dimColors[dim] + ';">' + (dimNames[dim] || dim) + ' <span class="dim-count">(' + dimN + '/5)</span></h3>';
         }
 
         var qid = String(q.id);
@@ -313,7 +322,8 @@ async function submitAll() {
     status.innerHTML = '<span style="color:#64748b;">保存中...</span>';
 
     var r1 = await api('PUT', '/api/me', {
-        name: name, gender: gender, looking_for: lookingFor, wechat_id: wechat, bio: bio
+        name: name, gender: gender, looking_for: lookingFor, wechat_id: wechat, bio: bio,
+        allow_cross_school: document.getElementById('allow_cross_school').checked
     });
     if (!r1.ok) {
         status.innerHTML = '<span class="error">基本资料保存失败: ' + esc(r1.error || '') + '</span>';

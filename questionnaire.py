@@ -1,11 +1,12 @@
 """
 CampusMatch 深度问卷系统
 
-参考 SJTU Date 的 65 题设计，提炼为 32 题四维度问卷：
+参考 SJTU Date 的 65 题设计，提炼为 40 题问卷：
   1. 核心价值观 (8题) — Q1-Q8
   2. 生活习惯   (8题) — Q9-Q16
   3. 情感风格   (8题) — Q17-Q24
   4. 兴趣爱好   (8题) — Q25-Q32
+  5. 相处预期   (8题) — Q33-Q40（消费/定居/约会频率等）
 
 输出 80+ 维特征向量，用于余弦相似度匹配。
 """
@@ -291,6 +292,80 @@ QUESTIONS = [
         "text": "你通常用什么方式放松？（可多选）",
         "type": "multi",
         "options": ["追剧/看电影", "打游戏", "运动出汗", "看书/写作", "和朋友聊天", "睡觉", "做饭/烘焙", "刷社交媒体"],
+    },
+
+    # ===== 维度5: 相处预期（消费观 / 定居 / 约会节奏等）=====
+    {
+        "id": 33,
+        "dimension": "expectations",
+        "text": "约会消费更倾向？",
+        "type": "scale",
+        "left": "AA / 各自付各自的",
+        "right": "谁提出谁请客 / 传统分工",
+        "dealbreaker": False,
+    },
+    {
+        "id": 34,
+        "dimension": "expectations",
+        "text": "毕业后希望主要生活在哪里？",
+        "type": "scale",
+        "left": "回老家 / 小城市",
+        "right": "北上广深港 / 国际都市",
+        "dealbreaker": False,
+    },
+    {
+        "id": 35,
+        "dimension": "expectations",
+        "text": "理想的约会频率？",
+        "type": "scale",
+        "left": "每周多次见面",
+        "right": "每月几次就够，更重线上联络",
+        "dealbreaker": False,
+    },
+    {
+        "id": 36,
+        "dimension": "expectations",
+        "text": "恋爱节奏？",
+        "type": "scale",
+        "left": "慢热，先做朋友再确定关系",
+        "right": "来得快，聊得来就认真推进",
+        "dealbreaker": False,
+    },
+    {
+        "id": 37,
+        "dimension": "expectations",
+        "text": "对异地恋的态度？",
+        "type": "scale",
+        "left": "可以接受，信任最重要",
+        "right": "很难接受，必须同城",
+        "dealbreaker": True,
+    },
+    {
+        "id": 38,
+        "dimension": "expectations",
+        "text": "想养宠物吗？",
+        "type": "scale",
+        "left": "一定要养（猫狗等）",
+        "right": "坚决不养",
+        "dealbreaker": False,
+    },
+    {
+        "id": 39,
+        "dimension": "expectations",
+        "text": "恋爱中的社交频率？",
+        "type": "scale",
+        "left": "经常一起见朋友 / 参加局",
+        "right": "两人世界为主，少社交",
+        "dealbreaker": False,
+    },
+    {
+        "id": 40,
+        "dimension": "expectations",
+        "text": "同居后家务怎么分？",
+        "type": "scale",
+        "left": "明确分工、对半分",
+        "right": "谁有空谁做 / 随性",
+        "dealbreaker": False,
     },
 ]
 

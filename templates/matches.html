@@ -6,7 +6,8 @@
         {{ user.name or '未设置名字' }} ·
         {{ {'male':'男','female':'女'}.get(user.gender, '未设性别') }} ·
         想找{{ {'male':'男生','female':'女生','both':'男女均可'}.get(user.effective_looking_for(), '未设取向') }} ·
-        {% if user.answers %}已答 {{ user.answers.keys()|length }}/32 题{% else %}未填问卷{% endif %}
+        {% if user.answers %}已答 {{ user.answers.keys()|length }} 题{% else %}未填问卷{% endif %}
+        · 跨校 {{ '开' if user.allow_cross_school else '关' }}
     </p>
 
     <div id="reveal-box" class="card" style="margin-top:14px;text-align:left;background:#f8fafc;">
@@ -14,9 +15,11 @@
         <p class="hint" id="reveal-hint">每周二晚统一揭晓，制造期待；不是随时刷脸。</p>
         <p style="margin:8px 0;">下次揭晓：<strong id="q-next-label">{{ quota.next_batch_label }}</strong>
             · <span id="q-countdown">计算中…</span></p>
-        <p class="hint">本周预约状态：<strong id="q-optin">{{ '已预约' if quota.opted_in else '未预约' }}</strong></p>
+        <p class="hint">本周预约状态：<strong id="q-optin">{{ '已预约' if quota.opted_in else '未预约' }}</strong>
+            · 跨校偏好：<strong id="q-cross">{{ '已开启' if quota.allow_cross_school else '仅同校' }}</strong></p>
         <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">
             <button type="button" class="btn btn-primary" id="optin-btn" onclick="toggleOptIn()">预约本周匹配</button>
+            <button type="button" class="btn btn-secondary" id="cross-btn" onclick="toggleCross()">切换跨校</button>
             <button type="button" class="btn btn-secondary" onclick="loadHistory()">查看当前配对</button>
             <a href="/questionnaire" class="btn btn-secondary">修改问卷</a>
         </div>
@@ -32,6 +35,17 @@
         <button class="btn btn-match" id="match-btn" onclick="doMatch()" style="font-size:1.05em;padding:12px 40px;">提前揭晓（冷启动）</button>
         <p class="hint" style="margin-top:8px;">冷启动阶段保留即时配对；正式运营可关掉，只走每周揭晓。</p>
     </div>
+</div>
+
+<div class="card" style="text-align:left;">
+    <h3 style="margin-bottom:8px;">不想匹配的人</h3>
+    <p class="hint">输入对方<strong>昵称</strong>搜索后点选确认（也可输完整学校邮箱）。不要只靠裸姓名字符串，避免撞名误伤。</p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;">
+        <input type="text" id="block-q" placeholder="昵称或邮箱" style="flex:1;min-width:160px;" onkeydown="if(event.key==='Enter')searchBlock()">
+        <button type="button" class="btn btn-secondary" onclick="searchBlock()">搜索</button>
+    </div>
+    <div id="block-search" style="margin-top:8px;"></div>
+    <div id="block-list" style="margin-top:10px;"></div>
 </div>
 
 <details class="card" style="text-align:left;">
@@ -69,11 +83,20 @@ function renderQuota(q) {
     document.getElementById('q-next-label').textContent = q.next_batch_label + '（' + q.next_batch_at + '）';
     document.getElementById('q-countdown').textContent = fmtCountdown(q.seconds_to_reveal || 0);
     document.getElementById('q-optin').textContent = q.opted_in ? '已预约 ✓' : '未预约';
+    document.getElementById('q-cross').textContent = q.allow_cross_school ? '已开启' : '仅同校';
     if (q.match_mode) document.getElementById('q-mode').textContent = q.match_mode;
 
     var optBtn = document.getElementById('optin-btn');
     optBtn.textContent = q.opted_in ? '取消本周预约' : '预约本周匹配';
     optBtn.className = q.opted_in ? 'btn btn-secondary' : 'btn btn-primary';
+
+    var crossBtn = document.getElementById('cross-btn');
+    if (!q.cross_school_enabled) {
+        crossBtn.style.display = 'none';
+    } else {
+        crossBtn.style.display = '';
+        crossBtn.textContent = q.allow_cross_school ? '关闭跨校' : '开启跨校';
+    }
 
     var wrap = document.getElementById('instant-wrap');
     var btn = document.getElementById('match-btn');
@@ -131,6 +154,7 @@ function renderMatchCards(matches, headerHtml) {
             + '<span style="font-size:1.25em;font-weight:800;color:' + color + ';">系统派单</span>'
             + '<span style="font-size:1.15em;font-weight:700;">' + esc(m.name) + '</span>'
             + '<span>' + (m.gender === 'male' ? '男' : m.gender === 'female' ? '女' : '') + '</span>'
+            + (m.school ? '<span class="hint">' + esc(m.school) + '</span>' : '')
             + '<span style="margin-left:auto;font-weight:700;font-size:1.1em;color:' + color + ';">' + pct + '%</span>'
             + '</div>'
             + '<div style="margin:8px 0;background:#e5e7eb;border-radius:99px;height:6px;">'
@@ -167,6 +191,9 @@ function renderMatchCards(matches, headerHtml) {
 
         html += '<div style="margin-top:12px;font-size:1.05em;color:#2563eb;font-weight:700;">微信: ' + esc(m.wechat_id || '未填写') + '</div>';
         html += '<p class="hint" style="margin-top:6px;">开口可以很简单：「嗨，CampusMatch 匹配到的，看到破冰话题想先问你第一个…」</p>';
+        if (m.id) {
+            html += '<button type="button" class="btn btn-secondary" style="margin-top:8px;" onclick="blockUser(' + m.id + ', this)">不再匹配此人</button>';
+        }
         if (m.matched_at) {
             html += '<div style="font-size:0.75em;color:#999;margin-top:4px;">' + new Date(m.matched_at).toLocaleString() + '</div>';
         }
@@ -191,6 +218,76 @@ async function toggleOptIn() {
     alert(opted ? '已取消本周预约' : (d.message || '已预约本周匹配'));
 }
 
+async function toggleCross() {
+    var on = document.getElementById('q-cross').textContent.indexOf('已开启') >= 0;
+    var d = await api('PUT', '/api/me', { allow_cross_school: !on });
+    if (!d.ok) { alert(d.error || '失败'); return; }
+    await refreshQuota();
+    alert(!on ? '已开启跨校（对方也要开才会配对）' : '已关闭跨校，仅同校匹配');
+}
+
+async function searchBlock() {
+    var q = document.getElementById('block-q').value.trim();
+    var box = document.getElementById('block-search');
+    if (!q) { alert('请输入昵称或邮箱'); return; }
+    box.innerHTML = '<p class="hint">搜索中…</p>';
+    var d = await api('GET', '/api/users/search?q=' + encodeURIComponent(q));
+    if (!d.ok) { box.innerHTML = '<p style="color:#dc2626;">' + esc(d.error) + '</p>'; return; }
+    if (!d.results.length) {
+        box.innerHTML = '<p class="hint">没有找到。请确认对方已注册且昵称拼写正确；也可用完整邮箱。</p>';
+        return;
+    }
+    var html = '<ul style="list-style:none;padding:0;margin:0;">';
+    for (var i = 0; i < d.results.length; i++) {
+        var u = d.results[i];
+        html += '<li style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid #eee;">'
+            + '<span><strong>' + esc(u.name) + '</strong> · ' + esc(u.school)
+            + ' · ' + (u.gender === 'male' ? '男' : u.gender === 'female' ? '女' : '') + '</span>'
+            + (u.already_blocked
+                ? '<span class="hint" style="margin-left:auto;">已拉黑</span>'
+                : '<button type="button" class="btn btn-secondary" style="margin-left:auto;" onclick="blockUser(' + u.id + ')">拉黑</button>')
+            + '</li>';
+    }
+    html += '</ul>';
+    box.innerHTML = html;
+}
+
+async function loadBlocklist() {
+    var box = document.getElementById('block-list');
+    var d = await api('GET', '/api/blocklist');
+    if (!d.ok) { box.innerHTML = ''; return; }
+    if (!d.blocklist.length) {
+        box.innerHTML = '<p class="hint">黑名单为空。</p>';
+        return;
+    }
+    var html = '<p><strong>当前黑名单</strong></p><ul style="list-style:none;padding:0;">';
+    for (var i = 0; i < d.blocklist.length; i++) {
+        var b = d.blocklist[i];
+        html += '<li style="display:flex;gap:8px;align-items:center;padding:6px 0;">'
+            + '<span>' + esc(b.name) + ' · ' + esc(b.school || '') + '</span>'
+            + '<button type="button" class="btn btn-secondary" style="margin-left:auto;" onclick="unblockUser(' + b.id + ')">移除</button>'
+            + '</li>';
+    }
+    html += '</ul>';
+    box.innerHTML = html;
+}
+
+async function blockUser(id, btn) {
+    if (!confirm('确认拉黑？之后不会再匹配此人；若已有配对将失效。')) return;
+    var d = await api('POST', '/api/blocklist', { user_id: id });
+    if (!d.ok) { alert(d.error || '失败'); return; }
+    if (btn) btn.disabled = true;
+    alert(d.message || '已拉黑');
+    await loadBlocklist();
+    await loadHistory();
+}
+
+async function unblockUser(id) {
+    var d = await api('DELETE', '/api/blocklist', { user_id: id });
+    if (!d.ok) { alert(d.error || '失败'); return; }
+    await loadBlocklist();
+}
+
 async function doMatch() {
     var btn = document.getElementById('match-btn');
     var div = document.getElementById('result');
@@ -208,7 +305,7 @@ async function doMatch() {
     }
     if (!d.matches || d.matches.length === 0) {
         div.innerHTML = '<div class="card" style="text-align:center;"><p style="font-size:1.2em;">暂无匹配</p>'
-            + '<p class="hint">候选 ' + (d.total_candidates || 0) + ' 人 · 可先预约本周批量揭晓</p></div>';
+            + '<p class="hint">' + esc(d.message || '') + ' · 候选 ' + (d.total_candidates || 0) + ' 人</p></div>';
         return;
     }
 
@@ -234,6 +331,7 @@ async function loadHistory() {
 
 renderQuota({{ quota | tojson }});
 loadHistory();
+loadBlocklist();
 setInterval(refreshQuota, 60000);
 </script>
 {% endblock %}

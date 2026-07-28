@@ -16,7 +16,9 @@ from itertools import combinations
 
 
 def cosine_similarity(vec1, vec2):
-    """余弦相似度 [0, 1]"""
+    """余弦相似度 [0, 1]。维数不一致时返回 0（需双方重交问卷对齐）。"""
+    if not vec1 or not vec2 or len(vec1) != len(vec2):
+        return 0.0
     dot = sum(a * b for a, b in zip(vec1, vec2))
     norm1 = math.sqrt(sum(a * a for a in vec1))
     norm2 = math.sqrt(sum(b * b for b in vec2))

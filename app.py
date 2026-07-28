@@ -21,17 +21,18 @@ from config import (
     MATCH_WEEKLY_NEW_LIMIT, MATCH_COOLDOWN_HOURS,
     BATCH_MATCH_DAY, BATCH_MATCH_HOUR, BATCH_SCHEDULER_ENABLED,
     ADMIN_SECRET, WEEKDAY_LABELS,
-    REVEAL_REQUIRE_OPT_IN, INSTANT_MATCH_ENABLED,
+    REVEAL_REQUIRE_OPT_IN, INSTANT_MATCH_ENABLED, CROSS_SCHOOL_MATCHING_ENABLED,
     MAIL_ENABLED, MAIL_SERVER, MAIL_PORT, MAIL_USERNAME, MAIL_PASSWORD, MAIL_FROM,
 )
-from models import db, User, UserTag, Match
+from models import db, User, UserTag, Match, Blocklist
 from questionnaire import QUESTIONS, build_feature_vector, get_compatibility_insight
-from matcher import real_time_match, batch_match_school, orientation_compatible
+from matcher import real_time_match, batch_match_school
 from email_service import send_verification_email, send_match_result_email
 from batch_job import (
     persist_user_matches, count_new_matches_this_week,
     next_batch_datetime, run_batch_all, schedule_loop, current_week_key,
 )
+from match_pool import eligible_candidates
 
 # ---- App Factory ----
 app = Flask(__name__)
@@ -143,6 +144,8 @@ def match_quota_status(user):
         "reveal_happened_this_week": reveal_happened_this_week,
         "has_active_match": bool(active_match),
         "seconds_to_reveal": max(0, int((nxt - now).total_seconds())) if not reveal_happened_this_week else 0,
+        "cross_school_enabled": CROSS_SCHOOL_MATCHING_ENABLED,
+        "allow_cross_school": bool(getattr(user, "allow_cross_school", False)),
         "explain": _match_explain_text(mode),
     }
 
@@ -151,6 +154,7 @@ def serialize_match_payload(other, score, insight, active=True):
     """统一匹配结果 JSON（含相处说明书 + 破冰）。"""
     insight = insight or {}
     return {
+        "id": other.id if active else None,
         "name": other.name if active else "（已失效的配对）",
         "gender": other.gender if active else None,
         "school": getattr(other, "school", None) if active else None,
@@ -167,21 +171,26 @@ def serialize_match_payload(other, score, insight, active=True):
 
 def _match_explain_text(mode):
     """给开发者/用户看的通俗说明（不讲公式也能懂）。"""
+    school_line = (
+        "一对一：在取向互相接受的人里算问卷相似度，只给你得分最高的 1 人"
+        + ("；默认同校，双方都开「允许跨校」时可跨校。" if CROSS_SCHOOL_MATCHING_ENABLED else "（同校）。")
+    )
     return {
         "mode": mode,
         "summary": (
-            "一对一：在同校、取向互相接受的人里，算问卷相似度，只给你得分最高的 1 人。"
+            school_line
             if mode in ("one_to_one", "realtime") else
             "Top-N：按相似度返回多人（调试用）。"
             if mode == "top_n" else
-            "批量匈牙利：全校一起算，尽量让每人最多配到 1 人，且总体更优（像排课/分配名额）。"
+            "批量匈牙利：先按校配对，再跑跨校池；每人最多配到 1 人。"
         ),
         "steps": [
             "1. 问卷答案变成一串数字（特征向量），「对我很重要」的题权重更大。",
             "2. 余弦相似度：两串数字方向越接近，匹配分越高（可理解为口味有多像）。",
-            "3. 一票否决：婚姻/孩子/出轨/抽烟等题差太大直接跳过。",
+            "3. 一票否决：婚姻/孩子/出轨/异地恋等题差太大直接跳过。",
             "4. 择偶取向：双方都愿意匹配对方的性别才进入候选。",
-            "5. 点按钮默认只配对 1 人；每周二批量模式才用匈牙利做全校一对一分配。",
+            "5. 黑名单双向生效；跨校需双方都勾选且总闸开启。",
+            "6. 点按钮默认只配对 1 人；每周二批量模式才用匈牙利做一对一分配。",
         ],
         "why_not_many": "以前默认 Top-5 会一次出很多人，现已改为默认一对一。",
         "email_note": "匹配成功会尝试给你和对方发邮件；对方若是演示账号（假学校邮箱）常会失败，你的真实学校邮箱应能收到。",
@@ -488,22 +497,26 @@ def api_match():
     if mode == "realtime":
         mode = "one_to_one"
 
-    pool = User.query.filter(
-        User.school == user.school,
-        User.id != user.id,
+    pool_q_size_hint = User.query.filter(
         User.email_verified == True,
         User.feature_vector_json.isnot(None),
         User.gender.isnot(None),
-    ).all()
-    candidates = [c for c in pool if orientation_compatible(user, c)]
+    )
+    if not (CROSS_SCHOOL_MATCHING_ENABLED and user.allow_cross_school):
+        pool_q_size_hint = pool_q_size_hint.filter(User.school == user.school)
+    pool_size = pool_q_size_hint.count()
+    candidates = eligible_candidates(user)
 
     if not candidates:
+        msg = "当前暂无符合你择偶取向的可匹配用户"
+        if CROSS_SCHOOL_MATCHING_ENABLED and not user.allow_cross_school:
+            msg += "（可在问卷页开启「允许跨校」扩大池子）"
         return jsonify({
             "ok": True,
             "matches": [],
-            "message": "当前学校暂无符合你择偶取向的可匹配用户",
+            "message": msg,
             "total_candidates": 0,
-            "pool_size": len(pool),
+            "pool_size": pool_size,
             "quota": match_quota_status(user),
             "explain": _match_explain_text(mode),
             "note": "结果以本页为准；邮件仅作通知，发送失败不影响查看。",
@@ -642,8 +655,110 @@ def api_me():
         user.looking_for = looking_for
     user.wechat_id = (data.get("wechat_id") or "").strip() or user.wechat_id
     user.bio = (data.get("bio") or "").strip() or user.bio
+    if "allow_cross_school" in data:
+        user.allow_cross_school = bool(data.get("allow_cross_school"))
     db.session.commit()
     return jsonify({"ok": True, "user": user.to_dict()})
+
+
+@app.route("/api/users/search", methods=["GET"])
+@login_required
+def api_users_search():
+    """按昵称或邮箱精确搜索可拉黑对象（不返回微信）。"""
+    user = get_current_user()
+    q = (request.args.get("q") or "").strip()
+    if len(q) < 1:
+        return jsonify({"ok": False, "error": "请输入昵称或邮箱"}), 400
+
+    query = User.query.filter(
+        User.id != user.id,
+        User.email_verified == True,
+        User.name.isnot(None),
+    )
+    if "@" in q:
+        query = query.filter(User.email == q.lower())
+    else:
+        query = query.filter(User.name.ilike(f"%{q}%"))
+        # 默认同校；开了跨校总闸则全库可搜（仍需点选确认）
+        if not CROSS_SCHOOL_MATCHING_ENABLED:
+            query = query.filter(User.school == user.school)
+
+    rows = query.order_by(User.school, User.name).limit(20).all()
+    blocked = {r.blocked_user_id for r in Blocklist.query.filter_by(user_id=user.id).all()}
+    return jsonify({
+        "ok": True,
+        "results": [
+            {
+                "id": u.id,
+                "name": u.name,
+                "school": u.school,
+                "gender": u.gender,
+                "already_blocked": u.id in blocked,
+            }
+            for u in rows
+        ],
+    })
+
+
+@app.route("/api/blocklist", methods=["GET", "POST", "DELETE"])
+@login_required
+def api_blocklist():
+    """黑名单：GET 列表；POST 添加；DELETE 移除。"""
+    user = get_current_user()
+
+    if request.method == "GET":
+        rows = Blocklist.query.filter_by(user_id=user.id).order_by(Blocklist.created_at.desc()).all()
+        items = []
+        for r in rows:
+            other = r.blocked
+            items.append({
+                "id": other.id if other else r.blocked_user_id,
+                "name": other.name if other else "（已注销）",
+                "school": other.school if other else None,
+                "gender": other.gender if other else None,
+                "blocked_at": r.created_at.isoformat() if r.created_at else None,
+            })
+        return jsonify({"ok": True, "blocklist": items})
+
+    data = request.get_json(silent=True) or {}
+    target_id = data.get("user_id") or request.args.get("user_id")
+    try:
+        target_id = int(target_id)
+    except (TypeError, ValueError):
+        return jsonify({"ok": False, "error": "请指定要拉黑的用户（从搜索结果点选）"}), 400
+
+    if target_id == user.id:
+        return jsonify({"ok": False, "error": "不能拉黑自己"}), 400
+
+    target = User.query.get(target_id)
+    if not target or not target.email_verified:
+        return jsonify({"ok": False, "error": "用户不存在"}), 404
+
+    if request.method == "DELETE":
+        Blocklist.query.filter_by(user_id=user.id, blocked_user_id=target_id).delete()
+        db.session.commit()
+        return jsonify({"ok": True, "blocked": False})
+
+    existing = Blocklist.query.filter_by(user_id=user.id, blocked_user_id=target_id).first()
+    if not existing:
+        db.session.add(Blocklist(user_id=user.id, blocked_user_id=target_id))
+
+    # 若有有效配对，降为 inactive（不再展示对方微信）
+    active = Match.query.filter(
+        ((Match.user1_id == user.id) & (Match.user2_id == target_id)) |
+        ((Match.user1_id == target_id) & (Match.user2_id == user.id)),
+        Match.active.is_(True),
+    ).all()
+    for m in active:
+        m.active = False
+
+    db.session.commit()
+    return jsonify({
+        "ok": True,
+        "blocked": True,
+        "message": f"已将 {target.name or target.email} 加入黑名单，之后不会再匹配",
+        "deactivated_matches": len(active),
+    })
 
 
 @app.route("/api/logout", methods=["POST"])
@@ -732,6 +847,11 @@ def ensure_schema():
         db.session.execute(text("ALTER TABLE users ADD COLUMN opt_in_week VARCHAR(16)"))
         db.session.commit()
         print("[CampusMatch] migrated: users.opt_in_week")
+
+    if "allow_cross_school" not in user_cols:
+        db.session.execute(text("ALTER TABLE users ADD COLUMN allow_cross_school BOOLEAN DEFAULT 0"))
+        db.session.commit()
+        print("[CampusMatch] migrated: users.allow_cross_school")
 
     if "active" not in match_cols:
         db.session.execute(text("ALTER TABLE matches ADD COLUMN active BOOLEAN DEFAULT 1"))

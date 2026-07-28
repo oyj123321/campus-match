@@ -23,6 +23,7 @@ SEEDS = [
          28:["RPG/开放世界","手游/休闲"],29:2,
          30:["瑜伽/普拉提","跑步/健身"],31:["看展/博物馆","咖啡馆/美食探店"],
          32:["追剧/看电影","和朋友聊天"],
+         33:2,34:4,35:2,36:2,37:2,38:1,39:3,40:2,
      }),
 
     ("Bob", "male", "bob_wx", "澳门大学", "bob@um.edu.mo",
@@ -35,6 +36,7 @@ SEEDS = [
          28:["MOBA（王者/LOL）","RPG/开放世界"],29:3,
          30:["球类运动","跑步/健身"],31:["音乐会/Livehouse","市集/艺术节"],
          32:["打游戏","运动出汗"],
+         33:3,34:4,35:3,36:3,37:3,38:3,39:3,40:3,
      }),
 
     ("Cathy", "female", "cathy_wx", "澳门大学", "cathy@um.edu.mo",
@@ -47,6 +49,7 @@ SEEDS = [
          28:["不玩游戏","桌游/剧本杀"],29:4,
          30:["徒步/登山","游泳/水上"],31:["看展/博物馆","读书会/讲座"],
          32:["看书/写作","运动出汗"],
+         33:2,34:3,35:2,36:1,37:2,38:2,39:2,40:1,
      }),
 
     ("David", "male", "david_wx", "澳门大学", "david@um.edu.mo",
@@ -59,6 +62,7 @@ SEEDS = [
          28:["MOBA（王者/LOL）","手游/休闲"],29:4,
          30:["跑步/健身","球类运动"],31:["咖啡馆/美食探店","音乐会/Livehouse"],
          32:["运动出汗","刷社交媒体"],
+         33:4,34:4,35:2,36:4,37:4,38:3,39:4,40:3,
      }),
 
     ("Emma", "female", "emma_wx", "澳门大学", "emma@um.edu.mo",
@@ -71,6 +75,7 @@ SEEDS = [
          28:["RPG/开放世界","独立游戏"],29:2,
          30:["舞蹈","瑜伽/普拉提"],31:["音乐会/Livehouse","市集/艺术节"],
          32:["追剧/看电影","看书/写作"],
+         33:4,34:5,35:3,36:4,37:2,38:4,39:2,40:4,
      }),
 
     ("Frank", "male", "frank_wx", "澳门大学", "frank@um.edu.mo",
@@ -83,6 +88,7 @@ SEEDS = [
          28:["桌游/剧本杀","不玩游戏"],29:5,
          30:["徒步/登山","球类运动"],31:["读书会/讲座","看展/博物馆"],
          32:["看书/写作","和朋友聊天"],
+         33:2,34:2,35:2,36:1,37:3,38:1,39:4,40:1,
      }),
 
     ("Grace", "female", "grace_wx", "澳门大学", "grace@um.edu.mo",
@@ -95,6 +101,7 @@ SEEDS = [
          28:["手游/休闲","MOBA（王者/LOL）"],29:3,
          30:["不运动","瑜伽/普拉提"],31:["咖啡馆/美食探店","市集/艺术节"],
          32:["刷社交媒体","追剧/看电影"],
+         33:3,34:4,35:3,36:3,37:3,38:2,39:3,40:3,
      }),
 
     ("Henry", "male", "henry_wx", "澳门大学", "henry@um.edu.mo",
@@ -107,6 +114,7 @@ SEEDS = [
          28:["独立游戏","主机/PC大作"],29:4,
          30:["极限运动","跑步/健身"],31:["读书会/讲座","看展/博物馆"],
          32:["看书/写作","打游戏"],
+         33:2,34:5,35:4,36:4,37:2,38:4,39:2,40:4,
      }),
 
     ("Ivy", "female", "ivy_wx", "澳门科技大学", "ivy@must.edu.mo",
@@ -119,6 +127,20 @@ SEEDS = [
          28:["手游/休闲","不玩游戏"],29:3,
          30:["舞蹈","不运动"],31:["咖啡馆/美食探店","市集/艺术节"],
          32:["刷社交媒体","追剧/看电影"],
+         33:4,34:4,35:2,36:3,37:2,38:3,39:4,40:3,
+     }),
+
+    ("Jack", "male", "jack_wx", "澳门科技大学", "jack@must.edu.mo",
+     "商科大三，喜欢探店和羽毛球，开了跨校想认识澳大同学", {
+         1:2,2:4,3:4,4:3,5:2,6:2,7:3,8:1,
+         9:3,10:3,11:2,12:2,13:1,14:2,15:2,16:3,
+         17:2,18:3,19:3,20:2,21:2,22:3,23:2,24:3,
+         25:["科幻/奇幻","喜剧","动画/二次元"],
+         26:["流行","K-Pop/J-Pop"],27:["科技/科普","不太看书"],
+         28:["手游/休闲","MOBA（王者/LOL）"],29:3,
+         30:["球类运动","跑步/健身"],31:["咖啡馆/美食探店","市集/艺术节"],
+         32:["打游戏","和朋友聊天"],
+         33:3,34:4,35:2,36:3,37:2,38:2,39:3,40:2,
      }),
 ]
 
@@ -135,8 +157,10 @@ def seed(refresh=False):
             looking_for = "female" if gender == "male" else "male"
             if email == "emma@um.edu.mo":
                 looking_for = "both"
+            # 跨校演示：Alice(澳大) + Ivy(科大) 都开跨校
+            allow_cross = email in ("alice@um.edu.mo", "ivy@must.edu.mo", "jack@must.edu.mo")
 
-            # 为 Q1-Q24 填默认值（scale 题）
+            # 为缺失 scale 题填默认值
             full_answers = {}
             for q in QUESTIONS:
                 qid = q["id"]
@@ -168,10 +192,11 @@ def seed(refresh=False):
                 existing.school = school
                 existing.bio = bio
                 existing.email_verified = True
+                existing.allow_cross_school = allow_cross
                 existing.answers = full_answers
                 existing.feature_vector = vec
                 refreshed += 1
-                print(f"  REFRESH: {name} ({gender}->{looking_for}) @ {school} — {len(vec)}d vector")
+                print(f"  REFRESH: {name} ({gender}->{looking_for}) @ {school} — {len(vec)}d vector cross={allow_cross}")
                 continue
 
             user = User(
@@ -183,12 +208,13 @@ def seed(refresh=False):
                 looking_for=looking_for,
                 wechat_id=wechat,
                 bio=bio,
+                allow_cross_school=allow_cross,
             )
             user.answers = full_answers
             user.feature_vector = vec
             db.session.add(user)
             count += 1
-            print(f"  ADD: {name} ({gender}->{looking_for}) @ {school} — {len(vec)}d vector")
+            print(f"  ADD: {name} ({gender}->{looking_for}) @ {school} — {len(vec)}d vector cross={allow_cross}")
 
         db.session.commit()
         print(f"\nSeeded {count} users, refreshed {refreshed} (skipped {len(SEEDS) - count - refreshed})")
