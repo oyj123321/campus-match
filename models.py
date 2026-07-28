@@ -41,13 +41,27 @@ class User(db.Model):
 
     @property
     def answers(self):
-        if self.answers_json:
-            return json.loads(self.answers_json)
-        return {}
+        """返回 {int_qid: value}；JSON 键一律规范为 int，避免匹配时 get(1) 读不到 '1'。"""
+        if not self.answers_json:
+            return {}
+        raw = json.loads(self.answers_json)
+        normalized = {}
+        for k, v in raw.items():
+            try:
+                normalized[int(k)] = v
+            except (TypeError, ValueError):
+                continue
+        return normalized
 
     @answers.setter
     def answers(self, value):
-        self.answers_json = json.dumps(value, ensure_ascii=False)
+        payload = {}
+        for k, v in (value or {}).items():
+            try:
+                payload[str(int(k))] = v
+            except (TypeError, ValueError):
+                payload[str(k)] = v
+        self.answers_json = json.dumps(payload, ensure_ascii=False)
 
     @property
     def feature_vector(self):
@@ -64,13 +78,26 @@ class User(db.Model):
 
     @property
     def important_qids(self):
-        if self.important_qids_json:
-            return set(json.loads(self.important_qids_json))
-        return set()
+        if not self.important_qids_json:
+            return set()
+        raw = json.loads(self.important_qids_json)
+        out = set()
+        for x in raw:
+            try:
+                out.add(int(x))
+            except (TypeError, ValueError):
+                continue
+        return out
 
     @important_qids.setter
     def important_qids(self, value):
-        self.important_qids_json = json.dumps(list(value)) if value else "[]"
+        ids = []
+        for x in (value or []):
+            try:
+                ids.append(int(x))
+            except (TypeError, ValueError):
+                continue
+        self.important_qids_json = json.dumps(ids)
 
     def generate_token(self):
         self.verification_token = secrets.token_hex(3).upper()

@@ -1,15 +1,16 @@
 {% extends "base.html" %}
 {% block content %}
 
-<h2 style="text-align:center;margin-bottom:16px;">填写资料 & 问卷</h2>
+<h2 style="text-align:center;margin-bottom:8px;">填写资料 & 问卷</h2>
+<p class="hint" style="text-align:center;margin-bottom:16px;">共 32 题 · 请认真选择，滑块默认不会自动计入进度</p>
 
 <!-- 基本资料 -->
-<div class="card">
+<div class="card" id="profile-card">
     <h3>基本信息</h3>
     <div class="form-row">
         <div class="form-group" style="flex:1;">
             <label for="name">昵称 *</label>
-            <input type="text" id="name" value="{{ user.name or '' }}" placeholder="你的名字">
+            <input type="text" id="name" value="{{ user.name or '' }}" placeholder="你的名字" autocomplete="nickname">
         </div>
         <div class="form-group" style="flex:1;">
             <label for="gender">性别 *</label>
@@ -23,7 +24,7 @@
     <div class="form-row">
         <div class="form-group" style="flex:1;">
             <label for="wechat_id">微信号 *</label>
-            <input type="text" id="wechat_id" value="{{ user.wechat_id or '' }}" placeholder="匹配成功后发送给对方">
+            <input type="text" id="wechat_id" value="{{ user.wechat_id or '' }}" placeholder="匹配成功后发送给对方" autocomplete="off">
         </div>
         <div class="form-group" style="flex:1;">
             <label for="bio">一句话介绍</label>
@@ -33,17 +34,18 @@
 </div>
 
 <!-- 进度条 -->
-<div class="card" style="position:sticky;top:0;z-index:10;">
+<div class="card progress-sticky" id="progress-card">
     <div style="display:flex;align-items:center;gap:10px;">
         <span style="font-weight:700;font-size:0.9em;">问卷进度</span>
-        <div class="progress-bar-container" style="flex:1;">
+        <div class="progress-bar-container" style="flex:1;margin-bottom:0;">
             <div class="progress-bar-fill" id="progress-bar" style="width:0%"></div>
         </div>
-        <span id="progress-text" style="font-size:0.85em;color:#999;white-space:nowrap;">0/32</span>
+        <span id="progress-text" style="font-size:0.85em;color:#64748b;white-space:nowrap;">0/32</span>
     </div>
+    <p id="progress-hint" class="hint" style="margin:8px 0 0;">点击 1–5 作答量表题；兴趣题至少选一项</p>
 </div>
 
-<form id="q-form">
+<form id="q-form" onsubmit="return false;">
     <div id="questions-container"><!-- JS 渲染 --></div>
 
     <div class="card" style="text-align:center;">
@@ -55,9 +57,9 @@
 </form>
 
 <script>
-const QUESTIONS = {{ questions | tojson | safe }};
-const EXISTING_ANSWERS = {{ user.answers | tojson | safe }};
-const EXISTING_IMPORTANT = {{ user.important_qids | list | tojson | safe }};
+const QUESTIONS = {{ questions | tojson }};
+const EXISTING_ANSWERS = {{ (user.answers or {}) | tojson }};
+const EXISTING_IMPORTANT = {{ user.important_qids | list | tojson }};
 
 const dimNames = {
     'values': '核心价值观', 'lifestyle': '生活习惯',
@@ -69,10 +71,32 @@ const dimColors = {
 };
 
 let answers = {};
-let important = new Set(EXISTING_IMPORTANT.map(String));
-{% if user.answers %}
-Object.assign(answers, {{ user.answers | tojson | safe }});
-{% endif %}
+let important = new Set(EXISTING_IMPORTANT.map(function (x) { return String(x); }));
+
+// 规范化已有答案为字符串题号
+(function loadExisting() {
+    var keys = Object.keys(EXISTING_ANSWERS || {});
+    for (var i = 0; i < keys.length; i++) {
+        var k = keys[i];
+        answers[String(k)] = EXISTING_ANSWERS[k];
+    }
+})();
+
+function esc(s) {
+    return String(s)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+}
+
+function isAnswered(q) {
+    var v = answers[String(q.id)];
+    if (q.type === 'scale') {
+        return v !== undefined && v !== null && v !== '';
+    }
+    return Array.isArray(v) && v.length > 0;
+}
 
 function render() {
     var c = document.getElementById('questions-container');
@@ -87,47 +111,50 @@ function render() {
             dim = q.dimension;
             dimN++;
             html += '<div class="card dimension-card" style="border-left:4px solid ' + dimColors[dim] + ';">'
-                + '<h3 style="color:' + dimColors[dim] + ';">' + dimNames[dim] + ' (' + dimN + '/4)</h3>';
+                + '<h3 style="color:' + dimColors[dim] + ';">' + dimNames[dim] + ' <span class="dim-count">(' + dimN + '/4)</span></h3>';
         }
 
         var qid = String(q.id);
         var val = answers[qid];
         var imp = important.has(qid);
         var db = q.dealbreaker;
+        var done = isAnswered(q);
 
-        html += '<div class="q-item' + (db ? ' q-dealbreaker' : '') + '" id="qcard_' + qid + '">'
+        html += '<div class="q-item' + (db ? ' q-dealbreaker' : '') + (done ? ' q-done' : ' q-todo') + '" id="qcard_' + qid + '" data-qid="' + qid + '">'
             + '<div class="q-head"><span class="q-num">' + q.id + '</span>'
-            + '<span>' + q.text + '</span>'
-            + (db ? '<span class="q-db">一票否决</span>' : '') + '</div>';
+            + '<span class="q-text">' + esc(q.text) + '</span>'
+            + (db ? '<span class="q-db">一票否决</span>' : '')
+            + '<span class="q-status" id="qs_' + qid + '">' + (done ? '已答' : '未答') + '</span></div>';
 
         if (q.type === 'scale') {
-            var v = val !== undefined ? val : 3;
-            html += '<div class="scale-row">'
-                + '<span class="scale-l">' + q.left + '</span>'
-                + '<div class="scale-mid">'
-                + '<input type="range" min="1" max="5" value="' + v + '" class="scale-rng"'
-                + ' id="q_' + qid + '" oninput="updateScale(' + qid + ')">'
-                + '<div class="scale-ticks"><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span></div>'
-                + '</div>'
-                + '<span class="scale-l">' + q.right + '</span>'
-                + '<span class="scale-v" id="sv_' + qid + '">' + v + '</span>'
+            html += '<div class="likert-row">'
+                + '<span class="scale-l scale-l-left">' + esc(q.left) + '</span>'
+                + '<div class="likert-opts" role="radiogroup" aria-label="' + esc(q.text) + '">';
+            for (var s = 1; s <= 5; s++) {
+                var on = (val !== undefined && Number(val) === s);
+                html += '<button type="button" class="likert-btn' + (on ? ' on' : '') + '" id="lb_' + qid + '_' + s + '"'
+                    + ' onclick="setScale(' + q.id + ',' + s + ')" aria-pressed="' + (on ? 'true' : 'false') + '">' + s + '</button>';
+            }
+            html += '</div>'
+                + '<span class="scale-l scale-l-right">' + esc(q.right) + '</span>'
                 + '</div>';
         } else if (q.type === 'multi') {
             var sel = Array.isArray(val) ? val : [];
             html += '<div class="multi-row">';
             for (var j = 0; j < q.options.length; j++) {
                 var opt = q.options[j];
-                var on = sel.indexOf(opt) >= 0;
-                html += '<label class="multi-tag' + (on ? ' on' : '') + '" id="mt_' + qid + '_' + j + '">'
-                    + '<input type="checkbox" value="' + opt + '"' + (on ? ' checked' : '')
-                    + ' onchange="toggleMulti(' + qid + ',' + j + ',this)" style="display:none;">'
-                    + opt + '</label>';
+                var selected = sel.indexOf(opt) >= 0;
+                html += '<label class="multi-tag' + (selected ? ' on' : '') + '" id="mt_' + qid + '_' + j + '">'
+                    + '<input type="checkbox" value="' + esc(opt) + '"' + (selected ? ' checked' : '')
+                    + ' onchange="toggleMulti(' + q.id + ',' + j + ',this)" style="display:none;">'
+                    + esc(opt) + '</label>';
             }
             html += '</div>';
         }
 
         html += '<button type="button" class="imp-btn' + (imp ? ' on' : '') + '" id="ib_' + qid
-            + '" onclick="toggleImp(' + qid + ',this)">' + (imp ? '星 很重要' : '星 标记为重要') + '</button>';
+            + '" onclick="toggleImp(' + q.id + ',this)">' + (imp ? '★ 很重要' : '☆ 标记为重要') + '</button>';
+        html += '</div>';
     }
     if (dim) html += '</div>';
 
@@ -135,39 +162,100 @@ function render() {
     updateProgress();
 }
 
-function updateScale(qid) {
-    var s = document.getElementById('q_' + qid);
-    document.getElementById('sv_' + qid).textContent = s.value;
-    answers[String(qid)] = parseInt(s.value);
+function markCard(qid) {
+    var q = null;
+    for (var i = 0; i < QUESTIONS.length; i++) {
+        if (QUESTIONS[i].id === Number(qid) || String(QUESTIONS[i].id) === String(qid)) {
+            q = QUESTIONS[i];
+            break;
+        }
+    }
+    if (!q) return;
+    var card = document.getElementById('qcard_' + qid);
+    var status = document.getElementById('qs_' + qid);
+    var done = isAnswered(q);
+    if (card) {
+        card.classList.toggle('q-done', done);
+        card.classList.toggle('q-todo', !done);
+        card.classList.remove('q-error');
+    }
+    if (status) status.textContent = done ? '已答' : '未答';
+}
+
+function setScale(qid, value) {
+    var qs = String(qid);
+    answers[qs] = value;
+    for (var s = 1; s <= 5; s++) {
+        var btn = document.getElementById('lb_' + qs + '_' + s);
+        if (!btn) continue;
+        var on = s === value;
+        btn.classList.toggle('on', on);
+        btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+    }
+    markCard(qs);
     updateProgress();
 }
 
 function toggleMulti(qid, idx, cb) {
     var qs = String(qid);
-    if (!answers[qs]) answers[qs] = [];
-    var tag = document.getElementById('mt_' + qid + '_' + idx);
+    if (!Array.isArray(answers[qs])) answers[qs] = [];
+    var tag = document.getElementById('mt_' + qs + '_' + idx);
     if (cb.checked) {
         if (answers[qs].indexOf(cb.value) < 0) answers[qs].push(cb.value);
-        tag.classList.add('on');
+        if (tag) tag.classList.add('on');
     } else {
-        answers[qs] = answers[qs].filter(function(v) { return v !== cb.value; });
-        tag.classList.remove('on');
+        answers[qs] = answers[qs].filter(function (v) { return v !== cb.value; });
+        if (tag) tag.classList.remove('on');
         if (answers[qs].length === 0) delete answers[qs];
     }
+    markCard(qs);
     updateProgress();
 }
 
 function toggleImp(qid, btn) {
     var qs = String(qid);
-    if (important.has(qs)) { important.delete(qs); btn.classList.remove('on'); btn.textContent = '星 标记为重要'; }
-    else { important.add(qs); btn.classList.add('on'); btn.textContent = '星 很重要'; }
+    if (important.has(qs)) {
+        important.delete(qs);
+        btn.classList.remove('on');
+        btn.textContent = '☆ 标记为重要';
+    } else {
+        important.add(qs);
+        btn.classList.add('on');
+        btn.textContent = '★ 很重要';
+    }
 }
 
 function updateProgress() {
-    var done = Object.keys(answers).length;
+    var done = 0;
+    for (var i = 0; i < QUESTIONS.length; i++) {
+        if (isAnswered(QUESTIONS[i])) done++;
+    }
     var pct = Math.round(done / QUESTIONS.length * 100);
     document.getElementById('progress-bar').style.width = pct + '%';
     document.getElementById('progress-text').textContent = done + '/' + QUESTIONS.length + ' (' + pct + '%)';
+    var hint = document.getElementById('progress-hint');
+    if (done < QUESTIONS.length) {
+        hint.textContent = '还需完成 ' + (QUESTIONS.length - done) + ' 题（量表点选数字，兴趣至少选 1 项）';
+    } else {
+        hint.textContent = '全部完成，可以提交啦';
+    }
+}
+
+function firstUnanswered() {
+    for (var i = 0; i < QUESTIONS.length; i++) {
+        if (!isAnswered(QUESTIONS[i])) return QUESTIONS[i];
+    }
+    return null;
+}
+
+function highlightMissing() {
+    for (var i = 0; i < QUESTIONS.length; i++) {
+        var q = QUESTIONS[i];
+        var card = document.getElementById('qcard_' + q.id);
+        if (!card) continue;
+        if (!isAnswered(q)) card.classList.add('q-error');
+        else card.classList.remove('q-error');
+    }
 }
 
 async function submitAll() {
@@ -178,27 +266,44 @@ async function submitAll() {
     var status = document.getElementById('save-status');
     var btn = document.getElementById('submit-btn');
 
-    if (!name) { alert('请填写名字'); return; }
-    if (!gender) { alert('请选择性别'); return; }
-    if (!wechat) { alert('请填写微信号'); return; }
+    if (!name) {
+        alert('请填写昵称');
+        document.getElementById('name').focus();
+        document.getElementById('profile-card').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+    }
+    if (!gender) {
+        alert('请选择性别');
+        document.getElementById('gender').focus();
+        return;
+    }
+    if (!wechat) {
+        alert('请填写微信号（匹配成功后会发给对方）');
+        document.getElementById('wechat_id').focus();
+        return;
+    }
+
+    var missing = firstUnanswered();
+    if (missing) {
+        highlightMissing();
+        status.innerHTML = '<span class="error">还有未完成的题目，请先答完再提交</span>';
+        var el = document.getElementById('qcard_' + missing.id);
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+    }
 
     btn.disabled = true;
     btn.textContent = '保存中...';
-    status.innerHTML = '保存中...';
+    status.innerHTML = '<span style="color:#64748b;">保存中...</span>';
 
-    // 收集所有 scale 题当前值
-    QUESTIONS.forEach(function(q) {
-        if (q.type === 'scale') {
-            var s = document.getElementById('q_' + q.id);
-            if (s) answers[String(q.id)] = parseInt(s.value);
-        }
-    });
-
-    // 先保存基本资料
     var r1 = await api('PUT', '/api/me', { name: name, gender: gender, wechat_id: wechat, bio: bio });
-    if (!r1.ok) { status.innerHTML = '基本资料保存失败: ' + r1.error; btn.disabled = false; btn.textContent = '提交问卷 & 开始匹配'; return; }
+    if (!r1.ok) {
+        status.innerHTML = '<span class="error">基本资料保存失败: ' + esc(r1.error || '') + '</span>';
+        btn.disabled = false;
+        btn.textContent = '提交问卷 & 开始匹配';
+        return;
+    }
 
-    // 再保存问卷
     var r2 = await api('POST', '/api/questionnaire', {
         answers: answers,
         important_qids: Array.from(important).map(Number),
@@ -208,14 +313,13 @@ async function submitAll() {
     btn.textContent = '提交问卷 & 开始匹配';
 
     if (r2.ok) {
-        status.innerHTML = '问卷已保存! 跳转到匹配页面...';
-        setTimeout(function() { location.href = '/matches'; }, 800);
+        status.innerHTML = '<span style="color:#059669;">问卷已保存！正在跳转匹配页...</span>';
+        setTimeout(function () { location.href = '/matches'; }, 600);
     } else {
-        status.innerHTML = '问卷保存失败: ' + r2.error;
+        status.innerHTML = '<span class="error">问卷保存失败: ' + esc(r2.error || '未知错误') + '</span>';
     }
 }
 
-// 初始化
 render();
 </script>
 {% endblock %}

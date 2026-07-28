@@ -295,6 +295,31 @@ QUESTIONS = [
 ]
 
 
+def _norm_answers(answers):
+    """兼容 int / str 题号键。"""
+    if not answers:
+        return {}
+    out = {}
+    for k, v in answers.items():
+        try:
+            out[int(k)] = v
+        except (TypeError, ValueError):
+            continue
+    return out
+
+
+def _norm_important_ids(important_ids):
+    if not important_ids:
+        return set()
+    out = set()
+    for x in important_ids:
+        try:
+            out.add(int(x))
+        except (TypeError, ValueError):
+            continue
+    return out
+
+
 def build_feature_vector(answers, important_ids=None):
     """
     将用户答案转换为特征向量。
@@ -309,8 +334,8 @@ def build_feature_vector(answers, important_ids=None):
         vector: list of float, 归一化的特征向量
         dimension_names: list of str, 每个维度的名称（用于调试和可解释性）
     """
-    if important_ids is None:
-        important_ids = set()
+    answers = _norm_answers(answers)
+    important_ids = _norm_important_ids(important_ids)
 
     vector = []
     dim_names = []
@@ -321,13 +346,18 @@ def build_feature_vector(answers, important_ids=None):
 
         if q["type"] == "scale":
             val = answers.get(qid, 3)  # 默认中间值
+            try:
+                val = int(val)
+            except (TypeError, ValueError):
+                val = 3
+            val = max(1, min(5, val))
             # 归一化到 [0, 1]
             normalized = (float(val) - 1) / 4.0
             vector.append(normalized * weight)
             dim_names.append(f"Q{qid}_{q['dimension']}")
 
         elif q["type"] == "multi":
-            selected = set(answers.get(qid, []))
+            selected = set(answers.get(qid, []) or [])
             for opt in q["options"]:
                 val = 1.0 if opt in selected else 0.0
                 vector.append(val * weight)
@@ -362,6 +392,8 @@ def check_dealbreakers(answers1, answers2, threshold=0.6):
     Returns:
         list of question texts that triggered dealbreaker
     """
+    answers1 = _norm_answers(answers1)
+    answers2 = _norm_answers(answers2)
     triggered = []
 
     for q in QUESTIONS:
@@ -371,8 +403,11 @@ def check_dealbreakers(answers1, answers2, threshold=0.6):
             continue
 
         qid = q["id"]
-        v1 = float(answers1.get(qid, 3))
-        v2 = float(answers2.get(qid, 3))
+        try:
+            v1 = float(answers1.get(qid, 3))
+            v2 = float(answers2.get(qid, 3))
+        except (TypeError, ValueError):
+            continue
 
         # scale 差 ≥ 3 → 否决
         if abs(v1 - v2) >= 3:
@@ -388,19 +423,30 @@ def get_compatibility_insight(user_vec, match_vec, answers, match_answers):
     Returns:
         dict with 'strengths' (共同点) and 'differences' (需要注意的差异)
     """
+    answers = _norm_answers(answers)
+    match_answers = _norm_answers(match_answers)
     strengths = []
     differences = []
 
     for q in QUESTIONS:
         qid = q["id"]
         if q["type"] == "scale":
-            v1 = answers.get(qid, 3)
-            v2 = match_answers.get(qid, 3)
-            diff = abs(float(v1) - float(v2))
+            try:
+                v1 = float(answers.get(qid, 3))
+                v2 = float(match_answers.get(qid, 3))
+            except (TypeError, ValueError):
+                continue
+            diff = abs(v1 - v2)
             if diff <= 1:
                 strengths.append(f"「{q['text']}」观点相近")
             elif diff >= 3:
                 differences.append(f"「{q['text']}」差异较大")
+        elif q["type"] == "multi":
+            s1 = set(answers.get(qid, []) or [])
+            s2 = set(match_answers.get(qid, []) or [])
+            common = s1 & s2
+            if len(common) >= 2:
+                strengths.append(f"「{q['text']}」都喜欢：{'、'.join(list(common)[:3])}")
 
     return {
         "strengths": strengths[:5],    # top 5

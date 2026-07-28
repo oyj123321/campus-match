@@ -25,3 +25,7 @@ Thumbs.db
 
 # Flask debug
 __debugger__
+
+# Runtime logs
+server.log
+*.log

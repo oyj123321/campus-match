@@ -21,7 +21,7 @@ SEEDS = [
          25:["科幻/奇幻","悬疑/犯罪","动画/二次元"],
          26:["流行","K-Pop/J-Pop"],27:["文学/小说","心理学/自我提升"],
          28:["RPG/开放世界","手游/休闲"],29:2,
-         30:["瑜伽/普拉提","跑步/健身"],31:["看展/博物馆","咖啡/美食探店"],
+         30:["瑜伽/普拉提","跑步/健身"],31:["看展/博物馆","咖啡馆/美食探店"],
          32:["追剧/看电影","和朋友聊天"],
      }),
 
@@ -57,7 +57,7 @@ SEEDS = [
          25:["动作/冒险","喜剧","科幻/奇幻"],
          26:["嘻哈/R&B","流行"],27:["心理学/自我提升","科技/科普"],
          28:["MOBA（王者/LOL）","手游/休闲"],29:4,
-         30:["跑步/健身","球类运动"],31:["咖啡/美食探店","音乐会/Livehouse"],
+         30:["跑步/健身","球类运动"],31:["咖啡馆/美食探店","音乐会/Livehouse"],
          32:["运动出汗","刷社交媒体"],
      }),
 
@@ -67,10 +67,10 @@ SEEDS = [
          9:5,10:4,11:3,12:4,13:1,14:4,15:3,16:3,
          17:4,18:4,19:4,20:2,21:1,22:1,23:3,24:1,
          25:["动画/二次元","恐怖/惊悚","科幻/奇幻"],
-         26:["摇滚/金属","电子/EDM","独立/民谣"],27:["文学/小说","漫画/轻小说"],
+         26:["摇滚/金属","电子/EDM","民谣/独立"],27:["文学/小说","漫画/轻小说"],
          28:["RPG/开放世界","独立游戏"],29:2,
          30:["舞蹈","瑜伽/普拉提"],31:["音乐会/Livehouse","市集/艺术节"],
-         32:["追剧/看电影","写作/画画"],
+         32:["追剧/看电影","看书/写作"],
      }),
 
     ("Frank", "male", "frank_wx", "澳门大学", "frank@um.edu.mo",
@@ -81,7 +81,7 @@ SEEDS = [
          25:["喜剧","纪录片","爱情/文艺"],
          26:["民谣/独立","什么都听"],27:["历史/哲学","学术/专业书籍"],
          28:["桌游/剧本杀","不玩游戏"],29:5,
-         30:["徒步/登山","球类运动"],31:["志愿服务","读书会/讲座"],
+         30:["徒步/登山","球类运动"],31:["读书会/讲座","看展/博物馆"],
          32:["看书/写作","和朋友聊天"],
      }),
 
@@ -93,7 +93,7 @@ SEEDS = [
          25:["爱情/文艺","喜剧","科幻/奇幻"],
          26:["K-Pop/J-Pop","流行"],27:["文学/小说","不太看书"],
          28:["手游/休闲","MOBA（王者/LOL）"],29:3,
-         30:["不运动","瑜伽/普拉提"],31:["咖啡/美食探店","市集/艺术节"],
+         30:["不运动","瑜伽/普拉提"],31:["咖啡馆/美食探店","市集/艺术节"],
          32:["刷社交媒体","追剧/看电影"],
      }),
 
@@ -117,21 +117,56 @@ SEEDS = [
          25:["爱情/文艺","动画/二次元","喜剧"],
          26:["K-Pop/J-Pop","流行"],27:["漫画/轻小说","文学/小说"],
          28:["手游/休闲","不玩游戏"],29:3,
-         30:["舞蹈","不运动"],31:["咖啡/美食探店","市集/艺术节"],
+         30:["舞蹈","不运动"],31:["咖啡馆/美食探店","市集/艺术节"],
          32:["刷社交媒体","追剧/看电影"],
      }),
 ]
 
 
-def seed():
+def seed(refresh=False):
     with app.app_context():
         db.create_all()
 
         count = 0
+        refreshed = 0
         for name, gender, wechat, school, email, bio, answers in SEEDS:
             existing = User.query.filter_by(email=email).first()
+
+            # 为 Q1-Q24 填默认值（scale 题）
+            full_answers = {}
+            for q in QUESTIONS:
+                qid = q["id"]
+                if qid in answers:
+                    full_answers[qid] = answers[qid]
+                elif q["type"] == "scale":
+                    full_answers[qid] = 3  # 默认中间值
+
+            # 清洗 multi 选项（防止历史脏值）
+            for q in QUESTIONS:
+                if q["type"] != "multi":
+                    continue
+                qid = q["id"]
+                if qid not in full_answers:
+                    continue
+                allowed = set(q["options"])
+                full_answers[qid] = [x for x in (full_answers[qid] or []) if x in allowed]
+
+            vec, _ = build_feature_vector(full_answers)
+
             if existing:
-                print(f"  SKIP: {name} already exists")
+                if not refresh:
+                    print(f"  SKIP: {name} already exists")
+                    continue
+                existing.name = name
+                existing.gender = gender
+                existing.wechat_id = wechat
+                existing.school = school
+                existing.bio = bio
+                existing.email_verified = True
+                existing.answers = full_answers
+                existing.feature_vector = vec
+                refreshed += 1
+                print(f"  REFRESH: {name} ({gender}) @ {school} — {len(vec)}d vector")
                 continue
 
             user = User(
@@ -143,29 +178,16 @@ def seed():
                 wechat_id=wechat,
                 bio=bio,
             )
-
-            # 为 Q1-Q24 填默认值（scale 题）
-            full_answers = {}
-            for q in QUESTIONS:
-                qid = q["id"]
-                if qid in answers:
-                    full_answers[qid] = answers[qid]
-                elif q["type"] == "scale":
-                    full_answers[qid] = 3  # 默认中间值
-
-            # 生成特征向量
-            vec, dim_names = build_feature_vector(full_answers)
-
             user.answers = full_answers
             user.feature_vector = vec
-
             db.session.add(user)
             count += 1
             print(f"  ADD: {name} ({gender}) @ {school} — {len(vec)}d vector")
 
         db.session.commit()
-        print(f"\nSeeded {count} users (skipped {len(SEEDS) - count} existing)")
+        print(f"\nSeeded {count} users, refreshed {refreshed} (skipped {len(SEEDS) - count - refreshed})")
 
 
 if __name__ == "__main__":
-    seed()
+    refresh = "--refresh" in sys.argv
+    seed(refresh=refresh)

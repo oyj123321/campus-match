@@ -28,11 +28,14 @@ async function doMatch() {
 
     if (!d.ok) { div.innerHTML = '<div class="card" style="text-align:center;color:#dc2626;">' + d.error + '</div>'; return; }
     if (!d.matches || d.matches.length === 0) {
-        div.innerHTML = '<div class="card" style="text-align:center;"><p style="font-size:1.2em;">暂无匹配</p><p class="hint">校内候选: ' + (d.total_candidates||0) + ' 人</p><p class="hint">邀请更多同学加入试试？</p></div>';
+        div.innerHTML = '<div class="card" style="text-align:center;"><p style="font-size:1.2em;">暂无匹配</p><p class="hint">校内候选: ' + (d.total_candidates||0) + ' 人</p><p class="hint">一票否决跳过: ' + (d.dealbreaker_skipped||0) + ' 人</p><p class="hint">邀请更多同学加入试试？</p></div>';
         return;
     }
 
-    var html = '<div class="card" style="background:#f0fdf4;border-left:3px solid #22c55e;"><p>在 ' + d.total_candidates + ' 人中找到 <strong>' + d.matches.length + '</strong> 个匹配。匹配结果已发送到你的学校邮箱。</p></div>';
+    var html = '<div class="card" style="background:#f0fdf4;border-left:3px solid #22c55e;"><p>在 ' + d.total_candidates + ' 人中找到 <strong>' + d.matches.length + '</strong> 个匹配'
+        + (d.updated_existing ? '（更新 ' + d.updated_existing + ' 条历史）' : '')
+        + (d.newly_notified ? '。已向邮箱发送 ' + d.newly_notified + ' 条新匹配通知。' : '。')
+        + '</p></div>';
     for (var i = 0; i < d.matches.length; i++) {
         var m = d.matches[i];
         var pct = Math.round(m.score * 100);

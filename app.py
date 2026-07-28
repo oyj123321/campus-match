@@ -228,23 +228,30 @@ def api_questionnaire():
     answers_raw = data.get("answers", {})
     important_qids = set(data.get("important_qids", []))
 
-    # 转换：前端传来的都是字符串，需要做类型转换
+    # 转换：前端传来的都是字符串键，统一成 int 键
     answers = {}
     for q in QUESTIONS:
         qid_str = str(q["id"])
-        val = answers_raw.get(qid_str)
+        val = answers_raw.get(qid_str, answers_raw.get(q["id"]))
         if val is None:
             continue
         if q["type"] == "scale":
             try:
-                answers[q["id"]] = int(val)
+                answers[q["id"]] = max(1, min(5, int(val)))
             except (ValueError, TypeError):
                 pass
         elif q["type"] == "multi":
             if isinstance(val, list):
-                answers[q["id"]] = val
+                # 只保留合法选项，避免脏数据进入特征向量
+                allowed = set(q.get("options") or [])
+                answers[q["id"]] = [x for x in val if x in allowed]
             elif isinstance(val, str):
-                answers[q["id"]] = [x.strip() for x in val.replace(",", "，").split(",") if x.strip()]
+                allowed = set(q.get("options") or [])
+                parts = [x.strip() for x in val.replace(",", "，").split(",") if x.strip()]
+                answers[q["id"]] = [x for x in parts if x in allowed]
+
+    if len(answers) < 20:
+        return jsonify({"ok": False, "error": f"请至少完成 20 题（当前 {len(answers)} 题）"}), 400
 
     # 构建特征向量
     vec, dim_names = build_feature_vector(answers, important_qids)
@@ -294,7 +301,10 @@ def api_match():
     if MATCH_DELAY_SECONDS > 0:
         time.sleep(MATCH_DELAY_SECONDS)
 
-    mode = request.get_json().get("mode", MATCH_MODE) if request.is_json else MATCH_MODE
+    mode = MATCH_MODE
+    if request.is_json:
+        body = request.get_json(silent=True) or {}
+        mode = body.get("mode", MATCH_MODE)
     other_gender = "female" if user.gender == "male" else "male" if user.gender == "female" else None
 
     # 获取同校候选人
@@ -326,24 +336,32 @@ def api_match():
     # 保存匹配记录 + 发送邮件
     mail_cfg = get_mail_config()
     saved = []
+    to_notify = []  # 仅新建立的匹配发邮件
+    skipped_dealbreaker = 0
+    updated_existing = 0
+
     for matched_user, score in my_matches:
-        # 检查一票否决
         dealbreakers = check_dealbreakers(user.answers, matched_user.answers)
         if dealbreakers:
-            continue  # 跳过一票否决的匹配
+            skipped_dealbreaker += 1
+            continue
 
-        # 生成匹配理由
         insight = get_compatibility_insight(
             user.feature_vector, matched_user.feature_vector,
             user.answers, matched_user.answers,
         )
 
-        # 避免重复
         existing = Match.query.filter(
             ((Match.user1_id == user.id) & (Match.user2_id == matched_user.id)) |
             ((Match.user1_id == matched_user.id) & (Match.user2_id == user.id))
         ).first()
+
         if existing:
+            existing.score = score
+            existing.mode = mode
+            existing.insight_json = json.dumps(insight, ensure_ascii=False)
+            updated_existing += 1
+            saved.append((matched_user, score, insight))
             continue
 
         m = Match(
@@ -353,15 +371,23 @@ def api_match():
         )
         db.session.add(m)
         saved.append((matched_user, score, insight))
+        to_notify.append((matched_user, score, insight))
 
     if saved:
         user.last_matched_at = datetime.utcnow()
     db.session.commit()
 
-    # 发送邮件
-    for matched_user, score, insight in saved:
+    for matched_user, score, insight in to_notify:
         send_match_result_email(user.email, [(matched_user, score)], mail_cfg, insight)
         send_match_result_email(matched_user.email, [(user, score)], mail_cfg, insight)
+        mrec = Match.query.filter(
+            ((Match.user1_id == user.id) & (Match.user2_id == matched_user.id)) |
+            ((Match.user1_id == matched_user.id) & (Match.user2_id == user.id))
+        ).first()
+        if mrec:
+            mrec.notified = True
+    if to_notify:
+        db.session.commit()
 
     return jsonify({
         "ok": True,
@@ -378,7 +404,9 @@ def api_match():
             for u, s, insight in saved
         ],
         "total_candidates": len(candidates),
-        "dealbreaker_skipped": len(my_matches) - len(saved),
+        "dealbreaker_skipped": skipped_dealbreaker,
+        "updated_existing": updated_existing,
+        "newly_notified": len(to_notify),
     })
 
 
