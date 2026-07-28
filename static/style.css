@@ -393,6 +393,11 @@ input[type="text"]:focus, input[type="email"]:focus {
     color: var(--dealbreaker); border: 1px solid #fecaca;
     border-radius: 99px; font-weight: 700; flex-shrink: 0;
 }
+.q-db-hint {
+    margin: 4px 0 8px 2.2em;
+    color: #b91c1c;
+    font-size: 0.82em;
+}
 .q-status {
     font-size: 0.72em; padding: 2px 8px; border-radius: 99px; flex-shrink: 0;
     background: #eef2fa; color: var(--text-secondary); font-weight: 600;

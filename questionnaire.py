@@ -1,12 +1,12 @@
 """
 CampusMatch 深度问卷系统
 
-参考 SJTU Date 的 65 题设计，提炼为 40 题问卷：
+参考 SJTU Date 的 65 题设计，提炼为 39 题问卷：
   1. 核心价值观 (8题) — Q1-Q8
-  2. 生活习惯   (8题) — Q9-Q16
+  2. 生活习惯   (8题) — Q9-Q16（含对宠物的态度）
   3. 情感风格   (8题) — Q17-Q24
   4. 兴趣爱好   (8题) — Q25-Q32
-  5. 相处预期   (8题) — Q33-Q40（消费/定居/约会频率等）
+  5. 相处预期   (7题) — Q33-Q39（消费/定居/约会等；宠物题已并入 Q15）
 
 输出 80+ 维特征向量，用于余弦相似度匹配。
 """
@@ -16,19 +16,19 @@ QUESTIONS = [
     {
         "id": 1,
         "dimension": "values",
-        "text": "你的人生追求更偏向哪边？",
+        "text": "现阶段你更愿意把时间和精力投入哪里？（3 = 两边兼顾）",
         "type": "scale",  # 1-5 Likert
-        "left": "事业成就",
-        "right": "家庭幸福",
+        "left": "事业发展",
+        "right": "家庭生活",
         "dealbreaker": False,
     },
     {
         "id": 2,
         "dimension": "values",
-        "text": "对社会议题的态度？",
+        "text": "你的生活方式更偏向？",
         "type": "scale",
-        "left": "保守传统",
-        "right": "开放进步",
+        "left": "传统",
+        "right": "开放",
         "dealbreaker": False,
     },
     {
@@ -52,10 +52,10 @@ QUESTIONS = [
     {
         "id": 5,
         "dimension": "values",
-        "text": "对婚姻的看法？",
+        "text": "你对结婚的态度？（3 = 可有可无 / 暂不确定）",
         "type": "scale",
-        "left": "人生必需",
-        "right": "可有可无",
+        "left": "人生必须结婚",
+        "right": "完全不接受婚姻",
         "dealbreaker": True,  # 一票否决
     },
     {
@@ -70,19 +70,19 @@ QUESTIONS = [
     {
         "id": 7,
         "dimension": "values",
-        "text": "朋友和恋人的时间分配？",
+        "text": "伴侣和朋友的安排冲突时，你更倾向？（3 = 协调平衡）",
         "type": "scale",
-        "left": "恋人为重",
-        "right": "朋友同样重要",
+        "left": "优先伴侣",
+        "right": "优先朋友",
         "dealbreaker": False,
     },
     {
         "id": 8,
         "dimension": "values",
-        "text": "对精神/肉体出轨的态度？",
+        "text": "如果伴侣发生精神或身体出轨，你更倾向？",
         "type": "scale",
-        "left": "绝对不可原谅",
-        "right": "可以理解/沟通解决",
+        "left": "结束关系",
+        "right": "愿意尝试修复",
         "dealbreaker": True,
     },
 
@@ -99,10 +99,10 @@ QUESTIONS = [
     {
         "id": 10,
         "dimension": "lifestyle",
-        "text": "饮食偏好？",
+        "text": "你能接受多辣的食物？",
         "type": "scale",
-        "left": "清淡健康",
-        "right": "无辣不欢/重口味",
+        "left": "完全不吃辣",
+        "right": "无辣不欢",
         "dealbreaker": False,
     },
     {
@@ -126,10 +126,10 @@ QUESTIONS = [
     {
         "id": 13,
         "dimension": "lifestyle",
-        "text": "抽烟习惯？",
+        "text": "你对吸烟的态度？（1 不吸且不能接受 · 2 不吸但介意 · 3 不吸但可接受 · 4 偶尔吸 · 5 经常吸）",
         "type": "scale",
-        "left": "从不抽烟",
-        "right": "经常抽烟",
+        "left": "不吸且不能接受",
+        "right": "本人经常吸烟",
         "dealbreaker": True,
     },
     {
@@ -144,10 +144,10 @@ QUESTIONS = [
     {
         "id": 15,
         "dimension": "lifestyle",
-        "text": "对宠物的态度？",
+        "text": "未来是否愿意和伴侣养宠物？",
         "type": "scale",
-        "left": "非常喜欢，一定要养",
-        "right": "不太喜欢/过敏/不养",
+        "left": "很想养",
+        "right": "不想养或不能养",
         "dealbreaker": False,
     },
     {
@@ -164,20 +164,18 @@ QUESTIONS = [
     {
         "id": 17,
         "dimension": "emotional",
-        "text": "吵架时你通常怎么做？",
+        "text": "发生矛盾时，你更倾向什么时候沟通？",
         "type": "scale",
-        "left": "立刻冷静沟通解决",
-        "right": "需要时间冷静/先回避",
+        "left": "当下沟通",
+        "right": "先冷静，之后再沟通",
         "dealbreaker": False,
     },
     {
         "id": 18,
         "dimension": "emotional",
-        "text": "你更偏向如何表达爱意？",
-        "type": "scale",
-        "left": "言语表达+身体接触",
-        "right": "实际行动+惊喜礼物",
-        "dealbreaker": False,
+        "text": "你常用哪些方式表达爱意？（可多选）",
+        "type": "multi",
+        "options": ["直接说爱与赞美", "拥抱牵手等接触", "帮对方做事", "准备礼物惊喜"],
     },
     {
         "id": 19,
@@ -191,7 +189,7 @@ QUESTIONS = [
     {
         "id": 20,
         "dimension": "emotional",
-        "text": "对伴侣与异性正常社交的看法？",
+        "text": "对伴侣与其他人正常社交的看法？",
         "type": "scale",
         "left": "完全不介意，充分信任",
         "right": "会比较介意/需要边界",
@@ -200,19 +198,19 @@ QUESTIONS = [
     {
         "id": 21,
         "dimension": "emotional",
-        "text": "你的吃醋频率？",
+        "text": "你情绪低落时，希望伴侣怎么做？",
         "type": "scale",
-        "left": "几乎不吃醋",
-        "right": "比较容易吃醋",
+        "left": "主动陪伴安慰",
+        "right": "给我空间自己消化",
         "dealbreaker": False,
     },
     {
         "id": 22,
         "dimension": "emotional",
-        "text": "浪漫 vs 务实？",
+        "text": "恋爱中你更看重什么？（3 = 两者兼顾）",
         "type": "scale",
-        "left": "极度浪漫，仪式感很重要",
-        "right": "极度务实，过日子才重要",
+        "left": "浪漫与仪式感",
+        "right": "实际行动与稳定",
         "dealbreaker": False,
     },
     {
@@ -248,6 +246,7 @@ QUESTIONS = [
         "text": "音乐品味？（可多选）",
         "type": "multi",
         "options": ["流行", "摇滚/金属", "嘻哈/R&B", "电子/EDM", "古典/爵士", "民谣/独立", "K-Pop/J-Pop", "什么都听"],
+        "exclusive_options": ["什么都听"],
     },
     {
         "id": 27,
@@ -255,6 +254,7 @@ QUESTIONS = [
         "text": "阅读偏好？（可多选）",
         "type": "multi",
         "options": ["文学/小说", "科幻/奇幻", "历史/哲学", "心理学/自我提升", "科技/科普", "漫画/轻小说", "不太看书", "学术/专业书籍"],
+        "exclusive_options": ["不太看书"],
     },
     {
         "id": 28,
@@ -262,6 +262,7 @@ QUESTIONS = [
         "text": "游戏类型？（可多选）",
         "type": "multi",
         "options": ["MOBA（王者/LOL）", "FPS/射击", "RPG/开放世界", "独立游戏", "手游/休闲", "桌游/剧本杀", "不玩游戏", "主机/PC大作"],
+        "exclusive_options": ["不玩游戏"],
     },
     {
         "id": 29,
@@ -278,6 +279,7 @@ QUESTIONS = [
         "text": "运动项目偏好？（可多选）",
         "type": "multi",
         "options": ["跑步/健身", "球类运动", "游泳/水上", "瑜伽/普拉提", "极限运动", "舞蹈", "不运动", "徒步/登山"],
+        "exclusive_options": ["不运动"],
     },
     {
         "id": 31,
@@ -285,6 +287,7 @@ QUESTIONS = [
         "text": "文化活动兴趣？（可多选）",
         "type": "multi",
         "options": ["看展/博物馆", "音乐会/Livehouse", "话剧/音乐剧", "电影/影展", "读书会/讲座", "咖啡馆/美食探店", "不太参加", "市集/艺术节"],
+        "exclusive_options": ["不太参加"],
     },
     {
         "id": 32,
@@ -298,19 +301,19 @@ QUESTIONS = [
     {
         "id": 33,
         "dimension": "expectations",
-        "text": "约会消费更倾向？",
+        "text": "约会账单更倾向怎样处理？（3 = 视情况决定）",
         "type": "scale",
-        "left": "AA / 各自付各自的",
-        "right": "谁提出谁请客 / 传统分工",
+        "left": "每次 AA",
+        "right": "双方轮流请客",
         "dealbreaker": False,
     },
     {
         "id": 34,
         "dimension": "expectations",
-        "text": "毕业后希望主要生活在哪里？",
-        "type": "scale",
-        "left": "回老家 / 小城市",
-        "right": "北上广深港 / 国际都市",
+        "text": "毕业后愿意去哪些地方发展？（可多选）",
+        "type": "multi",
+        "options": ["一线城市", "二线城市", "三四线城市", "小县城", "海外", "暂不确定"],
+        "exclusive_options": ["暂不确定"],
         "dealbreaker": False,
     },
     {
@@ -338,33 +341,24 @@ QUESTIONS = [
         "type": "scale",
         "left": "可以接受，信任最重要",
         "right": "很难接受，必须同城",
-        "dealbreaker": True,
+        "dealbreaker": False,
     },
     {
         "id": 38,
         "dimension": "expectations",
-        "text": "想养宠物吗？",
+        "text": "约会时你更偏好哪种形式？",
         "type": "scale",
-        "left": "一定要养（猫狗等）",
-        "right": "坚决不养",
+        "left": "和朋友一起活动",
+        "right": "两人单独约会",
         "dealbreaker": False,
     },
     {
         "id": 39,
         "dimension": "expectations",
-        "text": "恋爱中的社交频率？",
+        "text": "共同生活时，家务更倾向怎样安排？",
         "type": "scale",
-        "left": "经常一起见朋友 / 参加局",
-        "right": "两人世界为主，少社交",
-        "dealbreaker": False,
-    },
-    {
-        "id": 40,
-        "dimension": "expectations",
-        "text": "同居后家务怎么分？",
-        "type": "scale",
-        "left": "明确分工、对半分",
-        "right": "谁有空谁做 / 随性",
+        "left": "提前明确分工",
+        "right": "按当时空闲灵活分配",
         "dealbreaker": False,
     },
 ]
@@ -376,72 +370,75 @@ QUESTIONS = [
 # 注意：multi 选项翻译仅作展示，提交仍存简体原值
 # ============================================================
 QUESTION_I18N = {
-    1: {"tw": ("你的人生追求更偏向哪邊？", "事業成就", "家庭幸福"),
-        "en": ("What matters more in your life?", "Career achievement", "Family happiness"),
-        "pt": ("O que importa mais na sua vida?", "Sucesso profissional", "Felicidade familiar")},
-    2: {"tw": ("對社會議題的態度？", "保守傳統", "開放進步"),
-        "en": ("Your stance on social issues?", "Conservative & traditional", "Open & progressive"),
-        "pt": ("A sua posição em questões sociais?", "Conservador e tradicional", "Aberto e progressista")},
+    1: {"tw": ("現階段你更願意把時間和精力投入哪裡？（3 = 兩邊兼顧）", "事業發展", "家庭生活"),
+        "en": ("Where would you rather invest your time and energy now? (3 = balance both)", "Career growth", "Family life"),
+        "pt": ("Onde prefere investir tempo e energia agora? (3 = equilibrar ambos)", "Carreira", "Vida familiar")},
+    2: {"tw": ("你的生活方式更偏向？", "傳統", "開放"),
+        "en": ("Your lifestyle is more…?", "Traditional", "Open"),
+        "pt": ("O seu estilo de vida é mais…?", "Tradicional", "Aberto")},
     3: {"tw": ("宗教信仰在你生活中的重要性？", "非常重要", "完全不重要"),
         "en": ("How important is religion to you?", "Very important", "Not important at all"),
         "pt": ("Qual a importância da religião para si?", "Muito importante", "Nada importante")},
     4: {"tw": ("收入如何分配？", "儲蓄為主，未雨綢繆", "享受當下，及時行樂"),
         "en": ("How do you manage your income?", "Save first, plan ahead", "Enjoy now, live in the moment"),
         "pt": ("Como gere o seu dinheiro?", "Poupar e planear o futuro", "Aproveitar o momento")},
-    5: {"tw": ("對婚姻的看法？", "人生必需", "可有可無"),
-        "en": ("Your view on marriage?", "A must in life", "Optional"),
-        "pt": ("A sua visão sobre o casamento?", "Essencial na vida", "Opcional")},
+    5: {"tw": ("你對結婚的態度？（3 = 可有可無 / 暫不確定）", "人生必須結婚", "完全不接受婚姻"),
+        "en": ("Your attitude toward marriage? (3 = optional / unsure)", "Marriage is a must", "I completely reject marriage"),
+        "pt": ("A sua atitude perante o casamento? (3 = opcional / indeciso)", "Casar é essencial", "Rejeito totalmente o casamento")},
     6: {"tw": ("是否想要孩子？", "一定要", "一定不要"),
         "en": ("Do you want children?", "Definitely yes", "Definitely no"),
         "pt": ("Quer ter filhos?", "Com certeza sim", "Com certeza não")},
-    7: {"tw": ("朋友和戀人的時間分配？", "戀人為重", "朋友同樣重要"),
-        "en": ("Time between partner and friends?", "Partner comes first", "Friends matter equally"),
-        "pt": ("Tempo entre par e amigos?", "O par em primeiro lugar", "Os amigos importam igualmente")},
-    8: {"tw": ("對精神/肉體出軌的態度？", "絕對不可原諒", "可以理解/溝通解決"),
-        "en": ("Attitude toward cheating (emotional/physical)?", "Absolutely unforgivable", "Can be talked through"),
-        "pt": ("Atitude perante a infidelidade?", "Absolutamente imperdoável", "Pode ser conversado")},
+    7: {"tw": ("伴侶和朋友的安排衝突時，你更傾向？（3 = 協調平衡）", "優先伴侶", "優先朋友"),
+        "en": ("When plans with your partner and friends clash, what do you prefer? (3 = balance)", "Prioritize partner", "Prioritize friends"),
+        "pt": ("Quando os planos com o par e amigos coincidem? (3 = equilibrar)", "Priorizar o par", "Priorizar os amigos")},
+    8: {"tw": ("如果伴侶發生精神或身體出軌，你更傾向？", "結束關係", "願意嘗試修復"),
+        "en": ("If your partner cheats emotionally or physically, you would…?", "End the relationship", "Try to repair it"),
+        "pt": ("Se o par for infiel emocional ou fisicamente, prefere…?", "Terminar a relação", "Tentar reparar a relação")},
     9: {"tw": ("你的作息時間？", "早睡早起（22點睡6點起）", "夜貓子（凌晨2點後睡）"),
         "en": ("Your sleep schedule?", "Early bird (10pm–6am)", "Night owl (after 2am)"),
         "pt": ("O seu horário de sono?", "Madrugador (22h–6h)", "Noctívago (depois das 2h)")},
-    10: {"tw": ("飲食偏好？", "清淡健康", "無辣不歡/重口味"),
-         "en": ("Food preference?", "Light & healthy", "Spicy & bold flavors"),
-         "pt": ("Preferência alimentar?", "Leve e saudável", "Picante e intenso")},
+    10: {"tw": ("你能接受多辣的食物？", "完全不吃辣", "無辣不歡"),
+         "en": ("How spicy can your food be?", "No spice at all", "The spicier the better"),
+         "pt": ("Quanto picante aceita na comida?", "Nada picante", "Quanto mais picante melhor")},
     11: {"tw": ("運動頻率？", "每天堅持", "幾乎不運動"),
          "en": ("How often do you exercise?", "Every day", "Almost never"),
          "pt": ("Com que frequência faz exercício?", "Todos os dias", "Quase nunca")},
     12: {"tw": ("居住空間的整潔程度？", "一塵不染，物品歸位", "隨意就好，不拘小節"),
          "en": ("How tidy is your space?", "Spotless, everything in place", "Casual, easygoing"),
          "pt": ("Quão arrumado é o seu espaço?", "Impecável, tudo no lugar", "Descontraído")},
-    13: {"tw": ("抽菸習慣？", "從不抽菸", "經常抽菸"),
-         "en": ("Smoking?", "Never", "Often"),
-         "pt": ("Fuma?", "Nunca", "Frequentemente")},
+    13: {"tw": ("你對吸菸的態度？（1 不吸且不能接受 · 2 不吸但介意 · 3 不吸但可接受 · 4 偶爾吸 · 5 經常吸）", "不吸且不能接受", "本人經常吸菸"),
+         "en": ("Your attitude toward smoking? (1 don't smoke/can't accept · 2 don't smoke/dislike · 3 don't smoke/accept · 4 occasionally · 5 often)", "Do not smoke or accept it", "I smoke often"),
+         "pt": ("A sua atitude perante o tabaco? (1 não fumo/não aceito · 2 não fumo/incomoda · 3 não fumo/aceito · 4 ocasionalmente · 5 frequentemente)", "Não fumo nem aceito", "Fumo frequentemente")},
     14: {"tw": ("喝酒習慣？", "滴酒不沾", "經常小酌/聚會喝酒"),
          "en": ("Drinking?", "Never", "Social drinks often"),
          "pt": ("Bebe álcool?", "Nunca", "Socialmente, com frequência")},
-    15: {"tw": ("對寵物的態度？", "非常喜歡，一定要養", "不太喜歡/過敏/不養"),
-         "en": ("Pets?", "Love them, must have", "Not a fan / allergic"),
-         "pt": ("Animais de estimação?", "Adoro, quero ter", "Não gosto / alergia")},
+    15: {"tw": ("未來是否願意和伴侶養寵物？", "很想養", "不想養或不能養"),
+         "en": ("Would you raise pets with a partner in the future?", "Would love to", "Do not want to / cannot"),
+         "pt": ("Gostaria de ter animais com o seu par no futuro?", "Gostaria muito", "Não quero / não posso")},
     16: {"tw": ("旅行風格？", "精緻規劃，打卡清單", "隨性流浪，走到哪算哪"),
          "en": ("Travel style?", "Well planned, checklist", "Go with the flow"),
          "pt": ("Estilo de viagem?", "Tudo planeado, com roteiro", "Ao sabor do momento")},
-    17: {"tw": ("吵架時你通常怎麼做？", "立刻冷靜溝通解決", "需要時間冷靜/先迴避"),
-         "en": ("During a fight, you usually…?", "Talk it out calmly right away", "Need time alone first"),
-         "pt": ("Numa discussão, costuma…?", "Conversar logo com calma", "Preciso de tempo sozinho primeiro")},
-    18: {"tw": ("你更偏向如何表達愛意？", "言語表達+身體接觸", "實際行動+驚喜禮物"),
-         "en": ("How do you express love?", "Words & physical affection", "Actions & surprise gifts"),
-         "pt": ("Como expressa o amor?", "Palavras e carinho físico", "Ações e presentes surpresa")},
+    17: {"tw": ("發生矛盾時，你更傾向什麼時候溝通？", "當下溝通", "先冷靜，之後再溝通"),
+         "en": ("When conflict happens, when do you prefer to talk?", "Talk right away", "Cool down, then talk"),
+         "pt": ("Num conflito, quando prefere conversar?", "Conversar logo", "Acalmar primeiro, conversar depois")},
+    18: {"tw": ("你常用哪些方式表達愛意？（可多選）",
+               ["直接說愛與讚美", "擁抱牽手等接觸", "幫對方做事", "準備禮物驚喜"]),
+         "en": ("How do you usually express love? (select all)",
+                ["Say it & give compliments", "Hugs, hand-holding & touch", "Help with things", "Prepare gifts & surprises"]),
+         "pt": ("Como costuma expressar amor? (várias opções)",
+                ["Dizer e elogiar", "Abraçar, dar a mão e tocar", "Ajudar com tarefas", "Preparar presentes e surpresas"])},
     19: {"tw": ("你需要多少獨處時間？", "幾乎不需要，喜歡膩在一起", "需要大量獨處空間"),
          "en": ("How much alone time do you need?", "Barely any, love being together", "A lot of personal space"),
          "pt": ("De quanto tempo sozinho precisa?", "Quase nenhum, adoro estar juntos", "Muito espaço pessoal")},
-    20: {"tw": ("對伴侶與異性正常社交的看法？", "完全不介意，充分信任", "會比較介意/需要邊界"),
-         "en": ("Partner socializing with the opposite sex?", "Totally fine, full trust", "Prefer clear boundaries"),
-         "pt": ("O par socializar com o sexo oposto?", "Sem problema, confiança total", "Prefiro limites claros")},
-    21: {"tw": ("你的吃醋頻率？", "幾乎不吃醋", "比較容易吃醋"),
-         "en": ("How jealous do you get?", "Almost never", "Quite easily"),
-         "pt": ("É ciumento(a)?", "Quase nunca", "Com facilidade")},
-    22: {"tw": ("浪漫 vs 務實？", "極度浪漫，儀式感很重要", "極度務實，過日子才重要"),
-         "en": ("Romantic vs practical?", "Very romantic, rituals matter", "Very practical, daily life matters"),
-         "pt": ("Romântico ou prático?", "Muito romântico, rituais importam", "Muito prático, o dia a dia importa")},
+    20: {"tw": ("對伴侶與其他人正常社交的看法？", "完全不介意，充分信任", "希望有明確邊界"),
+         "en": ("Your partner socializing normally with others?", "Totally fine, full trust", "Prefer clear boundaries"),
+         "pt": ("O seu par socializar normalmente com outras pessoas?", "Sem problema, confiança total", "Prefiro limites claros")},
+    21: {"tw": ("你情緒低落時，希望伴侶怎麼做？", "主動陪伴安慰", "給我空間自己消化"),
+         "en": ("When you feel low, what should your partner do?", "Stay close and comfort me", "Give me space to process"),
+         "pt": ("Quando está em baixo, o que prefere que o par faça?", "Acompanhar e confortar", "Dar-me espaço")},
+    22: {"tw": ("戀愛中你更看重什麼？（3 = 兩者兼顧）", "浪漫與儀式感", "實際行動與穩定"),
+         "en": ("What matters more in a relationship? (3 = balance both)", "Romance & rituals", "Practical action & stability"),
+         "pt": ("O que valoriza mais numa relação? (3 = equilibrar)", "Romance e rituais", "Ações práticas e estabilidade")},
     23: {"tw": ("期望每天和伴侶溝通的頻率？", "時刻保持聯繫，分享日常", "有事再說，不必天天聊"),
          "en": ("Daily communication with your partner?", "Stay in touch all day", "Only when needed"),
          "pt": ("Comunicação diária com o par?", "Contacto constante", "Só quando necessário")},
@@ -493,12 +490,15 @@ QUESTION_I18N = {
                 ["Shows & movies", "Gaming", "Working out", "Reading/Writing", "Chatting with friends", "Sleeping", "Cooking/Baking", "Social media"]),
          "pt": ("Como relaxa? (vários)",
                 ["Séries e filmes", "Jogar", "Exercício", "Ler/Escrever", "Conversar com amigos", "Dormir", "Cozinhar", "Redes sociais"])},
-    33: {"tw": ("約會消費更傾向？", "AA / 各自付各自的", "誰提出誰請客 / 傳統分工"),
-         "en": ("Dating expenses?", "Split the bill", "Whoever invites pays / traditional"),
-         "pt": ("Despesas nos encontros?", "Dividir a conta", "Quem convida paga / tradicional")},
-    34: {"tw": ("畢業後希望主要生活在哪裡？", "回老家 / 小城市", "北上廣深港 / 國際都市"),
-         "en": ("Where do you want to live after graduation?", "Hometown / smaller city", "Big city / international"),
-         "pt": ("Onde quer viver depois de se formar?", "Terra natal / cidade pequena", "Grande metrópole / internacional")},
+    33: {"tw": ("約會帳單更傾向怎樣處理？（3 = 視情況決定）", "每次 AA", "雙方輪流請客"),
+         "en": ("How should dating bills be handled? (3 = depends)", "Split every time", "Take turns treating"),
+         "pt": ("Como dividir as contas dos encontros? (3 = depende)", "Dividir sempre", "Pagar à vez")},
+    34: {"tw": ("畢業後願意去哪裡發展？（可多選）",
+               ["一線城市", "二線城市", "三四線城市", "小縣城", "海外", "暫不確定"]),
+         "en": ("Where would you consider living after graduation? (select all)",
+                ["Major city", "Mid-sized city", "Smaller city", "Small town", "Abroad", "Not sure yet"]),
+         "pt": ("Onde aceitaria viver depois de se formar? (várias opções)",
+                ["Grande cidade", "Cidade média", "Cidade pequena", "Vila", "Estrangeiro", "Ainda não sei"])},
     35: {"tw": ("理想的約會頻率？", "每週多次見面", "每月幾次就夠，更重線上聯絡"),
          "en": ("Ideal dating frequency?", "Meet several times a week", "A few times a month, more online"),
          "pt": ("Frequência ideal de encontros?", "Várias vezes por semana", "Algumas vezes por mês, mais online")},
@@ -508,15 +508,12 @@ QUESTION_I18N = {
     37: {"tw": ("對異地戀的態度？", "可以接受，信任最重要", "很難接受，必須同城"),
          "en": ("Long-distance relationships?", "Acceptable, trust matters most", "Hard no, must be same city"),
          "pt": ("Relação à distância?", "Aceitável, confiança é o essencial", "Difícil, tem de ser na mesma cidade")},
-    38: {"tw": ("想養寵物嗎？", "一定要養（貓狗等）", "堅決不養"),
-         "en": ("Want to raise pets together?", "Definitely (cats/dogs etc.)", "Absolutely not"),
-         "pt": ("Ter animais de estimação juntos?", "Com certeza (gatos/cães)", "De maneira nenhuma")},
-    39: {"tw": ("戀愛中的社交頻率？", "經常一起見朋友 / 參加局", "兩人世界為主，少社交"),
-         "en": ("Social life as a couple?", "Often out with friends", "Mostly just the two of us"),
-         "pt": ("Vida social em casal?", "Muitas saídas com amigos", "Principalmente nós os dois")},
-    40: {"tw": ("同居後家務怎麼分？", "明確分工、對半分", "誰有空誰做 / 隨性"),
-         "en": ("Housework if living together?", "Clear 50/50 split", "Whoever is free does it"),
-         "pt": ("Tarefas domésticas se viverem juntos?", "Divisão clara 50/50", "Quem estiver livre faz")},
+    38: {"tw": ("約會時你更偏好哪種形式？", "和朋友一起活動", "兩人單獨約會"),
+         "en": ("What kind of date do you prefer?", "Activities with friends", "One-on-one dates"),
+         "pt": ("Que tipo de encontro prefere?", "Atividades com amigos", "Encontros a dois")},
+    39: {"tw": ("共同生活時，家務更傾向怎樣安排？", "提前明確分工", "按當時空閒靈活分配"),
+         "en": ("How should chores be arranged when living together?", "Agree on roles in advance", "Divide flexibly by availability"),
+         "pt": ("Como organizar tarefas ao viver juntos?", "Definir funções antes", "Dividir conforme a disponibilidade")},
 }
 
 
@@ -593,13 +590,20 @@ def build_feature_vector(answers, important_ids=None):
             except (TypeError, ValueError):
                 val = 3
             val = max(1, min(5, val))
-            # 归一化到 [0, 1]
-            normalized = (float(val) - 1) / 4.0
-            vector.append(normalized * weight)
-            dim_names.append(f"Q{qid}_{q['dimension']}")
+            # 双维互补编码，消除单维 [0,1] 对右端答案的余弦偏置：
+            # 1 -> [1,0]，3 -> [.5,.5]，5 -> [0,1]
+            # 因而“两人都选 1”和“两人都选 5”会得到对称贡献。
+            right = (float(val) - 1) / 4.0
+            left = 1.0 - right
+            vector.extend([left * weight, right * weight])
+            dim_names.extend([
+                f"Q{qid}_{q['dimension']}_left",
+                f"Q{qid}_{q['dimension']}_right",
+            ])
 
         elif q["type"] == "multi":
-            selected = set(answers.get(qid, []) or [])
+            raw = answers.get(qid, []) or []
+            selected = set(raw) if isinstance(raw, (list, tuple, set)) else set()
             for opt in q["options"]:
                 val = 1.0 if opt in selected else 0.0
                 vector.append(val * weight)
@@ -623,13 +627,13 @@ def cosine_similarity(vec1, vec2):
     return dot / (norm1 * norm2)
 
 
-def check_dealbreakers(answers1, answers2, threshold=0.6):
+def check_dealbreakers(answers1, answers2):
     """
     检查一票否决条件。
 
-    对标记为 dealbreaker 的 scale 题，如果两人的答案差距超过
-    threshold（即归一化后差距 > 0.6，相当于原始 scale 差 ≥ 3），
-    则返回所有触发否决的问题。
+    仅检查标记为 dealbreaker 的 scale 题：
+    - 婚姻/孩子（Q5/Q6）：一方明确想要（1–2）、另一方明确不要（4–5）
+    - 其它硬底线：答案差距 ≥ 3
 
     Returns:
         list of question texts that triggered dealbreaker
@@ -645,14 +649,19 @@ def check_dealbreakers(answers1, answers2, threshold=0.6):
             continue
 
         qid = q["id"]
+        if qid not in answers1 or qid not in answers2:
+            continue
         try:
-            v1 = float(answers1.get(qid, 3))
-            v2 = float(answers2.get(qid, 3))
+            v1 = float(answers1[qid])
+            v2 = float(answers2[qid])
         except (TypeError, ValueError):
             continue
 
-        # scale 差 ≥ 3 → 否决
-        if abs(v1 - v2) >= 3:
+        if qid in (5, 6):
+            conflict = min(v1, v2) <= 2 and max(v1, v2) >= 4
+        else:
+            conflict = abs(v1 - v2) >= 3
+        if conflict:
             triggered.append(q["text"])
 
     return triggered

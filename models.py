@@ -128,7 +128,19 @@ class User(db.Model):
 
     def questionnaire_completed(self):
         """检查是否完成了问卷"""
-        return bool(self.answers and len(self.answers) >= 20)  # 至少回答 20 题
+        from questionnaire import QUESTIONS
+
+        answers = self.answers
+        if not answers:
+            return False
+        for q in QUESTIONS:
+            value = answers.get(q["id"])
+            if q["type"] == "scale":
+                if value is None:
+                    return False
+            elif not isinstance(value, list) or not value:
+                return False
+        return True
 
     def ready_to_match(self):
         return bool(

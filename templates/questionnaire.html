@@ -57,9 +57,13 @@
         <div class="progress-bar-container" style="flex:1;margin-bottom:0;">
             <div class="progress-bar-fill" id="progress-bar" style="width:0%"></div>
         </div>
-        <span id="progress-text" class="t-dim" style="font-size:0.85em;white-space:nowrap;">0/40</span>
+        <span id="progress-text" class="t-dim" style="font-size:0.85em;white-space:nowrap;">0/39</span>
     </div>
     <p id="progress-hint" class="hint" style="margin:8px 0 0;">点击 1–5 作答量表题；兴趣题至少选一项</p>
+    <div class="box box-warn" style="margin-top:12px;text-align:left;">
+        <p style="margin:0;font-weight:700;font-size:0.9em;" data-i18n="qn.db.title">什么是「一票否决」？</p>
+        <p class="hint" style="margin:6px 0 0;" data-i18n="qn.db.hint">标有「一票否决」的题（婚姻、孩子、出轨、吸烟接受度）是硬性底线：出现明确冲突时，系统会直接跳过对方。请按真实想法作答。</p>
+    </div>
 </div>
 
 <form id="q-form" onsubmit="return false;">
@@ -137,8 +141,11 @@ function render() {
         html += '<div class="q-item' + (db ? ' q-dealbreaker' : '') + (done ? ' q-done' : ' q-todo') + '" id="qcard_' + qid + '" data-qid="' + qid + '">'
             + '<div class="q-head"><span class="q-num">' + q.id + '</span>'
             + '<span class="q-text">' + esc(qi(q, 'text')) + '</span>'
-            + (db ? '<span class="q-db">' + t('qn.db') + '</span>' : '')
+            + (db ? '<span class="q-db" title="' + esc(t('qn.db.tip')) + '">' + t('qn.db') + '</span>' : '')
             + '<span class="q-status" id="qs_' + qid + '">' + (done ? t('qn.done') : t('qn.todo')) + '</span></div>';
+        if (db) {
+            html += '<p class="hint q-db-hint">' + esc(t('qn.db.tip')) + '</p>';
+        }
 
         if (q.type === 'scale') {
             html += '<div class="likert-row">'
@@ -215,14 +222,36 @@ function setScale(qid, value) {
 function toggleMulti(qid, idx, cb) {
     var qs = String(qid);
     if (!Array.isArray(answers[qs])) answers[qs] = [];
-    var tag = document.getElementById('mt_' + qs + '_' + idx);
+    var q = null;
+    for (var i = 0; i < QUESTIONS.length; i++) {
+        if (QUESTIONS[i].id === Number(qid)) { q = QUESTIONS[i]; break; }
+    }
+    if (!q) return;
+    var exclusive = q.exclusive_options || [];
+
     if (cb.checked) {
-        if (answers[qs].indexOf(cb.value) < 0) answers[qs].push(cb.value);
-        if (tag) tag.classList.add('on');
+        if (exclusive.indexOf(cb.value) >= 0) {
+            // “不玩/不运动/暂不确定”等只能单独选择。
+            answers[qs] = [cb.value];
+        } else {
+            answers[qs] = answers[qs].filter(function (v) {
+                return exclusive.indexOf(v) < 0;
+            });
+            if (answers[qs].indexOf(cb.value) < 0) answers[qs].push(cb.value);
+        }
     } else {
         answers[qs] = answers[qs].filter(function (v) { return v !== cb.value; });
-        if (tag) tag.classList.remove('on');
         if (answers[qs].length === 0) delete answers[qs];
+    }
+
+    // 同步同题所有复选框与标签的视觉状态。
+    for (var j = 0; j < q.options.length; j++) {
+        var tag = document.getElementById('mt_' + qs + '_' + j);
+        if (!tag) continue;
+        var selected = Array.isArray(answers[qs]) && answers[qs].indexOf(q.options[j]) >= 0;
+        tag.classList.toggle('on', selected);
+        var input = tag.querySelector('input');
+        if (input) input.checked = selected;
     }
     markCard(qs);
     updateProgress();

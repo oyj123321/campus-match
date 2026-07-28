@@ -185,9 +185,9 @@ def _match_explain_text(mode):
             "批量匈牙利：先按校配对，再跑跨校池；每人最多配到 1 人。"
         ),
         "steps": [
-            "1. 问卷答案变成一串数字（特征向量），「对我很重要」的题权重更大。",
+            "1. 问卷答案变成双向平衡的特征向量，选左端或右端都不会天然占优势；「对我很重要」的题权重更大。",
             "2. 余弦相似度：两串数字方向越接近，匹配分越高（可理解为口味有多像）。",
-            "3. 一票否决：婚姻/孩子/出轨/异地恋等题差太大直接跳过。",
+            "3. 一票否决：婚姻、孩子出现明确相反意愿，或出轨观、吸烟接受度差异过大时直接跳过。",
             "4. 择偶取向：双方都愿意匹配对方的性别才进入候选。",
             "5. 黑名单双向生效；跨校需双方都勾选且总闸开启。",
             "6. 点按钮默认只配对 1 人；每周二批量模式才用匈牙利做一对一分配。",
@@ -287,6 +287,18 @@ def api_register():
         db.session.add(user)
         db.session.flush()
 
+    # 内测号不发真邮件、不换码：统一 BETA01（不写库，避免 unique 冲突）
+    if _is_beta_account(email):
+        user.verification_token = None
+        user.email_verified = True
+        db.session.commit()
+        return jsonify({
+            "ok": True,
+            "mail_sent": False,
+            "message": f"内测账号：请直接填写验证码 BETA01（{email}）",
+            "dev_token": "BETA01",
+        })
+
     token = user.generate_token()
     db.session.commit()
 
@@ -298,6 +310,12 @@ def api_register():
         "message": f"验证码已发送至 {email}" if mail_ok else f"邮件发送失败，请使用页面验证码。详情: {info}",
         "dev_token": None if (mail_ok and MAIL_ENABLED) else token,
     })
+
+
+def _is_beta_account(email: str) -> bool:
+    """内测号：beta01@…–beta10@…，统一验证码 BETA01，不过期。"""
+    local = (email or "").split("@", 1)[0].lower()
+    return local.startswith("beta") and local[4:].isdigit()
 
 
 @app.route("/api/verify", methods=["POST"])
@@ -312,6 +330,17 @@ def api_verify():
     user = User.query.filter_by(email=email).first()
     if not user:
         return jsonify({"ok": False, "error": "用户不存在"}), 404
+
+    beta = _is_beta_account(email)
+    # 内测号：固定验证码 BETA01（不落库，可反复登录）
+    if beta:
+        if token != "BETA01":
+            return jsonify({"ok": False, "error": "验证码错误（内测号请填 BETA01）"}), 400
+        user.email_verified = True
+        user.verification_token = None
+        db.session.commit()
+        session["user_id"] = user.id
+        return jsonify({"ok": True, "message": "已登录"})
 
     # 已验证用户直接登录
     if user.email_verified:
@@ -342,12 +371,18 @@ def api_resend_verification():
     user = User.query.filter_by(email=email).first()
     if not user:
         return jsonify({"ok": False, "error": "用户不存在"}), 404
-    if user.email_verified:
+    if user.email_verified and not _is_beta_account(email):
         return jsonify({"ok": True, "message": "已验证"})
 
     ok_rate, rate_err = check_register_rate(email)
     if not ok_rate:
         return jsonify({"ok": False, "error": rate_err}), 429
+
+    if _is_beta_account(email):
+        user.verification_token = None
+        user.email_verified = True
+        db.session.commit()
+        return jsonify({"ok": True, "dev_token": "BETA01", "message": "内测账号验证码：BETA01"})
 
     token = user.generate_token()
     db.session.commit()
@@ -380,7 +415,17 @@ def api_questionnaire():
     # POST: 提交答案 + 生成特征向量
     data = request.get_json() or {}
     answers_raw = data.get("answers", {})
-    important_qids = set(data.get("important_qids", []))
+    if not isinstance(answers_raw, dict):
+        return jsonify({"ok": False, "error": "问卷答案格式错误"}), 400
+    valid_qids = {q["id"] for q in QUESTIONS}
+    important_qids = set()
+    for raw_qid in data.get("important_qids", []):
+        try:
+            qid = int(raw_qid)
+        except (TypeError, ValueError):
+            continue
+        if qid in valid_qids:
+            important_qids.add(qid)
 
     # 转换：前端传来的都是字符串键，统一成 int 键
     answers = {}
@@ -398,14 +443,31 @@ def api_questionnaire():
             if isinstance(val, list):
                 # 只保留合法选项，避免脏数据进入特征向量
                 allowed = set(q.get("options") or [])
-                answers[q["id"]] = [x for x in val if x in allowed]
+                clean = list(dict.fromkeys(x for x in val if x in allowed))
             elif isinstance(val, str):
                 allowed = set(q.get("options") or [])
-                parts = [x.strip() for x in val.replace(",", "，").split(",") if x.strip()]
-                answers[q["id"]] = [x for x in parts if x in allowed]
+                parts = [x.strip() for x in val.replace("，", ",").split(",") if x.strip()]
+                clean = list(dict.fromkeys(x for x in parts if x in allowed))
+            else:
+                clean = []
 
-    if len(answers) < 20:
-        return jsonify({"ok": False, "error": f"请至少完成 20 题（当前 {len(answers)} 题）"}), 400
+            # “不玩/不运动/暂不确定”等选项与其它选项互斥。
+            exclusive = set(q.get("exclusive_options") or [])
+            chosen_exclusive = next((x for x in clean if x in exclusive), None)
+            answers[q["id"]] = [chosen_exclusive] if chosen_exclusive else clean
+
+    missing = []
+    for q in QUESTIONS:
+        val = answers.get(q["id"])
+        if q["type"] == "scale" and val is None:
+            missing.append(q["id"])
+        elif q["type"] == "multi" and not val:
+            missing.append(q["id"])
+    if missing:
+        return jsonify({
+            "ok": False,
+            "error": f"请完成全部 {len(QUESTIONS)} 题（未完成：{', '.join('Q' + str(x) for x in missing)}）",
+        }), 400
 
     # 构建特征向量
     vec, dim_names = build_feature_vector(answers, important_qids)
