@@ -1,25 +1,18 @@
 {% extends "base.html" %}
 {% block content %}
 <div class="hero">
-    <h1>校园恋爱匹配</h1>
-    <p class="hero-sub">用学校邮箱注册 → 完成问卷 → 算法匹配 → 邮件通知结果</p>
-    <p class="hint" style="margin-top:8px;">已有 <strong>{{ total_users }}</strong> 位同学验证加入 · 批量匹配 {{ batch_label }}</p>
-</div>
-
-<div class="card" style="border-left:4px solid #2563eb;">
-    <h3 style="margin-bottom:8px;">使用说明 & 隐私</h3>
-    <ul class="hint" style="padding-left:18px;margin:0;">
-        <li>仅接受支持列表内的<strong>学校邮箱</strong>注册，用于确认在校身份。</li>
-        <li>问卷与择偶取向用于匹配；微信号仅在匹配成功后发送给对方。</li>
-        <li>每周有匹配额度与冷却，结果以网站页面为准（邮件只是通知）。</li>
-        <li>可随时退出登录；如需删除账号请联系运营邮箱（见页脚）。</li>
-        <li>请友善使用，禁止骚扰；本平台不提供线下担保。</li>
-    </ul>
+    <span class="kicker">Campus Match · 澳门 & 大湾区</span>
+    <h1>不用刷脸不用滑，<br><span class="grad-text">让算法把对的人送到你面前</span></h1>
+    <p class="hero-sub">学校邮箱验证在校身份 → 40 题深度问卷 → 每周一对一揭晓，附相处说明书与破冰话题。</p>
+    <div class="stat-chip">
+        <span class="dot"></span>
+        已有 <strong>&nbsp;{{ total_users }}&nbsp;</strong> 位同学验证加入 · 批量揭晓 {{ batch_label }}
+    </div>
 </div>
 
 <!-- Step 1: 注册 -->
 <div class="card" id="step1-card">
-    <h2>Step 1: 输入学校邮箱</h2>
+    <h2>① 输入学校邮箱</h2>
     <div class="form-group">
         <label for="email">学校邮箱</label>
         <input type="email" id="email" placeholder="例如：yc12345@um.edu.mo" autocomplete="email"
@@ -36,8 +29,8 @@
 
 <!-- Step 2: 验证码（注册后显示） -->
 <div class="card" id="step2-card" style="display:none;">
-    <h2>Step 2: 输入验证码</h2>
-    <p id="step2-email" style="color:#2563eb;font-weight:600;"></p>
+    <h2>② 输入验证码</h2>
+    <p id="step2-email" style="color:#a5b4fc;font-weight:600;"></p>
     <p class="hint" style="margin-bottom:12px;">验证码已发送到你的学校邮箱，请检查收件箱（和垃圾邮件）</p>
     <div class="form-group">
         <label for="token">6 位验证码</label>
@@ -52,6 +45,65 @@
     <p id="verify-msg" style="margin-top:10px;"></p>
 </div>
 
+<!-- 如何参与 -->
+<div class="section-head">
+    <span class="kicker">How it works</span>
+    <h2>三步，认识那个合拍的人</h2>
+</div>
+<div class="steps">
+    <div class="card step-card">
+        <span class="step-num">01</span>
+        <h3>答一份走心问卷</h3>
+        <p>40 道题覆盖价值观、生活习惯、情感风格、兴趣与相处预期，可标记「对我很重要」加权。</p>
+    </div>
+    <div class="card step-card">
+        <span class="step-num">02</span>
+        <h3>预约本周匹配</h3>
+        <p>每周统一揭晓一位一对一对象：昵称、契合度、相处说明书，以及为什么是 TA。</p>
+    </div>
+    <div class="card step-card">
+        <span class="step-num">03</span>
+        <h3>照着破冰开聊</h3>
+        <p>配对成功互见微信号，附 3 条按你们答卷生成的破冰话题——开口不再尴尬。</p>
+    </div>
+</div>
+
+<!-- 为什么选择我们 -->
+<div class="section-head">
+    <span class="kicker">Why us</span>
+    <h2>我们和「刷脸软件」不一样</h2>
+</div>
+<div class="features">
+    <div class="card feature-card">
+        <h4><span class="feature-icon">⛨</span>只限在校生</h4>
+        <p>仅支持列表内学校邮箱注册，你遇到的每个人都经过校园身份验证。</p>
+    </div>
+    <div class="card feature-card">
+        <h4><span class="feature-icon">◈</span>一周一位，宁缺毋滥</h4>
+        <p>没有无限右滑。每周额度限一位，双方取向互相接受、硬性底线不冲突才配对。</p>
+    </div>
+    <div class="card feature-card">
+        <h4><span class="feature-icon">◎</span>隐私优先</h4>
+        <p>资料不公开陈列；微信号只在配对成功后互见，还可拉黑不想遇到的人。</p>
+    </div>
+    <div class="card feature-card">
+        <h4><span class="feature-icon">✦</span>告诉你「为什么是 TA」</h4>
+        <p>不只给分数：相处说明书列出共同点、需要包容的差异和聊天切入点。</p>
+    </div>
+</div>
+
+<!-- 使用说明 & 隐私 -->
+<div class="card" style="border-left:3px solid var(--accent);">
+    <h3 style="margin-bottom:8px;">使用说明 & 隐私</h3>
+    <ul class="hint" style="padding-left:18px;margin:0;">
+        <li>仅接受支持列表内的<strong>学校邮箱</strong>注册，用于确认在校身份。</li>
+        <li>问卷与择偶取向用于匹配；微信号仅在匹配成功后发送给对方。</li>
+        <li>每周有匹配额度与冷却，结果以网站页面为准（邮件只是通知）。</li>
+        <li>可随时退出登录；如需删除账号请联系运营邮箱（见页脚）。</li>
+        <li>请友善使用，禁止骚扰；本平台不提供线下担保。</li>
+    </ul>
+</div>
+
 <div class="insight-box" style="margin-top:16px;">
     <h3>扩展路线图</h3>
     <table style="width:100%;font-size:0.9em;">
@@ -61,6 +113,14 @@
         <tr><td>✅ 澳门旅游大学</td><td>iftm.edu.mo</td></tr>
         <tr><td>🔜 香港大学 / 中大 / 科大</td><td>下一阶段</td></tr>
     </table>
+</div>
+
+<!-- CTA -->
+<div class="card" style="text-align:center;">
+    <h2 style="margin-bottom:6px;">准备好了？</h2>
+    <p class="hint" style="margin-bottom:14px;">用学校邮箱开始，整个流程 10 分钟。</p>
+    <a class="btn btn-match" href="#step1-card"
+       onclick="document.getElementById('email').focus(); return true;">立即开始匹配</a>
 </div>
 
 <script>
@@ -93,8 +153,7 @@ async function register() {
     // 如果有 dev_token（邮件发送失败的降级），显示在页面上
     if (data.dev_token) {
         document.getElementById('verify-msg').innerHTML =
-            '<span style="background:#fef3c7;padding:8px 12px;border-radius:8px;">'
-            + '开发模式 — 验证码：<code style="font-size:1.5em;letter-spacing:4px;">' + data.dev_token + '</code></span>';
+            '<span class="code-chip">开发模式 — 验证码：<code style="font-size:1.5em;letter-spacing:4px;">' + data.dev_token + '</code></span>';
     }
 }
 
@@ -107,17 +166,17 @@ async function verify() {
     var msg = document.getElementById('verify-msg');
     btn.disabled = true;
     btn.textContent = '验证中...';
-    msg.innerHTML = '<span style="color:#999;">验证中...</span>';
+    msg.innerHTML = '<span class="t-dim">验证中...</span>';
 
     var data = await api('POST', '/api/verify', { email: currentEmail, token: token });
     btn.disabled = false;
     btn.textContent = '验证';
 
     if (data.ok) {
-        msg.innerHTML = '<span style="color:#059669;font-size:1.1em;">验证成功！跳转到问卷...</span>';
+        msg.innerHTML = '<span class="t-ok" style="font-size:1.1em;">验证成功！跳转到问卷...</span>';
         setTimeout(function() { window.location.href = '/questionnaire'; }, 600);
     } else {
-        msg.innerHTML = '<span style="color:#dc2626;">' + data.error + '</span>';
+        msg.innerHTML = '<span class="t-err">' + data.error + '</span>';
     }
 }
 </script>

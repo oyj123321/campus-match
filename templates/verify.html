@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block content %}
 <div class="card">
-    <h2>Step 2: 验证邮箱</h2>
+    <h2>② 验证邮箱</h2>
     <p>验证码已发送至 <strong>{{ email }}</strong></p>
     <p class="hint">检查收件箱和垃圾邮件文件夹。开发模式下验证码打印在服务器终端。</p>
 
@@ -29,7 +29,7 @@ async function verify() {
 
     btn.disabled = true;
     btn.textContent = '验证中...';
-    status.innerHTML = '<span style="color:#999;">验证中...</span>';
+    status.innerHTML = '<span class="t-dim">验证中...</span>';
 
     const data = await api('POST', '/api/verify', {
         email: '{{ email }}',
@@ -40,18 +40,18 @@ async function verify() {
     btn.textContent = '验证';
 
     if (data.ok) {
-        status.innerHTML = '<span style="color:#059669;">验证成功！跳转中...</span>';
+        status.innerHTML = '<span class="t-ok">验证成功！跳转中...</span>';
         setTimeout(function() {
             window.location.href = '/questionnaire';
         }, 600);
     } else {
-        status.innerHTML = '<span style="color:#dc2626;">' + data.error + '</span>';
+        status.innerHTML = '<span class="t-err">' + data.error + '</span>';
     }
 }
 
 async function resend() {
     const status = document.getElementById('verify-status');
-    status.innerHTML = '<span style="color:#999;">重新发送中...</span>';
+    status.innerHTML = '<span class="t-dim">重新发送中...</span>';
 
     const data = await api('POST', '/api/resend-verification', {
         email: '{{ email }}',
@@ -60,11 +60,11 @@ async function resend() {
     if (data.ok) {
         var info = '已重新发送';
         if (data.dev_token) {
-            info += '<br><span style="background:#fef3c7;padding:4px 8px;border-radius:4px;">验证码：<code style="font-size:1.4em;">' + data.dev_token + '</code></span>';
+            info += '<br><span class="code-chip">验证码：<code style="font-size:1.4em;">' + data.dev_token + '</code></span>';
         }
-        status.innerHTML = '<span style="color:#059669;">' + info + '</span>';
+        status.innerHTML = '<span class="t-ok">' + info + '</span>';
     } else {
-        status.innerHTML = '<span style="color:#dc2626;">' + data.error + '</span>';
+        status.innerHTML = '<span class="t-err">' + data.error + '</span>';
     }
 }
 </script>

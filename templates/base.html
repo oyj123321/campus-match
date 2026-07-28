@@ -7,9 +7,17 @@
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
+    <!-- 动态背景：光晕 + 网格 -->
+    <div class="bg-decor" aria-hidden="true">
+        <div class="orb orb-a"></div>
+        <div class="orb orb-b"></div>
+        <div class="orb orb-c"></div>
+    </div>
+    <div class="grid-overlay" aria-hidden="true"></div>
+
     <nav class="nav">
         <div class="nav-inner">
-            <a href="/" class="nav-brand">🎓 CampusMatch</a>
+            <a href="/" class="nav-brand">CampusMatch</a>
             <div class="nav-right">
                 {% if session.user_id %}
                     <a href="/matches" class="nav-link">匹配结果</a>
@@ -25,7 +33,7 @@
     </main>
 
     <footer class="footer">
-        <p>CampusMatch v2 — 深度问卷 · 算法匹配 · 每周二晚 9 点</p>
+        <p>CampusMatch — 深度问卷 · 算法匹配 · 每周揭晓</p>
         <p style="margin-top:6px;">账号删除 / 反馈：请用学校邮箱联系运营（暂用注册所用 SMTP 发件邮箱）</p>
     </footer>
 

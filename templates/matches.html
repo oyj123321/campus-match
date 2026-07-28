@@ -2,7 +2,7 @@
 {% block content %}
 <div class="card" style="text-align:center;">
     <h2>{{ user.school }} · 匹配中心</h2>
-    <p style="color:#999;font-size:0.9em;">
+    <p class="hint" style="font-size:0.9em;">
         {{ user.name or '未设置名字' }} ·
         {{ {'male':'男','female':'女'}.get(user.gender, '未设性别') }} ·
         想找{{ {'male':'男生','female':'女生','both':'男女均可'}.get(user.effective_looking_for(), '未设取向') }} ·
@@ -10,7 +10,7 @@
         · 跨校 {{ '开' if user.allow_cross_school else '关' }}
     </p>
 
-    <div id="reveal-box" class="card" style="margin-top:14px;text-align:left;background:#f8fafc;">
+    <div id="reveal-box" class="card box-dim" style="margin-top:14px;text-align:left;">
         <h3 style="margin-bottom:8px;">本周揭晓仪式</h3>
         <p class="hint" id="reveal-hint">每周二晚统一揭晓，制造期待；不是随时刷脸。</p>
         <p style="margin:8px 0;">下次揭晓：<strong id="q-next-label">{{ quota.next_batch_label }}</strong>
@@ -125,18 +125,18 @@ function renderQuota(q) {
 function renderMailBox(d) {
     if (!d.mail_details || !d.mail_details.length) {
         if (d.mail_fail_count) {
-            return '<div class="card" style="border-left:3px solid #f59e0b;"><p>邮件发送有失败（' + d.mail_fail_count + '）。演示邮箱失败正常。</p></div>';
+            return '<div class="card box-warn"><p>邮件发送有失败（' + d.mail_fail_count + '）。演示邮箱失败正常。</p></div>';
         }
         return '';
     }
-    var html = '<div class="card" style="text-align:left;border-left:3px solid #2563eb;"><p><strong>邮件通知状态</strong></p><ul class="hint" style="padding-left:18px;">';
+    var html = '<div class="card box-info" style="text-align:left;"><p><strong>邮件通知状态</strong></p><ul class="hint" style="padding-left:18px;">';
     for (var i = 0; i < d.mail_details.length; i++) {
         var m = d.mail_details[i];
         html += '<li>发给你（' + esc(m.to_self) + '）：'
-            + (m.self_ok ? '<span style="color:#059669;">成功</span>' : '<span style="color:#dc2626;">失败</span> — ' + esc(m.self_info))
+            + (m.self_ok ? '<span class="t-ok">成功</span>' : '<span class="t-err">失败</span> — ' + esc(m.self_info))
             + '</li>';
         html += '<li>发给对方 ' + esc(m.partner_name) + '：'
-            + (m.partner_ok ? '<span style="color:#059669;">成功</span>' : '<span style="color:#dc2626;">失败</span>')
+            + (m.partner_ok ? '<span class="t-ok">成功</span>' : '<span class="t-err">失败</span>')
             + '</li>';
     }
     html += '</ul></div>';
@@ -148,7 +148,7 @@ function renderMatchCards(matches, headerHtml) {
     for (var i = 0; i < matches.length; i++) {
         var m = matches[i];
         var pct = Math.round(m.score * 100);
-        var color = pct >= 70 ? '#059669' : pct >= 50 ? '#2563eb' : '#6b7280';
+        var color = pct >= 70 ? '#34d399' : pct >= 50 ? '#60a5fa' : '#94a3b8';
         html += '<div class="card" style="margin-top:8px;text-align:left;">'
             + '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">'
             + '<span style="font-size:1.25em;font-weight:800;color:' + color + ';">系统派单</span>'
@@ -157,45 +157,44 @@ function renderMatchCards(matches, headerHtml) {
             + (m.school ? '<span class="hint">' + esc(m.school) + '</span>' : '')
             + '<span style="margin-left:auto;font-weight:700;font-size:1.1em;color:' + color + ';">' + pct + '%</span>'
             + '</div>'
-            + '<div style="margin:8px 0;background:#e5e7eb;border-radius:99px;height:6px;">'
-            + '<div style="background:' + color + ';width:' + pct + '%;height:6px;border-radius:99px;"></div></div>';
+            + '<div class="meter"><div class="meter-fill" style="width:' + pct + '%;"></div></div>';
 
         if (m.summary) {
-            html += '<div style="background:#eff6ff;border-radius:8px;padding:12px 14px;margin:10px 0;">'
-                + '<strong style="color:#1d4ed8;">相处说明书</strong>'
+            html += '<div class="box box-info">'
+                + '<strong style="color:#93c5fd;">相处说明书</strong>'
                 + '<p class="hint" style="margin:6px 0 0;">' + esc(m.summary) + '</p></div>';
         }
 
         if (m.strengths && m.strengths.length) {
-            html += '<div style="margin-top:8px;"><strong style="color:#059669;">共同点</strong><ul class="hint" style="padding-left:18px;margin:6px 0;">';
+            html += '<div style="margin-top:8px;"><strong class="t-ok">共同点</strong><ul class="hint" style="padding-left:18px;margin:6px 0;">';
             for (var j = 0; j < m.strengths.length; j++) {
                 html += '<li>' + esc(m.strengths[j]) + '</li>';
             }
             html += '</ul></div>';
         }
         if (m.differences && m.differences.length) {
-            html += '<div style="margin-top:8px;"><strong style="color:#92400e;">需要包容的差异</strong><ul class="hint" style="padding-left:18px;margin:6px 0;">';
+            html += '<div style="margin-top:8px;"><strong style="color:#fbbf24;">需要包容的差异</strong><ul class="hint" style="padding-left:18px;margin:6px 0;">';
             for (var k = 0; k < m.differences.length; k++) {
                 html += '<li>' + esc(m.differences[k]) + '</li>';
             }
             html += '</ul></div>';
         }
         if (m.icebreakers && m.icebreakers.length) {
-            html += '<div style="background:#fdf2f8;border-radius:8px;padding:12px 14px;margin-top:10px;">'
-                + '<strong style="color:#be185d;">破冰话题（别让聊天死掉）</strong><ol class="hint" style="padding-left:18px;margin:6px 0;">';
+            html += '<div class="box box-ice">'
+                + '<strong style="color:#f9a8d4;">破冰话题（别让聊天死掉）</strong><ol class="hint" style="padding-left:18px;margin:6px 0;">';
             for (var t = 0; t < m.icebreakers.length; t++) {
                 html += '<li style="margin:4px 0;">' + esc(m.icebreakers[t]) + '</li>';
             }
             html += '</ol></div>';
         }
 
-        html += '<div style="margin-top:12px;font-size:1.05em;color:#2563eb;font-weight:700;">微信: ' + esc(m.wechat_id || '未填写') + '</div>';
+        html += '<div class="wechat-line">微信: ' + esc(m.wechat_id || '未填写') + '</div>';
         html += '<p class="hint" style="margin-top:6px;">开口可以很简单：「嗨，CampusMatch 匹配到的，看到破冰话题想先问你第一个…」</p>';
         if (m.id) {
             html += '<button type="button" class="btn btn-secondary" style="margin-top:8px;" onclick="blockUser(' + m.id + ', this)">不再匹配此人</button>';
         }
         if (m.matched_at) {
-            html += '<div style="font-size:0.75em;color:#999;margin-top:4px;">' + new Date(m.matched_at).toLocaleString() + '</div>';
+            html += '<div class="hint" style="font-size:0.75em;margin-top:4px;">' + new Date(m.matched_at).toLocaleString() + '</div>';
         }
         html += '</div>';
     }
@@ -232,7 +231,7 @@ async function searchBlock() {
     if (!q) { alert('请输入昵称或邮箱'); return; }
     box.innerHTML = '<p class="hint">搜索中…</p>';
     var d = await api('GET', '/api/users/search?q=' + encodeURIComponent(q));
-    if (!d.ok) { box.innerHTML = '<p style="color:#dc2626;">' + esc(d.error) + '</p>'; return; }
+    if (!d.ok) { box.innerHTML = '<p class="t-err">' + esc(d.error) + '</p>'; return; }
     if (!d.results.length) {
         box.innerHTML = '<p class="hint">没有找到。请确认对方已注册且昵称拼写正确；也可用完整邮箱。</p>';
         return;
@@ -240,7 +239,7 @@ async function searchBlock() {
     var html = '<ul style="list-style:none;padding:0;margin:0;">';
     for (var i = 0; i < d.results.length; i++) {
         var u = d.results[i];
-        html += '<li style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid #eee;">'
+        html += '<li class="list-row">'
             + '<span><strong>' + esc(u.name) + '</strong> · ' + esc(u.school)
             + ' · ' + (u.gender === 'male' ? '男' : u.gender === 'female' ? '女' : '') + '</span>'
             + (u.already_blocked
@@ -263,7 +262,7 @@ async function loadBlocklist() {
     var html = '<p><strong>当前黑名单</strong></p><ul style="list-style:none;padding:0;">';
     for (var i = 0; i < d.blocklist.length; i++) {
         var b = d.blocklist[i];
-        html += '<li style="display:flex;gap:8px;align-items:center;padding:6px 0;">'
+        html += '<li class="list-row">'
             + '<span>' + esc(b.name) + ' · ' + esc(b.school || '') + '</span>'
             + '<button type="button" class="btn btn-secondary" style="margin-left:auto;" onclick="unblockUser(' + b.id + ')">移除</button>'
             + '</li>';
@@ -300,7 +299,7 @@ async function doMatch() {
     else await refreshQuota();
 
     if (!d.ok) {
-        div.innerHTML = '<div class="card" style="text-align:center;color:#dc2626;">' + esc(d.error) + '</div>';
+        div.innerHTML = '<div class="card t-err" style="text-align:center;">' + esc(d.error) + '</div>';
         return;
     }
     if (!d.matches || d.matches.length === 0) {
@@ -309,7 +308,7 @@ async function doMatch() {
         return;
     }
 
-    var header = '<div class="card" style="background:#f0fdf4;border-left:3px solid #22c55e;"><p>配对完成（候选 '
+    var header = '<div class="card box-ok"><p>配对完成（候选 '
         + d.total_candidates + ' 人）。下面是相处说明书与破冰话题。</p></div>';
     header += renderMailBox(d);
     div.innerHTML = renderMatchCards(d.matches, header);
@@ -320,7 +319,7 @@ async function loadHistory() {
     div.innerHTML = '<p class="hint">加载中...</p>';
     var d = await api('GET', '/api/matches');
     if (d.quota) renderQuota(d.quota);
-    if (!d.ok) { div.innerHTML = '<p style="color:#dc2626;">' + esc(d.error) + '</p>'; return; }
+    if (!d.ok) { div.innerHTML = '<p class="t-err">' + esc(d.error) + '</p>'; return; }
     if (!d.matches.length) {
         div.innerHTML = '<div class="card"><p class="hint">暂无有效配对。先「预约本周匹配」，或冷启动时用「提前揭晓」。</p></div>';
         return;

@@ -57,7 +57,7 @@
         <div class="progress-bar-container" style="flex:1;margin-bottom:0;">
             <div class="progress-bar-fill" id="progress-bar" style="width:0%"></div>
         </div>
-        <span id="progress-text" style="font-size:0.85em;color:#64748b;white-space:nowrap;">0/32</span>
+        <span id="progress-text" class="t-dim" style="font-size:0.85em;white-space:nowrap;">0/40</span>
     </div>
     <p id="progress-hint" class="hint" style="margin:8px 0 0;">点击 1–5 作答量表题；兴趣题至少选一项</p>
 </div>
@@ -84,9 +84,9 @@ const dimNames = {
     'expectations': '相处预期'
 };
 const dimColors = {
-    'values': '#7c3aed', 'lifestyle': '#059669',
-    'emotional': '#db2777', 'interests': '#2563eb',
-    'expectations': '#d97706'
+    'values': '#a78bfa', 'lifestyle': '#34d399',
+    'emotional': '#f472b6', 'interests': '#60a5fa',
+    'expectations': '#fbbf24'
 };
 
 let answers = {};
@@ -319,7 +319,7 @@ async function submitAll() {
 
     btn.disabled = true;
     btn.textContent = '保存中...';
-    status.innerHTML = '<span style="color:#64748b;">保存中...</span>';
+    status.innerHTML = '<span class="t-dim">保存中...</span>';
 
     var r1 = await api('PUT', '/api/me', {
         name: name, gender: gender, looking_for: lookingFor, wechat_id: wechat, bio: bio,
@@ -341,7 +341,7 @@ async function submitAll() {
     btn.textContent = '提交问卷 & 开始匹配';
 
     if (r2.ok) {
-        status.innerHTML = '<span style="color:#059669;">问卷已保存！正在跳转匹配页...</span>';
+        status.innerHTML = '<span class="t-ok">问卷已保存！正在跳转匹配页...</span>';
         setTimeout(function () { location.href = '/matches'; }, 600);
     } else {
         status.innerHTML = '<span class="error">问卷保存失败: ' + esc(r2.error || '未知错误') + '</span>';
