@@ -173,10 +173,12 @@ class Match(db.Model):
     user1_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
     user2_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
     score = db.Column(db.Float, default=0.0)
-    mode = db.Column(db.String(16), default="realtime")  # "realtime" | "batch"
+    mode = db.Column(db.String(16), default="realtime")  # "realtime" | "batch" | "one_to_one"
     insight_json = db.Column(db.Text)  # 匹配理由
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     notified = db.Column(db.Boolean, default=False)
+    # 一对一：同一用户同时只应有 1 条 active=True 的配对；旧 Top-N 多条会被降为 False
+    active = db.Column(db.Boolean, default=True, index=True)
 
     user1 = db.relationship("User", foreign_keys=[user1_id])
     user2 = db.relationship("User", foreign_keys=[user2_id])

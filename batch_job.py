@@ -46,13 +46,34 @@ def week_window_start(now=None):
 
 
 def count_new_matches_this_week(user_id, now=None):
-    start = week_window_start(now)
-    # 用 UTC 存库，这里按「最近 7 天」更稳妥地兼容 utcnow
+    # 用 UTC 存库，这里按「最近 7 天」更稳妥地兼容 utcnow；只计当前有效配对
     since = (now or datetime.utcnow()) - timedelta(days=7)
     return Match.query.filter(
         ((Match.user1_id == user_id) | (Match.user2_id == user_id)),
         Match.created_at >= since,
+        Match.active.is_(True),
     ).count()
+
+
+def deactivate_other_matches(user_id, keep_partner_id):
+    """一对一：除 keep_partner 外，该用户其余配对全部失效（不再展示微信号等）。"""
+    rows = Match.query.filter(
+        ((Match.user1_id == user_id) | (Match.user2_id == user_id)),
+        Match.active.is_(True),
+    ).all()
+    for m in rows:
+        other_id = m.user2_id if m.user1_id == user_id else m.user1_id
+        if other_id == keep_partner_id:
+            m.active = True
+        else:
+            m.active = False
+
+
+def enforce_one_to_one_active(user_a, user_b, match_row):
+    """确立 A-B 为双方唯一有效配对。"""
+    match_row.active = True
+    deactivate_other_matches(user_a.id, user_b.id)
+    deactivate_other_matches(user_b.id, user_a.id)
 
 
 def _get_or_create_pair(user_a, user_b, score, insight, mode="batch"):
@@ -66,6 +87,7 @@ def _get_or_create_pair(user_a, user_b, score, insight, mode="batch"):
         existing.score = score
         existing.mode = mode
         existing.insight_json = payload
+        existing.active = True
         return existing, False
 
     m = Match(
@@ -74,6 +96,8 @@ def _get_or_create_pair(user_a, user_b, score, insight, mode="batch"):
         score=score,
         mode=mode,
         insight_json=payload,
+        active=True,
+        notified=False,
     )
     db.session.add(m)
     return m, True
@@ -112,10 +136,12 @@ def persist_user_matches(user, scored_pairs, mode, mail_cfg, weekly_new_limit=No
             existing.score = score
             existing.mode = mode
             existing.insight_json = json.dumps(insight, ensure_ascii=False)
+            existing.active = True
             updated_existing += 1
             saved.append((other, score, insight, existing))
             # 用户主动点「开始匹配」时再次尝试发信（冷却限制频率）
             to_notify.append((other, score, insight, existing))
+            enforce_one_to_one_active(user, other, existing)
             continue
 
         if weekly_new_limit is not None and new_this_week >= weekly_new_limit:
@@ -127,8 +153,11 @@ def persist_user_matches(user, scored_pairs, mode, mail_cfg, weekly_new_limit=No
             score=score, mode=mode,
             insight_json=json.dumps(insight, ensure_ascii=False),
             notified=False,
+            active=True,
         )
         db.session.add(m)
+        db.session.flush()
+        enforce_one_to_one_active(user, other, m)
         saved.append((other, score, insight, m))
         to_notify.append((other, score, insight, m))
         new_this_week += 1
@@ -213,6 +242,7 @@ def run_batch_school(school, mail_cfg):
             a.feature_vector, b.feature_vector, a.answers, b.answers,
         )
         m, is_new = _get_or_create_pair(a, b, score, insight, mode="batch")
+        enforce_one_to_one_active(a, b, m)
         if is_new:
             created += 1
         else:

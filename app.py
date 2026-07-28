@@ -516,34 +516,43 @@ def api_match():
 @app.route("/api/matches", methods=["GET"])
 @login_required
 def api_get_matches():
+    """默认只返回当前有效配对（一对一）；?all=1 可看已失效历史（不含微信号）。"""
     user = get_current_user()
-    records = Match.query.filter(
+    show_all = request.args.get("all") in ("1", "true", "yes")
+
+    q = Match.query.filter(
         (Match.user1_id == user.id) | (Match.user2_id == user.id)
-    ).order_by(Match.score.desc()).all()
+    )
+    if not show_all:
+        q = q.filter(Match.active.is_(True))
+    records = q.order_by(Match.created_at.desc(), Match.score.desc()).all()
 
     results = []
     for m in records:
         other = m.user2 if m.user1_id == user.id else m.user1
         insight = json.loads(m.insight_json) if m.insight_json else {}
-        results.append({
-            "name": other.name,
-            "gender": other.gender,
-            "school": other.school,
-            "wechat_id": other.wechat_id,
+        item = {
+            "name": other.name if m.active else "（已失效的配对）",
+            "gender": other.gender if m.active else None,
+            "school": other.school if m.active else None,
             "score": m.score,
-            "strengths": insight.get("strengths", [])[:3],
-            "differences": insight.get("differences", [])[:3],
-            "differences_count": insight.get("total_differences", 0),
+            "strengths": insight.get("strengths", [])[:3] if m.active else [],
+            "differences": insight.get("differences", [])[:3] if m.active else [],
+            "differences_count": insight.get("total_differences", 0) if m.active else 0,
             "matched_at": m.created_at.isoformat() if m.created_at else None,
             "mode": m.mode,
             "notified": bool(m.notified),
-        })
+            "active": bool(m.active),
+        }
+        # 只有当前有效配对才返回微信号，避免泄露未配对/已失效对象的联系方式
+        item["wechat_id"] = other.wechat_id if m.active else None
+        results.append(item)
 
     return jsonify({
         "ok": True,
         "matches": results,
         "quota": match_quota_status(user),
-        "note": "结果以本页为准；邮件仅作通知。",
+        "note": "一对一：你只能看到当前有效配对的微信号；其他人的联系方式不会展示。",
     })
 
 
@@ -643,16 +652,54 @@ def api_school_tags(school_name):
 # ============================================================
 
 def ensure_schema():
-    """create_all + 轻量迁移（SQLite 补 looking_for 列）"""
+    """create_all + 轻量迁移（looking_for / active）并清理旧 Top-N 多配对。"""
     db.create_all()
     try:
-        cols = {c["name"] for c in inspect(db.engine).get_columns("users")}
+        user_cols = {c["name"] for c in inspect(db.engine).get_columns("users")}
+        match_cols = {c["name"] for c in inspect(db.engine).get_columns("matches")}
     except Exception:
         return
-    if "looking_for" not in cols:
+
+    if "looking_for" not in user_cols:
         db.session.execute(text("ALTER TABLE users ADD COLUMN looking_for VARCHAR(16)"))
         db.session.commit()
         print("[CampusMatch] migrated: users.looking_for")
+
+    if "active" not in match_cols:
+        db.session.execute(text("ALTER TABLE matches ADD COLUMN active BOOLEAN DEFAULT 1"))
+        db.session.execute(text("UPDATE matches SET active = 1 WHERE active IS NULL"))
+        db.session.commit()
+        print("[CampusMatch] migrated: matches.active")
+
+    _cleanup_one_to_one_matches()
+
+
+def _cleanup_one_to_one_matches():
+    """每个用户只保留 1 条有效配对（优先最近、分数高），其余 active=False。"""
+    from sqlalchemy import or_
+
+    user_ids = [r[0] for r in db.session.query(User.id).all()]
+    changed = 0
+    for uid in user_ids:
+        rows = (
+            Match.query.filter(
+                or_(Match.user1_id == uid, Match.user2_id == uid),
+                Match.active.is_(True),
+            )
+            .order_by(Match.created_at.desc(), Match.score.desc())
+            .all()
+        )
+        if len(rows) <= 1:
+            continue
+        keep = rows[0]
+        keep.active = True
+        for m in rows[1:]:
+            if m.active:
+                m.active = False
+                changed += 1
+    if changed:
+        db.session.commit()
+        print(f"[CampusMatch] one-to-one cleanup: deactivated {changed} old matches")
 
 
 def init_db():

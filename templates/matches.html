@@ -18,7 +18,7 @@
     </div>
     <div style="margin-top:12px;">
         <button class="btn btn-match" id="match-btn" onclick="doMatch()" style="font-size:1.05em;padding:12px 40px;">开始匹配（一对一）</button>
-        <button class="btn btn-secondary" onclick="loadHistory()" style="margin-left:6px;">查看历史</button>
+        <button class="btn btn-secondary" onclick="loadHistory()" style="margin-left:6px;">当前配对</button>
         <a href="/questionnaire" class="btn btn-secondary" style="margin-left:6px;">修改问卷</a>
     </div>
     <p class="hint" style="margin-top:10px;">默认只配 <strong>1 个人</strong>。结果以本页为准；成功后会尝试发邮件到你的学校邮箱。</p>
@@ -167,12 +167,12 @@ async function loadHistory() {
     var d = await api('GET', '/api/matches');
     if (d.quota) renderQuota(d.quota);
     if (!d.ok) { div.innerHTML = '<p style="color:#dc2626;">' + esc(d.error) + '</p>'; return; }
+    var header = '<div class="card"><p><strong>当前有效配对</strong>（一对一，仅此人可见微信号）</p>'
+        + '<p class="hint">' + esc(d.note || '') + '</p></div>';
     if (!d.matches.length) {
-        div.innerHTML = '<div class="card"><p class="hint">暂无历史匹配记录。</p></div>';
+        div.innerHTML = '<div class="card"><p class="hint">暂无有效配对。点击「开始匹配」进行一对一配对。</p></div>';
         return;
     }
-    var header = '<div class="card"><p><strong>历史匹配</strong>（' + d.matches.length + '）</p>'
-        + '<p class="hint">' + esc(d.note || '结果以本页为准') + '</p></div>';
     div.innerHTML = renderMatchCards(d.matches, header);
 }
 
