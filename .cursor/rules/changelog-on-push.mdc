@@ -1,0 +1,37 @@
+---
+description: 每次提交/推送前必须更新 CHANGELOG，写清改了什么和上次问题
+alwaysApply: true
+---
+
+# 推送前更新更改日志
+
+凡用户要求 **commit / push / 提交到 GitHub**，必须先更新根目录 `CHANGELOG.md`，再提交；**不要**出现「代码已推、日志未改」的情况。
+
+## 必须写清两点
+
+1. **上次有什么问题**：现象或根因（用户可见 bug、错误行为、缺口）
+2. **这次改了什么**：具体改动与收益（文件/模块可点名）
+
+## 条目格式
+
+在文件顶部新增版本段（PATCH/MINOR/MAJOR 按影响选），建议结构：
+
+```markdown
+## [x.y.z] — YYYY-MM-DD
+
+### 问题（上次）
+- ……
+
+### 改动
+- **Fixed** / **Added** / **Improved**：……
+```
+
+也可沿用 `### Fixed` / `### Added` / `### Improved`，但每条 Fixed 要能看出「原先错在哪 + 现在怎么修」。
+
+## 流程
+
+1. 改代码 → 更新 `CHANGELOG.md`
+2. 把 changelog 与代码一并 `git add` / `commit`
+3. 再 `push`（若用户要求推送）
+
+`server.log`、`.env`、密钥等不要写入 changelog，也不要提交。
