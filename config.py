@@ -67,12 +67,21 @@ SCHOOL_DOMAINS = {
 MATCH_MODE = os.environ.get("MATCH_MODE", "realtime")  # "realtime" | "batch"
 MATCH_TOP_N = 5              # 实时模式：返回前 N 名
 MATCH_MIN_SCORE = 0.15       # 最低余弦相似度阈值
-BATCH_MATCH_DAY = 1          # 批量匹配：每周几执行（1=周二）
-BATCH_MATCH_HOUR = 21        # 批量匹配：几点执行（21=晚9点）
+BATCH_MATCH_DAY = int(os.environ.get("BATCH_MATCH_DAY", "1"))   # 0=周一 … 1=周二
+BATCH_MATCH_HOUR = int(os.environ.get("BATCH_MATCH_HOUR", "21"))  # 晚 9 点
 MATCH_DELAY_SECONDS = 0      # 匹配延迟（秒），防止瞬时并发
+# 运营额度（MVP 1.2）
+MATCH_WEEKLY_NEW_LIMIT = int(os.environ.get("MATCH_WEEKLY_NEW_LIMIT", "3"))  # 每用户每周新建匹配上限
+MATCH_COOLDOWN_HOURS = int(os.environ.get("MATCH_COOLDOWN_HOURS", "12"))    # 两次点「开始匹配」最短间隔
+BATCH_SCHEDULER_ENABLED = os.environ.get("BATCH_SCHEDULER_ENABLED", "false").lower() == "true"
+# 手动触发批量任务：POST /api/admin/batch-run  Header: X-Admin-Secret
+ADMIN_SECRET = os.environ.get("ADMIN_SECRET", "")
 
 # 验证码
 VERIFICATION_EXPIRE_SECONDS = 600  # 10 分钟
 # 注册/重发验证码限流（同一邮箱）
 REGISTER_RATE_LIMIT = int(os.environ.get("REGISTER_RATE_LIMIT", "5"))  # 窗口内最多次数
 REGISTER_RATE_WINDOW = int(os.environ.get("REGISTER_RATE_WINDOW", "3600"))  # 秒
+
+# weekday 显示名（供前端）
+WEEKDAY_LABELS = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"]

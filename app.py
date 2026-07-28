@@ -5,7 +5,7 @@ CampusMatch v2 — 校园恋爱匹配系统
   深度问卷 → 特征向量 → 余弦相似度 → 匈牙利全局匹配 → 邮件通知
 """
 
-import time, json
+import time, json, threading
 from collections import defaultdict, deque
 from datetime import datetime, timedelta
 from functools import wraps
@@ -18,6 +18,9 @@ from config import (
     SCHOOL_DOMAINS, MATCH_MODE, MATCH_TOP_N, MATCH_MIN_SCORE,
     MATCH_DELAY_SECONDS, VERIFICATION_EXPIRE_SECONDS,
     REGISTER_RATE_LIMIT, REGISTER_RATE_WINDOW,
+    MATCH_WEEKLY_NEW_LIMIT, MATCH_COOLDOWN_HOURS,
+    BATCH_MATCH_DAY, BATCH_MATCH_HOUR, BATCH_SCHEDULER_ENABLED,
+    ADMIN_SECRET, WEEKDAY_LABELS,
     MAIL_ENABLED, MAIL_SERVER, MAIL_PORT, MAIL_USERNAME, MAIL_PASSWORD, MAIL_FROM,
 )
 from models import db, User, UserTag, Match
@@ -27,6 +30,10 @@ from questionnaire import (
 )
 from matcher import real_time_match, batch_match_school, orientation_compatible
 from email_service import send_verification_email, send_match_result_email
+from batch_job import (
+    persist_user_matches, count_new_matches_this_week,
+    next_batch_datetime, run_batch_all, schedule_loop,
+)
 
 # ---- App Factory ----
 app = Flask(__name__)
@@ -96,6 +103,30 @@ def check_register_rate(email):
 LOOKING_FOR_VALUES = {"male", "female", "both"}
 
 
+def match_quota_status(user):
+    """计算冷却 / 本周额度，供页面与 API 使用。"""
+    used = count_new_matches_this_week(user.id)
+    remaining = max(0, MATCH_WEEKLY_NEW_LIMIT - used)
+    cooldown_left = 0
+    if user.last_matched_at and MATCH_COOLDOWN_HOURS > 0:
+        elapsed = (datetime.utcnow() - user.last_matched_at).total_seconds()
+        need = MATCH_COOLDOWN_HOURS * 3600
+        if elapsed < need:
+            cooldown_left = int(need - elapsed)
+    nxt = next_batch_datetime()
+    return {
+        "weekly_limit": MATCH_WEEKLY_NEW_LIMIT,
+        "weekly_used": used,
+        "weekly_remaining": remaining,
+        "cooldown_hours": MATCH_COOLDOWN_HOURS,
+        "cooldown_seconds_left": cooldown_left,
+        "can_match_now": remaining > 0 and cooldown_left <= 0,
+        "next_batch_at": nxt.isoformat(timespec="minutes"),
+        "next_batch_label": f"每{WEEKDAY_LABELS[BATCH_MATCH_DAY]} {BATCH_MATCH_HOUR}:00",
+        "match_mode": MATCH_MODE,
+    }
+
+
 # ============================================================
 # 页面路由
 # ============================================================
@@ -109,7 +140,20 @@ def index():
         if not user.questionnaire_completed():
             return redirect(url_for("questionnaire_page"))
         return redirect(url_for("matches_page"))
-    return render_template("index.html", schools=SCHOOL_DOMAINS)
+    from sqlalchemy import func
+    stats = dict(
+        db.session.query(User.school, func.count(User.id))
+        .filter(User.email_verified == True)
+        .group_by(User.school)
+        .all()
+    )
+    return render_template(
+        "index.html",
+        schools=SCHOOL_DOMAINS,
+        school_stats=stats,
+        total_users=sum(stats.values()),
+        batch_label=f"每{WEEKDAY_LABELS[BATCH_MATCH_DAY]} {BATCH_MATCH_HOUR}:00",
+    )
 
 
 @app.route("/verify")
@@ -137,7 +181,11 @@ def matches_page():
     user = get_current_user()
     if not user.questionnaire_completed():
         return redirect(url_for("questionnaire_page"))
-    return render_template("matches.html", user=user)
+    return render_template(
+        "matches.html",
+        user=user,
+        quota=match_quota_status(user),
+    )
 
 
 # ============================================================
@@ -321,6 +369,13 @@ def api_questionnaire():
 # 匹配 API
 # ============================================================
 
+@app.route("/api/match/status", methods=["GET"])
+@login_required
+def api_match_status():
+    user = get_current_user()
+    return jsonify({"ok": True, "quota": match_quota_status(user)})
+
+
 @app.route("/api/match", methods=["POST"])
 @login_required
 def api_match():
@@ -332,11 +387,26 @@ def api_match():
             return jsonify({"ok": False, "error": "请先验证邮箱"}), 400
         if not user.questionnaire_completed() or not user.feature_vector:
             return jsonify({"ok": False, "error": "请先完成问卷并提交"}), 400
-        if not user.gender or user.effective_looking_for() not in LOOKING_FOR_VALUES:
+        if not user.gender or user.looking_for not in LOOKING_FOR_VALUES:
             return jsonify({"ok": False, "error": "请先在问卷页设置性别与择偶取向"}), 400
         if not user.wechat_id:
             return jsonify({"ok": False, "error": "请先填写微信号"}), 400
         return jsonify({"ok": False, "error": "资料不完整，请返回问卷页补全"}), 400
+
+    quota = match_quota_status(user)
+    if quota["cooldown_seconds_left"] > 0:
+        mins = max(1, quota["cooldown_seconds_left"] // 60)
+        return jsonify({
+            "ok": False,
+            "error": f"匹配冷却中，请约 {mins} 分钟后再试（冷却 {MATCH_COOLDOWN_HOURS} 小时）",
+            "quota": quota,
+        }), 429
+    if quota["weekly_remaining"] <= 0:
+        return jsonify({
+            "ok": False,
+            "error": f"本周新建匹配已达上限（{MATCH_WEEKLY_NEW_LIMIT} 个）。可查看历史结果，或等下周 / {quota['next_batch_label']} 批量匹配。",
+            "quota": quota,
+        }), 429
 
     if MATCH_DELAY_SECONDS > 0:
         time.sleep(MATCH_DELAY_SECONDS)
@@ -346,7 +416,6 @@ def api_match():
         body = request.get_json(silent=True) or {}
         mode = body.get("mode", MATCH_MODE)
 
-    # 同校已验证候选人，再按双向择偶取向过滤
     pool = User.query.filter(
         User.school == user.school,
         User.id != user.id,
@@ -363,70 +432,28 @@ def api_match():
             "message": "当前学校暂无符合你择偶取向的可匹配用户",
             "total_candidates": 0,
             "pool_size": len(pool),
+            "quota": match_quota_status(user),
+            "note": "结果以本页为准；邮件仅作通知，发送失败不影响查看。",
         })
 
     if mode == "batch":
         all_users = candidates + [user]
         results = batch_match_school(all_users, filter_same_gender=True)
-        my_matches = [(a if b.id == user.id else b, s) for a, b, s in results if a.id == user.id or b.id == user.id]
+        my_matches = [
+            (a if b.id == user.id else b, s)
+            for a, b, s in results
+            if a.id == user.id or b.id == user.id
+        ]
     else:
-        my_matches = real_time_match(user, candidates, top_n=MATCH_TOP_N, min_score=MATCH_MIN_SCORE)
-
-    # 保存匹配记录 + 发送邮件
-    mail_cfg = get_mail_config()
-    saved = []
-    to_notify = []  # 仅新建立的匹配发邮件
-    skipped_dealbreaker = 0
-    updated_existing = 0
-
-    for matched_user, score in my_matches:
-        dealbreakers = check_dealbreakers(user.answers, matched_user.answers)
-        if dealbreakers:
-            skipped_dealbreaker += 1
-            continue
-
-        insight = get_compatibility_insight(
-            user.feature_vector, matched_user.feature_vector,
-            user.answers, matched_user.answers,
+        my_matches = real_time_match(
+            user, candidates, top_n=MATCH_TOP_N, min_score=MATCH_MIN_SCORE
         )
 
-        existing = Match.query.filter(
-            ((Match.user1_id == user.id) & (Match.user2_id == matched_user.id)) |
-            ((Match.user1_id == matched_user.id) & (Match.user2_id == user.id))
-        ).first()
-
-        if existing:
-            existing.score = score
-            existing.mode = mode
-            existing.insight_json = json.dumps(insight, ensure_ascii=False)
-            updated_existing += 1
-            saved.append((matched_user, score, insight))
-            continue
-
-        m = Match(
-            user1_id=user.id, user2_id=matched_user.id,
-            score=score, mode=mode,
-            insight_json=json.dumps(insight, ensure_ascii=False),
-        )
-        db.session.add(m)
-        saved.append((matched_user, score, insight))
-        to_notify.append((matched_user, score, insight))
-
-    if saved:
-        user.last_matched_at = datetime.utcnow()
-    db.session.commit()
-
-    for matched_user, score, insight in to_notify:
-        send_match_result_email(user.email, [(matched_user, score)], mail_cfg, insight)
-        send_match_result_email(matched_user.email, [(user, score)], mail_cfg, insight)
-        mrec = Match.query.filter(
-            ((Match.user1_id == user.id) & (Match.user2_id == matched_user.id)) |
-            ((Match.user1_id == matched_user.id) & (Match.user2_id == user.id))
-        ).first()
-        if mrec:
-            mrec.notified = True
-    if to_notify:
-        db.session.commit()
+    summary = persist_user_matches(
+        user, my_matches, mode, get_mail_config(),
+        weekly_new_limit=MATCH_WEEKLY_NEW_LIMIT,
+    )
+    saved = summary["saved"]
 
     return jsonify({
         "ok": True,
@@ -437,15 +464,21 @@ def api_match():
                 "gender": u.gender,
                 "wechat_id": u.wechat_id,
                 "score": s,
-                "strengths": insight["strengths"][:3] if "strengths" in insight else [],
+                "strengths": insight.get("strengths", [])[:3],
+                "differences": insight.get("differences", [])[:3],
                 "differences_count": insight.get("total_differences", 0),
             }
             for u, s, insight in saved
         ],
         "total_candidates": len(candidates),
-        "dealbreaker_skipped": skipped_dealbreaker,
-        "updated_existing": updated_existing,
-        "newly_notified": len(to_notify),
+        "dealbreaker_skipped": summary["dealbreaker_skipped"],
+        "updated_existing": summary["updated_existing"],
+        "newly_notified": summary["newly_notified"],
+        "quota_skipped": summary["quota_skipped"],
+        "mail_ok_count": summary["mail_ok_count"],
+        "mail_fail_count": summary["mail_fail_count"],
+        "quota": match_quota_status(user),
+        "note": "结果以本页为准；邮件仅作通知，发送失败不影响查看。",
     })
 
 
@@ -463,15 +496,24 @@ def api_get_matches():
         insight = json.loads(m.insight_json) if m.insight_json else {}
         results.append({
             "name": other.name,
+            "gender": other.gender,
             "school": other.school,
             "wechat_id": other.wechat_id,
             "score": m.score,
             "strengths": insight.get("strengths", [])[:3],
+            "differences": insight.get("differences", [])[:3],
+            "differences_count": insight.get("total_differences", 0),
             "matched_at": m.created_at.isoformat() if m.created_at else None,
             "mode": m.mode,
+            "notified": bool(m.notified),
         })
 
-    return jsonify({"ok": True, "matches": results})
+    return jsonify({
+        "ok": True,
+        "matches": results,
+        "quota": match_quota_status(user),
+        "note": "结果以本页为准；邮件仅作通知。",
+    })
 
 
 # ============================================================
@@ -521,7 +563,21 @@ def api_health():
         "mail_enabled": MAIL_ENABLED,
         "match_mode": MATCH_MODE,
         "debug": FLASK_DEBUG,
+        "next_batch_at": next_batch_datetime().isoformat(timespec="minutes"),
+        "batch_scheduler": BATCH_SCHEDULER_ENABLED,
     }), (200 if db_ok else 503)
+
+
+@app.route("/api/admin/batch-run", methods=["POST"])
+def api_admin_batch_run():
+    """手动触发全校批量匹配。需要 Header: X-Admin-Secret"""
+    if not ADMIN_SECRET:
+        return jsonify({"ok": False, "error": "未配置 ADMIN_SECRET，拒绝执行"}), 403
+    secret = request.headers.get("X-Admin-Secret") or (request.get_json(silent=True) or {}).get("secret")
+    if secret != ADMIN_SECRET:
+        return jsonify({"ok": False, "error": "密钥错误"}), 403
+    results = run_batch_all(get_mail_config())
+    return jsonify({"ok": True, "results": results})
 
 
 # ============================================================
@@ -574,11 +630,35 @@ def init_db():
         print("[CampusMatch v2] DB initialized")
 
 
+def start_batch_scheduler():
+    """可选：进程内后台线程等待每周批量匹配时刻。"""
+    if not BATCH_SCHEDULER_ENABLED:
+        return
+    # Flask debug 重载会起两个进程，只在主进程开调度
+    if FLASK_DEBUG and not os_environ_is_reloader_main():
+        return
+
+    def _run():
+        with app.app_context():
+            schedule_loop(get_mail_config)
+
+    t = threading.Thread(target=_run, name="batch-scheduler", daemon=True)
+    t.start()
+    print(f"  批量调度线程已启动 → {WEEKDAY_LABELS[BATCH_MATCH_DAY]} {BATCH_MATCH_HOUR}:00")
+
+
+def os_environ_is_reloader_main():
+    import os
+    return os.environ.get("WERKZEUG_RUN_MAIN") == "true"
+
+
 if __name__ == "__main__":
     init_db()
     print("  CampusMatch v2 启动!")
-    print(f"  模式: {'批量匹配(每周二晚9点)' if MATCH_MODE == 'batch' else '实时匹配'}")
+    print(f"  模式: {'批量匹配' if MATCH_MODE == 'batch' else '实时匹配'} · {WEEKDAY_LABELS[BATCH_MATCH_DAY]} {BATCH_MATCH_HOUR}:00 批量")
+    print(f"  额度: 每周新建 ≤{MATCH_WEEKLY_NEW_LIMIT} · 冷却 {MATCH_COOLDOWN_HOURS}h")
     print(f"  Debug: {FLASK_DEBUG}")
     print(f"  支持学校: {', '.join(SCHOOL_DOMAINS.keys())}")
     print(f"  邮件: {'真实发送' if MAIL_ENABLED else '开发模式'}")
+    start_batch_scheduler()
     app.run(debug=FLASK_DEBUG, host="127.0.0.1", port=5000)

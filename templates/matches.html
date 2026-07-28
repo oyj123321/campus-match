@@ -8,88 +8,148 @@
         想找{{ {'male':'男生','female':'女生','both':'男女均可'}.get(user.effective_looking_for(), '未设取向') }} ·
         {% if user.answers %}已答 {{ user.answers.keys()|length }}/32 题{% else %}未填问卷{% endif %}
     </p>
+    <div id="quota-box" class="hint" style="margin-top:10px;line-height:1.7;">
+        本周额度：<strong id="q-remain">{{ quota.weekly_remaining }}</strong> / {{ quota.weekly_limit }}
+        · 冷却 {{ quota.cooldown_hours }} 小时
+        · 批量匹配：{{ quota.next_batch_label }}
+        <br>
+        <span id="q-next">下次批量约 {{ quota.next_batch_at }}</span>
+    </div>
     <div style="margin-top:12px;">
         <button class="btn btn-match" id="match-btn" onclick="doMatch()" style="font-size:1.05em;padding:12px 40px;">开始匹配</button>
         <button class="btn btn-secondary" onclick="loadHistory()" style="margin-left:6px;">查看历史</button>
         <a href="/questionnaire" class="btn btn-secondary" style="margin-left:6px;">修改问卷</a>
     </div>
+    <p class="hint" style="margin-top:10px;">匹配结果以本页为准；邮件只是通知，发失败也能在这里看到微信号与分析。</p>
 </div>
 
 <div id="result" style="margin-top:12px;"></div>
 
 <script>
-async function doMatch() {
+function esc(s) {
+    return String(s == null ? '' : s)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function renderQuota(q) {
+    if (!q) return;
+    document.getElementById('q-remain').textContent = q.weekly_remaining;
+    document.getElementById('q-next').textContent = '下次批量约 ' + q.next_batch_at;
     var btn = document.getElementById('match-btn');
-    var div = document.getElementById('result');
-    btn.disabled = true; btn.textContent = '匹配中...';
-    div.innerHTML = '<div class="card" style="text-align:center;"><p>正在全校范围内寻找与你最合拍的人...</p><p style="color:#999;">基于 81 维特征向量 · 余弦相似度 · 一票否决过滤</p></div>';
-
-    var d = await api('POST', '/api/match', {});
-    btn.disabled = false; btn.textContent = '重新匹配';
-
-    if (!d.ok) { div.innerHTML = '<div class="card" style="text-align:center;color:#dc2626;">' + d.error + '</div>'; return; }
-    if (!d.matches || d.matches.length === 0) {
-        div.innerHTML = '<div class="card" style="text-align:center;"><p style="font-size:1.2em;">暂无匹配</p><p class="hint">校内候选: ' + (d.total_candidates||0) + ' 人</p><p class="hint">一票否决跳过: ' + (d.dealbreaker_skipped||0) + ' 人</p><p class="hint">邀请更多同学加入试试？</p></div>';
-        return;
+    if (q.cooldown_seconds_left > 0) {
+        btn.disabled = true;
+        btn.textContent = '冷却中（约 ' + Math.ceil(q.cooldown_seconds_left / 60) + ' 分钟）';
+    } else if (q.weekly_remaining <= 0) {
+        btn.disabled = true;
+        btn.textContent = '本周额度已用完';
+    } else {
+        btn.disabled = false;
+        btn.textContent = '开始匹配';
     }
+}
 
-    var html = '<div class="card" style="background:#f0fdf4;border-left:3px solid #22c55e;"><p>在 ' + d.total_candidates + ' 人中找到 <strong>' + d.matches.length + '</strong> 个匹配'
-        + (d.updated_existing ? '（更新 ' + d.updated_existing + ' 条历史）' : '')
-        + (d.newly_notified ? '。已向邮箱发送 ' + d.newly_notified + ' 条新匹配通知。' : '。')
-        + '</p></div>';
-    for (var i = 0; i < d.matches.length; i++) {
-        var m = d.matches[i];
+function renderMatchCards(matches, headerHtml) {
+    var html = headerHtml || '';
+    for (var i = 0; i < matches.length; i++) {
+        var m = matches[i];
         var pct = Math.round(m.score * 100);
         var color = pct >= 70 ? '#059669' : pct >= 50 ? '#2563eb' : '#6b7280';
         html += '<div class="card" style="margin-top:8px;">'
-            + '<div style="display:flex;align-items:center;gap:10px;">'
-            + '<span style="font-size:1.4em;font-weight:800;color:' + color + ';">#' + (i+1) + '</span>'
-            + '<span style="font-size:1.15em;font-weight:700;">' + m.name + '</span>'
-            + '<span>' + (m.gender==='male'?'男':'女') + '</span>'
+            + '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">'
+            + '<span style="font-size:1.4em;font-weight:800;color:' + color + ';">#' + (i + 1) + '</span>'
+            + '<span style="font-size:1.15em;font-weight:700;">' + esc(m.name) + '</span>'
+            + '<span>' + (m.gender === 'male' ? '男' : m.gender === 'female' ? '女' : '') + '</span>'
             + '<span style="margin-left:auto;font-weight:700;font-size:1.1em;color:' + color + ';">' + pct + '%</span>'
             + '</div>'
             + '<div style="margin:8px 0;background:#e5e7eb;border-radius:99px;height:6px;">'
             + '<div style="background:' + color + ';width:' + pct + '%;height:6px;border-radius:99px;"></div></div>';
 
         if (m.strengths && m.strengths.length) {
-            html += '<div style="font-size:0.85em;color:#666;">共同点: ';
+            html += '<div style="font-size:0.85em;color:#666;margin-bottom:4px;">共同点: ';
             for (var j = 0; j < Math.min(m.strengths.length, 3); j++) {
-                html += '<span class="tag" style="background:#d1fae5;color:#065f46;">' + m.strengths[j] + '</span> ';
+                html += '<span class="tag" style="background:#d1fae5;color:#065f46;">' + esc(m.strengths[j]) + '</span> ';
             }
             html += '</div>';
         }
-
-        html += '<div style="margin-top:6px;color:#2563eb;font-weight:700;">微信: ' + (m.wechat_id || '未填写') + '</div>';
-
-        if (m.differences_count > 0) {
+        if (m.differences && m.differences.length) {
+            html += '<div style="font-size:0.85em;color:#666;">差异: ';
+            for (var k = 0; k < Math.min(m.differences.length, 3); k++) {
+                html += '<span class="tag" style="background:#ffedd5;color:#9a3412;">' + esc(m.differences[k]) + '</span> ';
+            }
+            html += '</div>';
+        } else if (m.differences_count > 0) {
             html += '<p style="color:#999;font-size:0.8em;margin-top:4px;">有 ' + m.differences_count + ' 个方面存在差异 — 沟通时多包容</p>';
+        }
+
+        html += '<div style="margin-top:6px;color:#2563eb;font-weight:700;">微信: ' + esc(m.wechat_id || '未填写') + '</div>';
+        if (m.matched_at) {
+            html += '<div style="font-size:0.75em;color:#999;margin-top:4px;">' + new Date(m.matched_at).toLocaleString() + (m.mode ? ' · ' + m.mode : '') + '</div>';
         }
         html += '</div>';
     }
-    div.innerHTML = html;
+    return html;
+}
+
+async function refreshQuota() {
+    var d = await api('GET', '/api/match/status');
+    if (d.ok) renderQuota(d.quota);
+}
+
+async function doMatch() {
+    var btn = document.getElementById('match-btn');
+    var div = document.getElementById('result');
+    btn.disabled = true;
+    btn.textContent = '匹配中...';
+    div.innerHTML = '<div class="card" style="text-align:center;"><p>正在全校范围内寻找与你最合拍的人...</p><p style="color:#999;">特征向量 · 余弦相似度 · 择偶取向 · 一票否决</p></div>';
+
+    var d = await api('POST', '/api/match', {});
+    if (d.quota) renderQuota(d.quota);
+    else await refreshQuota();
+
+    if (!d.ok) {
+        div.innerHTML = '<div class="card" style="text-align:center;color:#dc2626;">' + esc(d.error) + '</div>';
+        return;
+    }
+    if (!d.matches || d.matches.length === 0) {
+        div.innerHTML = '<div class="card" style="text-align:center;"><p style="font-size:1.2em;">暂无匹配</p>'
+            + '<p class="hint">校内候选: ' + (d.total_candidates || 0) + ' 人</p>'
+            + '<p class="hint">一票否决跳过: ' + (d.dealbreaker_skipped || 0) + ' 人</p>'
+            + '<p class="hint">邀请更多同学加入试试？</p></div>';
+        return;
+    }
+
+    var header = '<div class="card" style="background:#f0fdf4;border-left:3px solid #22c55e;"><p>在 '
+        + d.total_candidates + ' 人中找到 <strong>' + d.matches.length + '</strong> 个匹配'
+        + (d.updated_existing ? '（更新 ' + d.updated_existing + ' 条历史）' : '')
+        + (d.newly_notified ? ' · 新匹配 ' + d.newly_notified + ' 条' : '')
+        + '。</p>';
+    if (d.mail_fail_count) {
+        header += '<p class="hint">有 ' + d.mail_fail_count + ' 封邮件发送失败，但下方结果仍可查看。</p>';
+    } else if (d.note) {
+        header += '<p class="hint">' + esc(d.note) + '</p>';
+    }
+    header += '</div>';
+
+    div.innerHTML = renderMatchCards(d.matches, header);
 }
 
 async function loadHistory() {
     var div = document.getElementById('result');
     div.innerHTML = '<p class="hint">加载中...</p>';
     var d = await api('GET', '/api/matches');
-    if (!d.ok) { div.innerHTML = '<p style="color:#dc2626;">' + d.error + '</p>'; return; }
-    if (!d.matches.length) { div.innerHTML = '<div class="card"><p class="hint">暂无历史匹配记录。点击上方按钮开始匹配。</p></div>'; return; }
-    var html = '';
-    for (var i = 0; i < d.matches.length; i++) {
-        var m = d.matches[i];
-        var pct = Math.round(m.score * 100);
-        html += '<div class="card" style="margin-bottom:6px;">'
-            + '<strong>' + m.name + '</strong> · ' + m.school
-            + ' · <span style="color:#2563eb;">' + pct + '%</span>'
-            + '<div style="color:#2563eb;">微信: ' + m.wechat_id + '</div>'
-            + '<div style="font-size:0.75em;color:#999;">' + (m.matched_at ? new Date(m.matched_at).toLocaleString() : '') + '</div>'
-            + '</div>';
+    if (d.quota) renderQuota(d.quota);
+    if (!d.ok) { div.innerHTML = '<p style="color:#dc2626;">' + esc(d.error) + '</p>'; return; }
+    if (!d.matches.length) {
+        div.innerHTML = '<div class="card"><p class="hint">暂无历史匹配记录。点击上方按钮开始匹配。</p></div>';
+        return;
     }
-    div.innerHTML = html;
+    var header = '<div class="card"><p><strong>历史匹配</strong>（' + d.matches.length + '）</p>'
+        + '<p class="hint">' + esc(d.note || '结果以本页为准') + '</p></div>';
+    div.innerHTML = renderMatchCards(d.matches, header);
 }
 
-// 自动加载历史
+renderQuota({{ quota | tojson }});
 loadHistory();
 </script>
 {% endblock %}
