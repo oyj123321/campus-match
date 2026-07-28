@@ -96,7 +96,6 @@ async function startMatch() {
             <div class="match-info">
                 <strong>${m.name}</strong>
                 <span class="tag-badge">${m.gender === 'male' ? '👦 男' : '👧 女'}</span>
-                <span class="tag-badge">匹配度: ${m.score}</span>
                 <div style="margin-top:4px;">
                     ${m.tags.map(t => `<span class="tag">${t}</span>`).join(' ')}
                 </div>

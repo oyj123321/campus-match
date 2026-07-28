@@ -44,7 +44,7 @@ def vectors_aligned(user_a, user_b):
 
 
 def eligible_candidates(user, exclude_ids=None):
-    """即时匹配候选：学校规则 + 黑名单 + 取向 + 向量维数对齐。"""
+    """即时匹配候选：学校规则 + 黑名单 + 取向 + 向量维数对齐 + 对方本周仍有额度。"""
     exclude_ids = set(exclude_ids or ())
     exclude_ids.add(user.id)
     blocked = blocked_partner_ids(user.id)
@@ -69,4 +69,8 @@ def eligible_candidates(user, exclude_ids=None):
         if not vectors_aligned(user, c):
             continue
         out.append(c)
-    return out
+
+    # 延迟导入，避免与 batch_job 循环依赖；排除本周已配满的人
+    from batch_job import users_without_weekly_quota
+    busy = users_without_weekly_quota([c.id for c in out])
+    return [c for c in out if c.id not in busy]

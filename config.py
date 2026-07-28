@@ -62,11 +62,11 @@ SCHOOL_DOMAINS = {
 # top_n：旧行为，一次返回多人（调试用，设 MATCH_MODE=top_n）
 MATCH_MODE = os.environ.get("MATCH_MODE", "one_to_one")  # one_to_one | top_n | batch
 MATCH_TOP_N = int(os.environ.get("MATCH_TOP_N", "1"))  # top_n 模式返回人数；one_to_one 强制为 1
-MATCH_MIN_SCORE = float(os.environ.get("MATCH_MIN_SCORE", "0.15"))
+MATCH_MIN_SCORE = float(os.environ.get("MATCH_MIN_SCORE", "0.15"))  # 契合度门槛，默认 15%（不对用户展示分数）
 BATCH_MATCH_DAY = int(os.environ.get("BATCH_MATCH_DAY", "1"))   # 0=周一 … 1=周二
 BATCH_MATCH_HOUR = int(os.environ.get("BATCH_MATCH_HOUR", "21"))  # 晚 9 点
 MATCH_DELAY_SECONDS = 0
-# 运营额度：一对一产品默认每周 1 个新匹配
+# 运营额度：每人每周最多参与 1 次新匹配（发起或被配都算）
 MATCH_WEEKLY_NEW_LIMIT = int(os.environ.get("MATCH_WEEKLY_NEW_LIMIT", "1"))
 MATCH_COOLDOWN_HOURS = int(os.environ.get("MATCH_COOLDOWN_HOURS", "12"))
 BATCH_SCHEDULER_ENABLED = os.environ.get("BATCH_SCHEDULER_ENABLED", "false").lower() == "true"

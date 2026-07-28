@@ -17,8 +17,8 @@ import time
 from datetime import datetime, timedelta
 
 from config import (
-    BATCH_MATCH_DAY, BATCH_MATCH_HOUR, MATCH_MIN_SCORE, SCHOOL_DOMAINS,
-    CROSS_SCHOOL_MATCHING_ENABLED,
+    BATCH_MATCH_DAY, BATCH_MATCH_HOUR, MATCH_MIN_SCORE, MATCH_WEEKLY_NEW_LIMIT,
+    SCHOOL_DOMAINS, CROSS_SCHOOL_MATCHING_ENABLED,
 )
 from models import db, User, Match
 from matcher import batch_match_school, orientation_compatible
@@ -41,21 +41,59 @@ def next_batch_datetime(now=None):
 
 
 def week_window_start(now=None):
-    """本自然周起始（周一 00:00，本地时间）。"""
-    now = now or datetime.now()
+    """本自然周起始（周一 00:00，UTC，与 Match.created_at 对齐）。"""
+    now = now or datetime.utcnow()
     monday = now.date() - timedelta(days=now.weekday())
     return datetime.combine(monday, datetime.min.time())
 
 
 def count_new_matches_this_week(user_id, now=None):
-    # 用 UTC 存库，这里按「最近 7 天」更稳妥地兼容 utcnow；只计当前有效配对
-    since = (now or datetime.utcnow()) - timedelta(days=7)
+    """本自然周内，该用户作为任一方参与的「新建」有效匹配次数。"""
+    since = week_window_start(now)
     return Match.query.filter(
         ((Match.user1_id == user_id) | (Match.user2_id == user_id)),
         Match.created_at >= since,
         Match.active.is_(True),
     ).count()
 
+
+def weekly_quota_remaining(user_id, limit=None, now=None):
+    """剩余可参与次数；默认上限来自 MATCH_WEEKLY_NEW_LIMIT。"""
+    lim = MATCH_WEEKLY_NEW_LIMIT if limit is None else limit
+    used = count_new_matches_this_week(user_id, now=now)
+    return max(0, lim - used)
+
+
+def users_without_weekly_quota(user_ids, limit=None, now=None):
+    """已用尽本周匹配额度的用户 ID 集合。"""
+    out = set()
+    for uid in user_ids:
+        if weekly_quota_remaining(uid, limit=limit, now=now) <= 0:
+            out.add(uid)
+    return out
+
+
+def active_partner_id(user_id):
+    """当前有效配对对方 ID；无则 None。"""
+    m = Match.query.filter(
+        ((Match.user1_id == user_id) | (Match.user2_id == user_id)),
+        Match.active.is_(True),
+    ).first()
+    if not m:
+        return None
+    return m.user2_id if m.user1_id == user_id else m.user1_id
+
+
+def partner_accepts_match(user_id, partner_id, weekly_new_limit=None):
+    """
+    对方本周是否还能被配：有剩余额度，或本周额度已用尽但当前有效对象就是自己
+    （允许刷新同一对，禁止抢走别人本周已配到的人）。
+    """
+    if weekly_new_limit is None:
+        return True
+    if weekly_quota_remaining(partner_id, limit=weekly_new_limit) > 0:
+        return True
+    return active_partner_id(partner_id) == user_id
 
 def deactivate_other_matches(user_id, keep_partner_id):
     """一对一：除 keep_partner 外，该用户其余配对全部失效（不再展示微信号等）。"""
@@ -108,7 +146,7 @@ def _get_or_create_pair(user_a, user_b, score, insight, mode="batch"):
 def persist_user_matches(user, scored_pairs, mode, mail_cfg, weekly_new_limit=None):
     """
     将 [(other, score), ...] 落库并通知。
-    weekly_new_limit: 本周新建匹配上限；None 表示不限制（批量任务用）。
+    weekly_new_limit: 本周新建匹配上限（发起方与被配方都计）；None 表示不限制。
     返回结果摘要 dict。
     """
     saved = []
@@ -116,14 +154,24 @@ def persist_user_matches(user, scored_pairs, mode, mail_cfg, weekly_new_limit=No
     skipped_dealbreaker = 0
     updated_existing = 0
     skipped_quota = 0
+    skipped_partner_quota = 0
+    skipped_low_score = 0
 
     new_this_week = count_new_matches_this_week(user.id) if weekly_new_limit is not None else 0
 
     for other, score in scored_pairs:
+        if score < MATCH_MIN_SCORE:
+            skipped_low_score += 1
+            continue
         if is_blocked_pair(user.id, other.id):
             continue
         if check_dealbreakers(user.answers, other.answers):
             skipped_dealbreaker += 1
+            continue
+        if weekly_new_limit is not None and not partner_accepts_match(
+            user.id, other.id, weekly_new_limit=weekly_new_limit
+        ):
+            skipped_partner_quota += 1
             continue
 
         insight = get_compatibility_insight(
@@ -168,7 +216,10 @@ def persist_user_matches(user, scored_pairs, mode, mail_cfg, weekly_new_limit=No
         new_this_week += 1
 
     if saved:
-        user.last_matched_at = datetime.utcnow()
+        now = datetime.utcnow()
+        user.last_matched_at = now
+        for other, *_ in saved:
+            other.last_matched_at = now
     db.session.commit()
 
     mail_ok_count = 0
@@ -205,6 +256,8 @@ def persist_user_matches(user, scored_pairs, mode, mail_cfg, weekly_new_limit=No
         "newly_notified": sum(1 for d in mail_details if d["self_ok"]),
         "dealbreaker_skipped": skipped_dealbreaker,
         "quota_skipped": skipped_quota,
+        "partner_quota_skipped": skipped_partner_quota,
+        "low_score_skipped": skipped_low_score,
         "mail_ok_count": mail_ok_count,
         "mail_fail_count": mail_fail_count,
         "mail_details": mail_details,
@@ -238,6 +291,9 @@ def run_batch_school(school, mail_cfg, require_opt_in=False, exclude_ids=None):
     """对单校执行一对一批量匹配。返回摘要（含 matched_ids）。"""
     exclude_ids = set(exclude_ids or ())
     users = [u for u in ready_users(school, require_opt_in=require_opt_in) if u.id not in exclude_ids]
+    # 本周已配过的人不再进入池（双向一周一次）
+    busy = users_without_weekly_quota([u.id for u in users])
+    users = [u for u in users if u.id not in busy]
     if len(users) < 2:
         return {"school": school, "users": len(users), "pairs": 0, "created": 0, "updated": 0, "matched_ids": set()}
 
@@ -252,6 +308,8 @@ def run_batch_school(school, mail_cfg, require_opt_in=False, exclude_ids=None):
             continue
         if a.id in exclude_ids or b.id in exclude_ids:
             continue
+        if a.id in matched_ids or b.id in matched_ids:
+            continue
         if not orientation_compatible(a, b):
             continue
         if not school_compatible(a, b):
@@ -261,6 +319,10 @@ def run_batch_school(school, mail_cfg, require_opt_in=False, exclude_ids=None):
         if not vectors_aligned(a, b):
             continue
         if check_dealbreakers(a.answers, b.answers):
+            continue
+        if not partner_accepts_match(a.id, b.id, weekly_new_limit=MATCH_WEEKLY_NEW_LIMIT):
+            continue
+        if not partner_accepts_match(b.id, a.id, weekly_new_limit=MATCH_WEEKLY_NEW_LIMIT):
             continue
 
         insight = get_compatibility_insight(
@@ -308,6 +370,8 @@ def run_batch_cross(mail_cfg, require_opt_in=False, exclude_ids=None):
         u for u in ready_users(None, require_opt_in=require_opt_in)
         if u.id not in exclude_ids and getattr(u, "allow_cross_school", False)
     ]
+    busy = users_without_weekly_quota([u.id for u in users])
+    users = [u for u in users if u.id not in busy]
     # 至少要有 2 所学校才有意义
     schools = {u.school for u in users}
     if len(users) < 2 or len(schools) < 2:
@@ -333,6 +397,8 @@ def run_batch_cross(mail_cfg, require_opt_in=False, exclude_ids=None):
             continue
         if a.school == b.school:
             continue  # 同校留给校内轮
+        if a.id in matched_ids or b.id in matched_ids:
+            continue
         if not school_compatible(a, b):
             continue
         if is_blocked_pair(a.id, b.id):
@@ -342,6 +408,10 @@ def run_batch_cross(mail_cfg, require_opt_in=False, exclude_ids=None):
         if not vectors_aligned(a, b):
             continue
         if check_dealbreakers(a.answers, b.answers):
+            continue
+        if not partner_accepts_match(a.id, b.id, weekly_new_limit=MATCH_WEEKLY_NEW_LIMIT):
+            continue
+        if not partner_accepts_match(b.id, a.id, weekly_new_limit=MATCH_WEEKLY_NEW_LIMIT):
             continue
 
         insight = get_compatibility_insight(

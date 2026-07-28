@@ -151,7 +151,7 @@ def match_quota_status(user):
 
 
 def serialize_match_payload(other, score, insight, active=True):
-    """统一匹配结果 JSON（含相处说明书 + 破冰）。"""
+    """统一匹配结果 JSON（含相处说明书 + 破冰）。不对用户返回匹配度分数。"""
     insight = insight or {}
     return {
         "id": other.id if active else None,
@@ -159,7 +159,6 @@ def serialize_match_payload(other, score, insight, active=True):
         "gender": other.gender if active else None,
         "school": getattr(other, "school", None) if active else None,
         "wechat_id": other.wechat_id if active else None,
-        "score": score,
         "summary": insight.get("summary") if active else None,
         "strengths": insight.get("strengths", [])[:6] if active else [],
         "differences": insight.get("differences", [])[:4] if active else [],
@@ -172,7 +171,8 @@ def serialize_match_payload(other, score, insight, active=True):
 def _match_explain_text(mode):
     """给开发者/用户看的通俗说明（不讲公式也能懂）。"""
     school_line = (
-        "一对一：在取向互相接受的人里算问卷相似度，只给你得分最高的 1 人"
+        "一对一：在取向互相接受、本周仍有额度的人里算问卷相似度，"
+        "只给你得分最高的 1 人；页面不展示匹配度分数，只给契合点与破冰话题"
         + ("；默认同校，双方都开「允许跨校」时可跨校。" if CROSS_SCHOOL_MATCHING_ENABLED else "（同校）。")
     )
     return {
@@ -182,17 +182,18 @@ def _match_explain_text(mode):
             if mode in ("one_to_one", "realtime") else
             "Top-N：按相似度返回多人（调试用）。"
             if mode == "top_n" else
-            "批量匈牙利：先按校配对，再跑跨校池；每人最多配到 1 人。"
+            "批量匈牙利：先按校配对，再跑跨校池；每人每周最多配到 1 人；结果只展示契合点，不展示分数。"
         ),
         "steps": [
             "1. 问卷答案变成双向平衡的特征向量，选左端或右端都不会天然占优势；「对我很重要」的题权重更大。",
-            "2. 余弦相似度：两串数字方向越接近，匹配分越高（可理解为口味有多像）。",
+            "2. 余弦相似度：两串数字方向越接近，匹配分越高（仅用于内部排序，不对用户展示）。",
             "3. 一票否决：婚姻、孩子出现明确相反意愿，或出轨观、吸烟接受度差异过大时直接跳过。",
             "4. 择偶取向：双方都愿意匹配对方的性别才进入候选。",
             "5. 黑名单双向生效；跨校需双方都勾选且总闸开启。",
-            "6. 点按钮默认只配对 1 人；每周二批量模式才用匈牙利做一对一分配。",
+            "6. 每人每周最多参与 1 次新匹配（发起或被配都算），不会反复抢走同一人。",
+            "7. 揭晓时只给昵称、微信、若干契合点与破冰话题——剩下靠你们聊。",
         ],
-        "why_not_many": "以前默认 Top-5 会一次出很多人，现已改为默认一对一。",
+        "why_not_many": "以前默认 Top-5 会一次出很多人，现已改为默认一对一，且每周双向各限一次。",
         "email_note": "匹配成功会尝试给你和对方发邮件；对方若是演示账号（假学校邮箱）常会失败，你的真实学校邮箱应能收到。",
     }
 
@@ -590,7 +591,7 @@ def api_match():
         my_matches = [
             (a if b.id == user.id else b, s)
             for a, b, s in results
-            if a.id == user.id or b.id == user.id
+            if (a.id == user.id or b.id == user.id) and s >= MATCH_MIN_SCORE
         ]
     else:
         # one_to_one：只取 1 人；top_n：可多人（调试）
@@ -599,11 +600,51 @@ def api_match():
             user, candidates, top_n=top_n, min_score=MATCH_MIN_SCORE
         )
 
+    if not my_matches:
+        return jsonify({
+            "ok": True,
+            "matches": [],
+            "message": (
+                "池子里有人，但暂时没有足够合适的人选"
+                "（或合适人选本周已配过）。宁缺毋滥，请下周再试或完善问卷。"
+            ),
+            "total_candidates": len(candidates),
+            "pool_size": pool_size,
+            "quota": match_quota_status(user),
+            "explain": _match_explain_text(mode),
+            "note": "结果以本页为准；邮件仅作通知，发送失败不影响查看。",
+        })
+
     summary = persist_user_matches(
         user, my_matches, mode, get_mail_config(),
         weekly_new_limit=MATCH_WEEKLY_NEW_LIMIT,
     )
     saved = summary["saved"]
+
+    if not saved:
+        parts = []
+        if summary.get("partner_quota_skipped"):
+            parts.append("对方本周已有配对")
+        if summary.get("low_score_skipped"):
+            parts.append("相似度未达内部门槛")
+        if summary.get("dealbreaker_skipped"):
+            parts.append("硬性底线冲突")
+        if summary.get("quota_skipped"):
+            parts.append("你的本周额度已用完")
+        reason = "；".join(parts) if parts else "暂无合适人选"
+        return jsonify({
+            "ok": True,
+            "matches": [],
+            "message": f"未能完成配对：{reason}。",
+            "total_candidates": len(candidates),
+            "dealbreaker_skipped": summary["dealbreaker_skipped"],
+            "quota_skipped": summary["quota_skipped"],
+            "partner_quota_skipped": summary.get("partner_quota_skipped", 0),
+            "low_score_skipped": summary.get("low_score_skipped", 0),
+            "quota": match_quota_status(user),
+            "explain": _match_explain_text(mode),
+            "note": "结果以本页为准；邮件仅作通知。",
+        })
 
     return jsonify({
         "ok": True,
@@ -617,6 +658,8 @@ def api_match():
         "updated_existing": summary["updated_existing"],
         "newly_notified": summary["newly_notified"],
         "quota_skipped": summary["quota_skipped"],
+        "partner_quota_skipped": summary.get("partner_quota_skipped", 0),
+        "low_score_skipped": summary.get("low_score_skipped", 0),
         "mail_ok_count": summary["mail_ok_count"],
         "mail_fail_count": summary["mail_fail_count"],
         "mail_details": summary.get("mail_details", []),
@@ -984,7 +1027,7 @@ if __name__ == "__main__":
     init_db()
     print("  CampusMatch v2 启动!")
     print(f"  模式: {MATCH_MODE} · {WEEKDAY_LABELS[BATCH_MATCH_DAY]} {BATCH_MATCH_HOUR}:00 批量")
-    print(f"  额度: 每周新建 ≤{MATCH_WEEKLY_NEW_LIMIT} · 冷却 {MATCH_COOLDOWN_HOURS}h")
+    print(f"  额度: 每周双向 ≤{MATCH_WEEKLY_NEW_LIMIT} · 门槛 {int(round(MATCH_MIN_SCORE*100))}% · 冷却 {MATCH_COOLDOWN_HOURS}h")
     print(f"  Debug: {FLASK_DEBUG}")
     print(f"  支持学校: {', '.join(SCHOOL_DOMAINS.keys())}")
     print(f"  邮件: {'真实发送' if MAIL_ENABLED else '开发模式'}")

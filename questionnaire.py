@@ -726,18 +726,11 @@ def get_compatibility_insight(user_vec, match_vec, answers, match_answers, score
         if fb not in icebreakers:
             icebreakers.append(fb)
 
-    pct = int(round((score or 0) * 100)) if score is not None else None
-    if pct is not None:
-        summary = (
-            f"系统派单合拍度约 {pct}%：找到 {len(strengths)} 处相近、"
-            f"{len(differences)} 处需要包容的差异。"
-            "算法只能帮你们认识，剩下的靠聊天。"
-        )
-    else:
-        summary = (
-            f"找到 {len(strengths)} 处相近、{len(differences)} 处差异。"
-            "把这次当作「系统给的开口理由」，轻松一点就好。"
-        )
+    pct = None  # 不对用户展示匹配度百分比，只给契合点与破冰
+    summary = (
+        f"找到 {len(strengths)} 处相近、{len(differences)} 处差异。"
+        "把这次当作「系统给的开口理由」，轻松一点就好。"
+    )
 
     if shared_tags:
         uniq = list(dict.fromkeys(shared_tags))[:4]
@@ -751,7 +744,7 @@ def get_compatibility_insight(user_vec, match_vec, answers, match_answers, score
         "shared_tags": list(dict.fromkeys(shared_tags))[:6],
         "total_strengths": len(strengths),
         "total_differences": len(differences),
-        "score_pct": pct,
+        "score_pct": None,
     }
 
 

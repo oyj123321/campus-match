@@ -152,35 +152,19 @@ function renderMatchCards(matches, headerHtml) {
     var html = headerHtml || '';
     for (var i = 0; i < matches.length; i++) {
         var m = matches[i];
-        var pct = Math.round(m.score * 100);
-        var color = pct >= 70 ? '#059669' : pct >= 50 ? '#2563eb' : '#64748b';
         html += '<div class="card" style="margin-top:8px;text-align:left;">'
             + '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">'
-            + '<span style="font-size:1.25em;font-weight:800;color:' + color + ';">' + t('card.assigned') + '</span>'
+            + '<span style="font-size:1.25em;font-weight:800;color:#2563eb;">' + t('card.assigned') + '</span>'
             + '<span style="font-size:1.15em;font-weight:700;">' + esc(m.name) + '</span>'
             + '<span>' + (m.gender === 'male' ? t('g.male') : m.gender === 'female' ? t('g.female') : '') + '</span>'
             + (m.school ? '<span class="hint">' + esc(tSchool(m.school)) + '</span>' : '')
-            + '<span style="margin-left:auto;font-weight:700;font-size:1.1em;color:' + color + ';">' + pct + '%</span>'
-            + '</div>'
-            + '<div class="meter"><div class="meter-fill" style="width:' + pct + '%;"></div></div>';
-
-        if (m.summary) {
-            html += '<div class="box box-info">'
-                + '<strong style="color:#1d4ed8;">' + t('card.manual') + '</strong>'
-                + '<p class="hint" style="margin:6px 0 0;">' + esc(m.summary) + '</p></div>';
-        }
+            + '</div>';
 
         if (m.strengths && m.strengths.length) {
-            html += '<div style="margin-top:8px;"><strong class="t-ok">' + t('card.strengths') + '</strong><ul class="hint" style="padding-left:18px;margin:6px 0;">';
-            for (var j = 0; j < m.strengths.length; j++) {
+            html += '<div style="margin-top:12px;"><strong class="t-ok">' + t('card.strengths') + '</strong><ul class="hint" style="padding-left:18px;margin:6px 0;">';
+            var maxS = Math.min(m.strengths.length, 4);
+            for (var j = 0; j < maxS; j++) {
                 html += '<li>' + esc(m.strengths[j]) + '</li>';
-            }
-            html += '</ul></div>';
-        }
-        if (m.differences && m.differences.length) {
-            html += '<div style="margin-top:8px;"><strong style="color:#b45309;">' + t('card.diff') + '</strong><ul class="hint" style="padding-left:18px;margin:6px 0;">';
-            for (var k = 0; k < m.differences.length; k++) {
-                html += '<li>' + esc(m.differences[k]) + '</li>';
             }
             html += '</ul></div>';
         }
