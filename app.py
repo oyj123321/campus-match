@@ -25,7 +25,7 @@ from config import (
     MAIL_ENABLED, MAIL_SERVER, MAIL_PORT, MAIL_USERNAME, MAIL_PASSWORD, MAIL_FROM,
 )
 from models import db, User, UserTag, Match, Blocklist
-from questionnaire import QUESTIONS, build_feature_vector, get_compatibility_insight
+from questionnaire import QUESTIONS, build_feature_vector, get_compatibility_insight, get_open_letter
 from matcher import real_time_match, batch_match_school
 from email_service import send_verification_email, send_match_result_email
 from batch_job import (
@@ -151,14 +151,18 @@ def match_quota_status(user):
 
 
 def serialize_match_payload(other, score, insight, active=True):
-    """统一匹配结果 JSON（含相处说明书 + 破冰）。不对用户返回匹配度分数。"""
+    """统一匹配结果 JSON。不对用户返回匹配度分数；有效配对才互见学校邮箱与附加联系方式。"""
     insight = insight or {}
+    letter = get_open_letter(other.answers) if active else None
     return {
         "id": other.id if active else None,
         "name": other.name if active else "（已失效的配对）",
         "gender": other.gender if active else None,
         "school": getattr(other, "school", None) if active else None,
+        "email": other.email if active else None,
         "wechat_id": other.wechat_id if active else None,
+        "bio": other.bio if active else None,
+        "open_letter": letter,
         "summary": insight.get("summary") if active else None,
         "strengths": insight.get("strengths", [])[:6] if active else [],
         "differences": insight.get("differences", [])[:4] if active else [],
@@ -191,7 +195,7 @@ def _match_explain_text(mode):
             "4. 择偶取向：双方都愿意匹配对方的性别才进入候选。",
             "5. 黑名单双向生效；跨校需双方都勾选且总闸开启。",
             "6. 每人每周最多参与 1 次新匹配（发起或被配都算），不会反复抢走同一人。",
-            "7. 揭晓时只给昵称、微信、若干契合点与破冰话题——剩下靠你们聊。",
+            "7. 揭晓时互见学校邮箱；可另留微信；军师支招给你可复制的开场白（兴趣优先，避开出轨/婚姻等开场雷区）。",
         ],
         "why_not_many": "以前默认 Top-5 会一次出很多人，现已改为默认一对一，且每周双向各限一次。",
         "email_note": "匹配成功会尝试给你和对方发邮件；对方若是演示账号（假学校邮箱）常会失败，你的真实学校邮箱应能收到。",
@@ -426,6 +430,10 @@ def api_questionnaire():
         except (TypeError, ValueError):
             continue
         if qid in valid_qids:
+            # 自由留言题不参与「很重要」加权
+            qmeta = next((x for x in QUESTIONS if x["id"] == qid), None)
+            if qmeta and qmeta.get("type") == "text":
+                continue
             important_qids.add(qid)
 
     # 转换：前端传来的都是字符串键，统一成 int 键
@@ -456,18 +464,27 @@ def api_questionnaire():
             exclusive = set(q.get("exclusive_options") or [])
             chosen_exclusive = next((x for x in clean if x in exclusive), None)
             answers[q["id"]] = [chosen_exclusive] if chosen_exclusive else clean
+        elif q["type"] == "text":
+            text = val if isinstance(val, str) else ("" if val is None else str(val))
+            text = text.strip()
+            max_len = int(q.get("max_length") or 2000)
+            if text:
+                answers[q["id"]] = text[:max_len]
 
     missing = []
     for q in QUESTIONS:
+        if q.get("optional") or q["type"] == "text":
+            continue
         val = answers.get(q["id"])
         if q["type"] == "scale" and val is None:
             missing.append(q["id"])
         elif q["type"] == "multi" and not val:
             missing.append(q["id"])
     if missing:
+        required_n = sum(1 for q in QUESTIONS if not q.get("optional") and q["type"] != "text")
         return jsonify({
             "ok": False,
-            "error": f"请完成全部 {len(QUESTIONS)} 题（未完成：{', '.join('Q' + str(x) for x in missing)}）",
+            "error": f"请完成全部 {required_n} 道必答题（未完成：{', '.join('Q' + str(x) for x in missing)}）",
         }), 400
 
     # 构建特征向量
@@ -522,8 +539,6 @@ def api_match():
             return jsonify({"ok": False, "error": "请先完成问卷并提交"}), 400
         if not user.gender or user.looking_for not in LOOKING_FOR_VALUES:
             return jsonify({"ok": False, "error": "请先在问卷页设置性别与择偶取向"}), 400
-        if not user.wechat_id:
-            return jsonify({"ok": False, "error": "请先填写微信号"}), 400
         return jsonify({"ok": False, "error": "资料不完整，请返回问卷页补全"}), 400
 
     if not INSTANT_MATCH_ENABLED:
@@ -675,7 +690,7 @@ def api_match_opt_in():
     """预约 / 取消本周批量匹配。"""
     user = get_current_user()
     if not user.ready_to_match():
-        return jsonify({"ok": False, "error": "请先完成问卷、性别、取向与微信号"}), 400
+        return jsonify({"ok": False, "error": "请先完成问卷、性别与择偶取向"}), 400
 
     week = current_week_key()
     if request.method == "DELETE":
@@ -733,7 +748,7 @@ def api_get_matches():
         "ok": True,
         "matches": results,
         "quota": match_quota_status(user),
-        "note": "一对一：你只能看到当前有效配对；打开相处说明书与破冰话题再加微信。",
+        "note": "一对一：你只能看到当前有效配对；学校邮箱已互见，可先邮件开聊。",
     })
 
 
@@ -758,7 +773,10 @@ def api_me():
     looking_for = (data.get("looking_for") or "").strip()
     if looking_for in LOOKING_FOR_VALUES:
         user.looking_for = looking_for
-    user.wechat_id = (data.get("wechat_id") or "").strip() or user.wechat_id
+    contact = (data.get("wechat_id") or "").strip()
+    # 允许清空可选联系方式
+    if "wechat_id" in data:
+        user.wechat_id = contact[:120] if contact else None
     user.bio = (data.get("bio") or "").strip() or user.bio
     if "allow_cross_school" in data:
         user.allow_cross_school = bool(data.get("allow_cross_school"))
@@ -769,7 +787,7 @@ def api_me():
 @app.route("/api/users/search", methods=["GET"])
 @login_required
 def api_users_search():
-    """按昵称或邮箱精确搜索可拉黑对象（不返回微信）。"""
+    """按昵称或邮箱精确搜索可拉黑对象（不返回联系方式）。"""
     user = get_current_user()
     q = (request.args.get("q") or "").strip()
     if len(q) < 1:

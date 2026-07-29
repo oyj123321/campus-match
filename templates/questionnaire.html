@@ -2,7 +2,7 @@
 {% block content %}
 
 <h2 style="text-align:center;margin-bottom:8px;" data-i18n="qn.title">填写资料 & 问卷</h2>
-<p class="hint" style="text-align:center;margin-bottom:16px;"><span data-i18n="qn.sub1">共</span> {{ questions|length }} <span data-i18n="qn.sub2">题 · 请点选作答；未选不算已答</span></p>
+<p class="hint" style="text-align:center;margin-bottom:16px;"><span data-i18n="qn.sub1">共</span> 39 <span data-i18n="qn.sub2">道必答题 · 另有可选留言；量表/多选未选不算已答</span></p>
 
 <!-- 基本资料 -->
 <div class="card" id="profile-card">
@@ -33,8 +33,11 @@
     </div>
     <div class="form-row">
         <div class="form-group" style="flex:1;">
-            <label for="wechat_id" data-i18n="qn.wechat">微信号 *</label>
-            <input type="text" id="wechat_id" value="{{ user.wechat_id or '' }}" placeholder="匹配成功后发送给对方" data-i18n-ph="qn.wechat.ph" autocomplete="off">
+            <label for="wechat_id" data-i18n="qn.wechat">附加联系方式（可选）</label>
+            <input type="text" id="wechat_id" value="{{ user.wechat_id or '' }}" maxlength="120"
+                   placeholder="例如：wechat:mahuateng1998"
+                   data-i18n-ph="qn.wechat.ph" autocomplete="off">
+            <p class="hint" data-i18n="qn.wechat.hint">配对成功后双方会互见已验证的学校邮箱，可先邮件开聊。若愿意，可再留微信等方便的联系方式。</p>
         </div>
         <div class="form-group" style="flex:1;">
             <label for="bio" data-i18n="qn.bio">一句话介绍</label>
@@ -85,7 +88,7 @@ const EXISTING_IMPORTANT = {{ user.important_qids | list | tojson }};
 const dimColors = {
     'values': '#7c3aed', 'lifestyle': '#059669',
     'emotional': '#db2777', 'interests': '#2563eb',
-    'expectations': '#d97706'
+    'expectations': '#d97706', 'open': '#0d9488'
 };
 
 let answers = {};
@@ -109,11 +112,31 @@ function esc(s) {
 }
 
 function isAnswered(q) {
+    if (q.optional || q.type === 'text') return true;
     var v = answers[String(q.id)];
     if (q.type === 'scale') {
         return v !== undefined && v !== null && v !== '';
     }
     return Array.isArray(v) && v.length > 0;
+}
+
+function requiredQuestions() {
+    return QUESTIONS.filter(function (q) { return !(q.optional || q.type === 'text'); });
+}
+
+function setText(qid, value) {
+    var qs = String(qid);
+    var q = null;
+    for (var i = 0; i < QUESTIONS.length; i++) {
+        if (String(QUESTIONS[i].id) === qs) { q = QUESTIONS[i]; break; }
+    }
+    var maxLen = (q && q.max_length) ? q.max_length : 2000;
+    var text = String(value || '');
+    if (text.length > maxLen) text = text.slice(0, maxLen);
+    if (text.trim()) answers[qs] = text;
+    else delete answers[qs];
+    var counter = document.getElementById('tc_' + qs);
+    if (counter) counter.textContent = text.length + '/' + maxLen;
 }
 
 function render() {
@@ -129,7 +152,7 @@ function render() {
             dim = q.dimension;
             dimN++;
             html += '<div class="card dimension-card" style="border-left:4px solid ' + dimColors[dim] + ';">'
-                + '<h3 style="color:' + dimColors[dim] + ';">' + t('dim.' + dim) + ' <span class="dim-count">(' + dimN + '/5)</span></h3>';
+                + '<h3 style="color:' + dimColors[dim] + ';">' + t('dim.' + dim) + '</h3>';
         }
 
         var qid = String(q.id);
@@ -173,10 +196,22 @@ function render() {
                     + esc(labels[j]) + '</label>';
             }
             html += '</div>';
+        } else if (q.type === 'text') {
+            var textVal = (typeof val === 'string') ? val : '';
+            var maxLen = q.max_length || 2000;
+            var ph = qi(q, 'placeholder') || q.placeholder || '';
+            html += '<p class="hint" style="margin:6px 0 8px;">' + esc(q.hint || t('qn.open.hint')) + '</p>'
+                + '<textarea class="open-letter" id="ta_' + qid + '" rows="6" maxlength="' + maxLen + '"'
+                + ' placeholder="' + esc(ph) + '"'
+                + ' oninput="setText(' + q.id + ', this.value)">' + esc(textVal) + '</textarea>'
+                + '<div class="hint" style="text-align:right;margin-top:4px;" id="tc_' + qid + '">'
+                + textVal.length + '/' + maxLen + '</div>';
         }
 
-        html += '<button type="button" class="imp-btn' + (imp ? ' on' : '') + '" id="ib_' + qid
-            + '" onclick="toggleImp(' + q.id + ',this)">' + (imp ? t('qn.imp.on') : t('qn.imp.off')) + '</button>';
+        if (q.type !== 'text') {
+            html += '<button type="button" class="imp-btn' + (imp ? ' on' : '') + '" id="ib_' + qid
+                + '" onclick="toggleImp(' + q.id + ',this)">' + (imp ? t('qn.imp.on') : t('qn.imp.off')) + '</button>';
+        }
         html += '</div>';
     }
     if (dim) html += '</div>';
@@ -271,31 +306,34 @@ function toggleImp(qid, btn) {
 }
 
 function updateProgress() {
+    var req = requiredQuestions();
     var done = 0;
-    for (var i = 0; i < QUESTIONS.length; i++) {
-        if (isAnswered(QUESTIONS[i])) done++;
+    for (var i = 0; i < req.length; i++) {
+        if (isAnswered(req[i])) done++;
     }
-    var pct = Math.round(done / QUESTIONS.length * 100);
+    var pct = req.length ? Math.round(done / req.length * 100) : 100;
     document.getElementById('progress-bar').style.width = pct + '%';
-    document.getElementById('progress-text').textContent = done + '/' + QUESTIONS.length + ' (' + pct + '%)';
+    document.getElementById('progress-text').textContent = done + '/' + req.length + ' (' + pct + '%)';
     var hint = document.getElementById('progress-hint');
-    if (done < QUESTIONS.length) {
-        hint.textContent = t('qn.left') + ' ' + (QUESTIONS.length - done) + ' ' + t('qn.left2');
+    if (done < req.length) {
+        hint.textContent = t('qn.left') + ' ' + (req.length - done) + ' ' + t('qn.left2');
     } else {
         hint.textContent = t('qn.alldone');
     }
 }
 
 function firstUnanswered() {
-    for (var i = 0; i < QUESTIONS.length; i++) {
-        if (!isAnswered(QUESTIONS[i])) return QUESTIONS[i];
+    var req = requiredQuestions();
+    for (var i = 0; i < req.length; i++) {
+        if (!isAnswered(req[i])) return req[i];
     }
     return null;
 }
 
 function highlightMissing() {
-    for (var i = 0; i < QUESTIONS.length; i++) {
-        var q = QUESTIONS[i];
+    var req = requiredQuestions();
+    for (var i = 0; i < req.length; i++) {
+        var q = req[i];
         var card = document.getElementById('qcard_' + q.id);
         if (!card) continue;
         if (!isAnswered(q)) card.classList.add('q-error');
@@ -326,11 +364,6 @@ async function submitAll() {
     if (!lookingFor) {
         alert(t('qn.needLf'));
         document.getElementById('looking_for').focus();
-        return;
-    }
-    if (!wechat) {
-        alert(t('qn.needWechat'));
-        document.getElementById('wechat_id').focus();
         return;
     }
 

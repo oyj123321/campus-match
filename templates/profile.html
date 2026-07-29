@@ -18,9 +18,10 @@
     </div>
 
     <div class="form-group">
-        <label for="wechat_id">微信号</label>
-        <input type="text" id="wechat_id" value="{{ user.wechat_id or '' }}" placeholder="匹配成功后发送给对方">
-        <p class="hint">这是匹配成功后的联系方式，请认真填写</p>
+        <label for="wechat_id">附加联系方式（可选）</label>
+        <input type="text" id="wechat_id" value="{{ user.wechat_id or '' }}" maxlength="120"
+               placeholder="例如：wechat:mahuateng1998">
+        <p class="hint">配对成功后会互见学校邮箱；此处可另留微信等</p>
     </div>
 
     <div class="form-group">
@@ -58,7 +59,7 @@ async function saveProfile() {
 
     if (!data.name) return alert('请填写名字');
     if (!data.gender) return alert('请选择性别');
-    if (!data.wechat_id) return alert('请填写微信号');
+    if (!data.name) return alert('请填写昵称');
     if (!tagsRaw.trim()) return alert('请至少写一个兴趣标签');
 
     const res = await api('PUT', '/api/profile', data);
@@ -100,7 +101,8 @@ async function startMatch() {
                     ${m.tags.map(t => `<span class="tag">${t}</span>`).join(' ')}
                 </div>
                 <div style="margin-top:6px;color:#2563eb;font-weight:bold;">
-                    微信: ${m.wechat_id}
+                    学校邮箱: ${m.email || '—'}
+                    ${m.wechat_id ? ' · 附加: ' + m.wechat_id : ''}
                 </div>
             </div>
         </div>`;

@@ -70,6 +70,21 @@ function esc(s) {
         .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
+async function copyIce(btn) {
+    var box = btn && btn.parentElement;
+    var code = box && box.querySelector('.ice-send-text');
+    var text = code ? code.textContent : '';
+    if (!text) return;
+    try {
+        await navigator.clipboard.writeText(text);
+        var old = btn.textContent;
+        btn.textContent = t('card.ice.copied');
+        setTimeout(function () { btn.textContent = old; }, 1200);
+    } catch (e) {
+        prompt(t('card.ice.copyManual'), text);
+    }
+}
+
 function fmtCountdown(sec) {
     if (sec <= 0) return t('cd.over');
     var d = Math.floor(sec / 86400);
@@ -168,16 +183,35 @@ function renderMatchCards(matches, headerHtml) {
             }
             html += '</ul></div>';
         }
+        if (m.open_letter) {
+            html += '<div class="box box-ice" style="margin-top:12px;">'
+                + '<strong style="color:#0f766e;">' + t('card.letter') + '</strong>'
+                + '<p class="hint" style="margin:8px 0 0;white-space:pre-wrap;line-height:1.65;">' + esc(m.open_letter) + '</p></div>';
+        }
         if (m.icebreakers && m.icebreakers.length) {
             html += '<div class="box box-ice">'
-                + '<strong style="color:#db2777;">' + t('card.ice') + '</strong><ol class="hint" style="padding-left:18px;margin:6px 0;">';
+                + '<strong style="color:#db2777;">' + t('card.ice') + '</strong>'
+                + '<p class="hint" style="margin:6px 0 8px;">' + t('card.ice.hint') + '</p>';
             for (var ib = 0; ib < m.icebreakers.length; ib++) {
-                html += '<li style="margin:4px 0;">' + esc(m.icebreakers[ib]) + '</li>';
+                var ice = m.icebreakers[ib];
+                var tip = (ice && typeof ice === 'object') ? (ice.tip || '') : String(ice || '');
+                var send = (ice && typeof ice === 'object') ? (ice.send || '') : '';
+                html += '<div class="ice-card">'
+                    + '<p class="hint" style="margin:0 0 6px;">' + esc(tip) + '</p>';
+                if (send) {
+                    html += '<div class="ice-send"><span class="ice-send-label">' + t('card.ice.send') + '</span>'
+                        + '<code class="ice-send-text">' + esc(send) + '</code>'
+                        + '<button type="button" class="btn btn-secondary ice-copy" onclick="copyIce(this)">' + t('card.ice.copy') + '</button></div>';
+                }
+                html += '</div>';
             }
-            html += '</ol></div>';
+            html += '</div>';
         }
 
-        html += '<div class="wechat-line">' + t('card.wechat') + esc(m.wechat_id || t('card.nowechat')) + '</div>';
+        html += '<div class="wechat-line">' + t('card.email') + esc(m.email || t('card.nowechat')) + '</div>';
+        if (m.wechat_id) {
+            html += '<div class="wechat-line">' + t('card.wechat') + esc(m.wechat_id) + '</div>';
+        }
         html += '<p class="hint" style="margin-top:6px;">' + t('card.opener') + '</p>';
         if (m.id) {
             html += '<button type="button" class="btn btn-secondary" style="margin-top:8px;" onclick="blockUser(' + m.id + ', this)">' + t('btn.noMore') + '</button>';

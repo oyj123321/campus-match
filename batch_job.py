@@ -276,7 +276,6 @@ def ready_users(school=None, require_opt_in=False):
         User.feature_vector_json.isnot(None),
         User.gender.isnot(None),
         User.looking_for.isnot(None),
-        User.wechat_id.isnot(None),
     )
     if school:
         q = q.filter(User.school == school)

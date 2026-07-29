@@ -451,6 +451,34 @@ input[type="text"]:focus, input[type="email"]:focus {
     box-shadow: 0 0 12px rgba(99, 102, 241, 0.2);
 }
 
+textarea.open-letter {
+    width: 100%; min-height: 140px; padding: 12px 14px;
+    background: rgba(255, 255, 255, 0.95);
+    border: 1px solid #d7deee; border-radius: 12px;
+    color: var(--text); font-size: 0.98em; line-height: 1.65;
+    font-family: inherit; resize: vertical;
+    transition: border-color 0.18s, box-shadow 0.18s;
+}
+textarea.open-letter:focus {
+    outline: none; border-color: #14b8a6;
+    box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.18);
+}
+
+.ice-card {
+    margin-top: 10px; padding: 10px 12px;
+    background: rgba(253, 242, 248, 0.7);
+    border: 1px solid rgba(244, 114, 182, 0.35);
+    border-radius: 12px; text-align: left;
+}
+.ice-send { margin-top: 6px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.ice-send-label { font-size: 0.85em; color: #9d174d; font-weight: 700; }
+.ice-send-text {
+    flex: 1; min-width: 160px; padding: 8px 10px;
+    background: #fff; border-radius: 8px; border: 1px dashed #f9a8d4;
+    font-size: 0.92em; color: var(--text); white-space: pre-wrap;
+}
+.ice-copy { padding: 6px 12px !important; font-size: 0.85em !important; }
+
 /* Important button */
 .imp-btn {
     margin-top: 8px; padding: 4px 14px;

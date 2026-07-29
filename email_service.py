@@ -62,11 +62,18 @@ def send_match_result_email(to_email, matches, mail_config, insight=None):
     else:
         rows = ""
         for i, (m_user, score) in enumerate(matches, 1):
+            extra = m_user.wechat_id or ""
+            extra_cell = (
+                f'<td style="padding:10px 8px;border-bottom:1px solid #e2e8f0;color:#059669;font-weight:700;">{extra}</td>'
+                if extra else
+                '<td style="padding:10px 8px;border-bottom:1px solid #e2e8f0;color:#94a3b8;">—</td>'
+            )
             rows += f"""
             <tr>
                 <td style="padding:10px 8px;border-bottom:1px solid #e2e8f0;text-align:center;">#{i}</td>
                 <td style="padding:10px 8px;border-bottom:1px solid #e2e8f0;">{m_user.name or '(匿名)'}</td>
-                <td style="padding:10px 8px;border-bottom:1px solid #e2e8f0;color:#059669;font-weight:700;">{m_user.wechat_id or '未填'}</td>
+                <td style="padding:10px 8px;border-bottom:1px solid #e2e8f0;color:#2563eb;font-weight:600;">{m_user.email}</td>
+                {extra_cell}
             </tr>"""
 
         insight_html = ""
@@ -75,10 +82,42 @@ def send_match_result_email(to_email, matches, mail_config, insight=None):
             if strengths:
                 items = "".join(f"<li style='margin:4px 0;'>{s}</li>" for s in strengths)
                 insight_html += f"<div style='background:#f0fdf4;border-radius:8px;padding:12px 16px;margin-top:16px;'><strong style='color:#059669;'>你们的契合点</strong><ul style='margin:8px 0 0;padding-left:18px;font-size:14px;'>{items}</ul></div>"
+            # 对方留给你的话（可选自由留言）
+            letter = None
+            try:
+                from questionnaire import get_open_letter
+                if matches:
+                    letter = get_open_letter(matches[0][0].answers)
+            except Exception:
+                letter = None
+            if letter:
+                safe = (
+                    letter.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+                    .replace("\n", "<br>")
+                )
+                insight_html += (
+                    f"<div style='background:#f0fdfa;border-radius:8px;padding:12px 16px;margin-top:10px;'>"
+                    f"<strong style='color:#0f766e;'>TA 留给你的话</strong>"
+                    f"<p style='margin:8px 0 0;font-size:14px;line-height:1.65;'>{safe}</p></div>"
+                )
             ice = insight.get("icebreakers", [])[:3]
             if ice:
-                items = "".join(f"<li style='margin:4px 0;'>{x}</li>" for x in ice)
-                insight_html += f"<div style='background:#fdf2f8;border-radius:8px;padding:12px 16px;margin-top:10px;'><strong style='color:#be185d;'>破冰话题（别让聊天死掉）</strong><ul style='margin:8px 0 0;padding-left:18px;font-size:14px;'>{items}</ul></div>"
+                items = []
+                for x in ice:
+                    if isinstance(x, dict):
+                        tip = x.get("tip") or ""
+                        send = x.get("send") or ""
+                        chunk = tip
+                        if send:
+                            chunk += f"<br><em style='color:#9d174d;'>可以发：</em>{send}"
+                        items.append(f"<li style='margin:8px 0;'>{chunk}</li>")
+                    else:
+                        items.append(f"<li style='margin:4px 0;'>{x}</li>")
+                insight_html += (
+                    f"<div style='background:#fdf2f8;border-radius:8px;padding:12px 16px;margin-top:10px;'>"
+                    f"<strong style='color:#be185d;'>军师支招</strong>"
+                    f"<ul style='margin:8px 0 0;padding-left:18px;font-size:14px;'>{''.join(items)}</ul></div>"
+                )
 
         body = f"""<!DOCTYPE html>
 <html lang="zh-CN">
@@ -94,7 +133,8 @@ def send_match_result_email(to_email, matches, mail_config, insight=None):
                 <tr style="background:#f8fafc;">
                     <th style="padding:10px 8px;text-align:left;font-size:13px;color:#64748b;">#</th>
                     <th style="padding:10px 8px;text-align:left;font-size:13px;color:#64748b;">名字</th>
-                    <th style="padding:10px 8px;text-align:left;font-size:13px;color:#64748b;">微信</th>
+                    <th style="padding:10px 8px;text-align:left;font-size:13px;color:#64748b;">学校邮箱</th>
+                    <th style="padding:10px 8px;text-align:left;font-size:13px;color:#64748b;">附加联系</th>
                 </tr>
             </thead>
             <tbody>{rows}</tbody>
@@ -113,7 +153,7 @@ def send_match_result_email(to_email, matches, mail_config, insight=None):
         print(f"\n{'='*60}")
         print(f"[DEV] 匹配结果 → {to_email}")
         for i, (m_user, score) in enumerate(matches, 1):
-            print(f"  #{i} {m_user.name} | wx:{m_user.wechat_id}")
+            print(f"  #{i} {m_user.name} | email:{m_user.email} | extra:{m_user.wechat_id or '-'}")
         if insight and insight.get("strengths"):
             print(f"  共同点: {' | '.join(insight['strengths'][:3])}")
         print(f"{'='*60}\n")
