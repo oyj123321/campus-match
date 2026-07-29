@@ -46,6 +46,17 @@ python tunnel.py
 # → 获得 https://xxx.serveousercontent.com 公网地址
 ```
 
+## 文档
+
+| 文档 | 用途 |
+|------|------|
+| [`docs/beta-launch.md`](docs/beta-launch.md) | 熟人公测 checklist、推荐 `.env`、冒烟测试 |
+| [`docs/deploy-tencent-lighthouse.md`](docs/deploy-tencent-lighthouse.md) | 腾讯云轻量机部署（含给其他学校复用要点） |
+| [`docs/mvp-roadmap.md`](docs/mvp-roadmap.md) | MVP 路线图 |
+| [`CHANGELOG.md`](CHANGELOG.md) | 版本变更记录 |
+
+换校定制：改 `config.py` 里学校域名白名单，建议每校独立部署/独立数据库；步骤见部署文档第 10 节。
+
 ## 项目结构
 
 ```
