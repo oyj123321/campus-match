@@ -52,6 +52,7 @@ python tunnel.py
 |------|------|
 | [`docs/beta-launch.md`](docs/beta-launch.md) | 熟人公测 checklist、推荐 `.env`、冒烟测试 |
 | [`docs/deploy-tencent-lighthouse.md`](docs/deploy-tencent-lighthouse.md) | 腾讯云轻量机部署（含给其他学校复用要点） |
+| [`docs/ops-maintenance.md`](docs/ops-maintenance.md) | 日常维护、排障、如何查看/备份数据库 |
 | [`docs/mvp-roadmap.md`](docs/mvp-roadmap.md) | MVP 路线图 |
 | [`CHANGELOG.md`](CHANGELOG.md) | 版本变更记录 |
 

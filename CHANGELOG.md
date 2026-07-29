@@ -4,6 +4,17 @@ All notable changes to CampusMatch.
 
 ---
 
+## [1.8.2] — 2026-07-29
+
+### 问题（上次）
+- 上线后缺少「日常怎么养站、出事怎么办、如何看库里每个人数据」的成文说明
+
+### 改动
+- **Added / 运维手册**：`docs/ops-maintenance.md`（备份习惯、systemd/日志、常见故障表、SQLite 图形界面与 SQL/Python 查人、删号示例、安全底线）
+- **Improved / README**：文档索引增加运维手册链接
+
+---
+
 ## [1.8.1] — 2026-07-29
 
 ### 问题（上次）
