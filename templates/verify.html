@@ -21,8 +21,10 @@
 
 <script>
 async function verify() {
+    const email = '{{ email }}';
     const token = document.getElementById('token').value.trim();
-    if (!token) { alert(t('msg.enterToken')); return; }
+    const isBeta = /^(cmtest|beta|test)\d+@/i.test(email);
+    if (!token && !isBeta) { alert(t('msg.enterToken')); return; }
 
     const btn = document.getElementById('verify-btn');
     const status = document.getElementById('verify-status');

@@ -292,16 +292,18 @@ def api_register():
         db.session.add(user)
         db.session.flush()
 
-    # 内测号不发真邮件、不换码：统一 BETA01（不写库，避免 unique 冲突）
+    # 内测号：免邮件，注册后直接登录（验证码随便填也能进）
     if _is_beta_account(email):
         user.verification_token = None
         user.email_verified = True
         db.session.commit()
+        session["user_id"] = user.id
         return jsonify({
             "ok": True,
             "mail_sent": False,
-            "message": f"内测账号：请直接填写验证码 BETA01（{email}）",
-            "dev_token": "BETA01",
+            "beta_skip_verify": True,
+            "message": f"内测账号已直接登录（{email}）。验证码可随便填，或不填直接点验证亦可。",
+            "dev_token": "任意",
         })
 
     token = user.generate_token()
@@ -318,34 +320,38 @@ def api_register():
 
 
 def _is_beta_account(email: str) -> bool:
-    """内测号：beta01@…–beta10@…，统一验证码 BETA01，不过期。"""
+    """内测号：本地部分为 beta/cmtest/test + 数字，如 cmtest01@um.edu.mo。免真邮件。"""
     local = (email or "").split("@", 1)[0].lower()
-    return local.startswith("beta") and local[4:].isdigit()
+    for prefix in ("cmtest", "beta", "test"):
+        if local.startswith(prefix) and local[len(prefix):].isdigit():
+            return True
+    return False
 
 
 @app.route("/api/verify", methods=["POST"])
 def api_verify():
     data = request.get_json() or {}
-    email = (data.get("email") or "").strip()
+    email = (data.get("email") or "").strip().lower()
     token = (data.get("token") or "").strip().upper()
 
-    if not email or not token:
-        return jsonify({"ok": False, "error": "邮箱和验证码不能为空"}), 400
+    if not email:
+        return jsonify({"ok": False, "error": "邮箱不能为空"}), 400
 
     user = User.query.filter_by(email=email).first()
     if not user:
         return jsonify({"ok": False, "error": "用户不存在"}), 404
 
     beta = _is_beta_account(email)
-    # 内测号：固定验证码 BETA01（不落库，可反复登录）
+    # 内测号：任意验证码（可空）直接登录
     if beta:
-        if token != "BETA01":
-            return jsonify({"ok": False, "error": "验证码错误（内测号请填 BETA01）"}), 400
         user.email_verified = True
         user.verification_token = None
         db.session.commit()
         session["user_id"] = user.id
-        return jsonify({"ok": True, "message": "已登录"})
+        return jsonify({"ok": True, "message": "内测账号已登录"})
+
+    if not token:
+        return jsonify({"ok": False, "error": "邮箱和验证码不能为空"}), 400
 
     # 已验证用户直接登录
     if user.email_verified:
@@ -387,7 +393,13 @@ def api_resend_verification():
         user.verification_token = None
         user.email_verified = True
         db.session.commit()
-        return jsonify({"ok": True, "dev_token": "BETA01", "message": "内测账号验证码：BETA01"})
+        session["user_id"] = user.id
+        return jsonify({
+            "ok": True,
+            "beta_skip_verify": True,
+            "dev_token": "任意",
+            "message": "内测账号已登录，验证码可随便填",
+        })
 
     token = user.generate_token()
     db.session.commit()

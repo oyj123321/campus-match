@@ -145,6 +145,12 @@ async function register() {
         return;
     }
 
+    // 内测号：注册后已登录，跳过验证码
+    if (data.beta_skip_verify) {
+        window.location.href = '/questionnaire';
+        return;
+    }
+
     // 显示 Step 2
     currentEmail = email;
     document.getElementById('step2-email').textContent = email;
@@ -161,8 +167,10 @@ async function register() {
 
 async function verify() {
     var token = document.getElementById('token').value.trim().toUpperCase();
-    if (!token) { alert(t('msg.enterToken')); return; }
     if (!currentEmail) { alert(t('msg.registerFirst')); return; }
+    // 内测号允许空验证码；真邮箱仍要求填写
+    var isBeta = /^(cmtest|beta|test)\d+@/i.test(currentEmail);
+    if (!token && !isBeta) { alert(t('msg.enterToken')); return; }
 
     var btn = document.getElementById('verify-btn');
     var msg = document.getElementById('verify-msg');
