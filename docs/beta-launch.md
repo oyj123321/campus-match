@@ -51,6 +51,51 @@
 
 本机拉正式库备份（只读排查用）：见 [`scripts/README-backup.md`](../scripts/README-backup.md)。**不要把本机实验库覆盖到云上**，除非你明确要还原灾备。
 
+### 本机 vs 云：怎么分清、为何「一改就刷新变了」
+
+本地改代码 **不会** 自动同步到云。两边是两份文件：
+
+| 你改的是 | 磁盘位置 | 浏览器应打开 |
+|----------|----------|--------------|
+| Cursor / 本机项目 | `D:\claude\projects\campus-match\...` | **仅** `http://127.0.0.1:5000` |
+| 云上正式版 | 服务器 `/opt/campus-match/...` | **仅** `http://公网IP`（如 `106.53.82.216`） |
+
+**若你一改代码、刷新网页立刻看到新效果：**  
+多半地址栏是 `127.0.0.1` / `localhost`（本机 Flask 在跑，Debug 还会自动重载）。  
+这是**正常的本机开发体验**，不是云被自动更新了。
+
+**自检（推荐做一次）：**
+
+1. 本机改一句首页文案并保存  
+2. 刷新 `http://127.0.0.1:5000` → 应看到新文案  
+3. 刷新 `http://公网IP` → 应仍是旧文案  
+4. 只有服务器执行 `git pull` + `systemctl restart campus-match` 后，云才会变成新版  
+
+**给同学的链接永远发云地址，不要发 127.0.0.1**（别人电脑打不开你的本机）。
+
+### 标准发布口令（抄着用）
+
+本机测通后：
+
+```powershell
+# 本机
+cd D:\claude\projects\campus-match
+git add ...
+git commit -m "说明这次改了什么"
+git push
+```
+
+服务器（TAT / SSH）：
+
+```bash
+cd /opt/campus-match
+git pull
+sudo systemctl restart campus-match
+curl -s http://127.0.0.1:5000/api/health
+```
+
+再用手机/电脑打开**公网 IP** 冒烟一遍，再告诉同学「已更新」。
+
 ---
 
 ## 本周最小上线（按顺序做）
