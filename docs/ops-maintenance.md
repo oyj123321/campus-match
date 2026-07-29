@@ -13,7 +13,7 @@
 | **每周** | 打开网站点一遍注册页；看 `/api/health`；确认邮件还能发 |
 | **匹配日（如周二）** | 确认 `BATCH_SCHEDULER_ENABLED=true` 已开；或手动 `python batch_job.py --now` |
 | **有人投诉时** | 先备份库，再查用户/匹配记录；必要时帮人删号（见下） |
-| **改代码后** | `git pull` → 装依赖 → `systemctl restart campus-match`（见部署文档） |
+| **改代码后** | **先本机测** → push → 云上 `git pull` → 装依赖（若有）→ `systemctl restart campus-match` → 打开首页/注册冒烟。**禁止不测直推正式站。** 详见 [`beta-launch.md`](beta-launch.md)「改代码：禁止直推正式站」 |
 
 云服务器上常用命令：
 

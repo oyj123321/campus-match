@@ -4,6 +4,19 @@ All notable changes to CampusMatch.
 
 ---
 
+## [1.9.4] — 2026-07-29
+
+### 问题（上次）
+- 大范围公测条件未成文，易误判「已经可以广而告之」
+- 缺少「先本机测再上正式云」的发布纪律；移动端问题未列入优先事项
+
+### 改动
+- **Added / 硬门槛**：`docs/beta-launch.md` 顶部记录大范围公测 7 项硬门槛（邮件隔离、域名 HTTPS、备案、发信、删号、移动端、禁止直推正式站）
+- **Added / 发布纪律**：本机自测（含内测号）→ push → 云上 pull 重启；写入 beta-launch 与 ops-maintenance
+- **Improved / 路线图**：`docs/mvp-roadmap.md` 将移动端与邮件投递标为 P0
+
+---
+
 ## [1.9.3] — 2026-07-29
 
 ### 问题（上次）
