@@ -115,7 +115,7 @@ def send_match_result_email(to_email, matches, mail_config, insight=None):
                         items.append(f"<li style='margin:4px 0;'>{x}</li>")
                 insight_html += (
                     f"<div style='background:#fdf2f8;border-radius:8px;padding:12px 16px;margin-top:10px;'>"
-                    f"<strong style='color:#be185d;'>军师支招</strong>"
+                    f"<strong style='color:#be185d;'>破冰话题</strong>"
                     f"<ul style='margin:8px 0 0;padding-left:18px;font-size:14px;'>{''.join(items)}</ul></div>"
                 )
 

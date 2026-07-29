@@ -728,8 +728,10 @@ def api_get_matches():
     for m in records:
         other = m.user2 if m.user1_id == user.id else m.user1
         insight = json.loads(m.insight_json) if m.insight_json else {}
-        # 旧记录补全相处说明书 / 破冰（不改库则仅本次响应增强；有 active 则回写）
-        if m.active and (not insight.get("icebreakers") or not insight.get("summary")):
+        # 旧记录补全：icebreakers 为空时重新生成
+        ice = insight.get("icebreakers") or []
+        needs_regen = not ice
+        if m.active and needs_regen:
             insight = get_compatibility_insight(
                 user.feature_vector, other.feature_vector,
                 user.answers, other.answers,

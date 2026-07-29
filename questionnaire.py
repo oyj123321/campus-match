@@ -718,161 +718,66 @@ def get_compatibility_insight(user_vec, match_vec, answers, match_answers, score
     icebreakers = []
     shared_tags = []
 
-    # 不适合当开场的硬核题（婚姻/孩子/出轨/吸烟/前任等）
+    # 敏感话题不做破冰素材（婚姻/孩子/出轨/吸烟/前任）
     ice_ban_qids = {5, 6, 8, 13, 24}
 
-    # 量表：短绰号 + 可发送开场（俏皮军师风）
-    scale_openers = {
-        1: ("你们对「时间花在哪」挺同频", "这学期你更忙课业，还是在搞自己想搞的事？"),
-        2: ("生活方式好像能聊到一块", "周末你更想躺平还是出门浪一点？"),
-        3: ("信仰这件事你们距离不远", "有空想听听：对你来说，仪式感或信念占多大比重？"),
-        4: ("花钱风格意外接近", "发了奖学金第一件事：存起来还是改善生活？"),
-        7: ("伴侣 vs 朋友的优先级你们挺像", "要是朋友临时局和约会撞车，你通常怎么撕日历？"),
-        9: ("作息听起来能对齐", "你一般几点睡？我怕约早茶变成叫早服务😂"),
-        10: ("吃辣容忍度接近——聚餐好办", "下次吃饭你能接受多辣？我好提前点菜策略。"),
-        11: ("运动频率差不多", "最近还有在动吗？要不要互相监督（不打卡那种）？"),
-        12: ("对整洁的容忍度挺像", "你宿舍/房间是「展览级」还是「幸存者难度」？"),
-        14: ("喝酒习惯接近", "聚会你是浅酌派还是汽水扛把子？"),
-        15: ("宠物态度接近", "你是云吸宠，还是真想养一个一起踩屎？"),
-        16: ("旅行风格合拍", "更想精致攻略，还是走到哪算哪？我想对齐期待。"),
-        17: ("吵架后的处理方式接近", "闹别扭时你更想马上说清楚，还是先冷却再聊？"),
-        19: ("对独处空间的需求接近", "充电方式是黏黏的还是各自安静待一会儿？"),
-        21: ("低落时想要的支持方式接近", "心情差的时候，你更想有人陪，还是先自己缓缓？"),
-        22: ("恋爱里看重的点接近", "你更吃浪漫仪式，还是「帮我把事办了」那种实在？"),
-        23: ("聊天频率预期接近", "日常你更想碎碎念分享，还是有事再说就好？"),
-        35: ("约会频率预期接近", "理想状态是一周见几次，还是忙起来线上也行？"),
-        36: ("恋爱节奏接近", "你偏慢热先做朋友，还是聊得来就认真推进？"),
-        37: ("异地态度接近", "对异地你底线大概在哪？我想先摸清地图。"),
-        38: ("约会形式偏好接近", "更想双人小局，还是偶尔和朋友一起玩也可以？"),
-        39: ("家务观接近——同居预演加分", "你是提前分工派，还是看谁空谁上手？"),
-    }
-
-    interest_openers = {
-        "科幻/奇幻": ("都磕科幻/奇幻", "最近有没有一部让你想安利到停不下来的？"),
-        "悬疑/犯罪": ("都爱悬疑", "你是边看边猜，还是被剧透也要追完的人？"),
-        "爱情/文艺": ("都沾点爱情/文艺片", "有没有一部让你想拉人二刷的？"),
-        "喜剧": ("都吃喜剧这口", "最近什么段子/剧把你逗到没形象？"),
-        "动作/冒险": ("都爱动作冒险", "更爱炸场面，还是主角光环硬闯？"),
-        "动画/二次元": ("二次元浓度匹配", "最近追哪部？安利我一个不会踩雷的。"),
-        "纪录片": ("都看纪录片", "有没有一部看完想安静十分钟的？"),
-        "流行": ("流行歌单能接上", "最近单曲循环是哪首？"),
-        "摇滚/金属": ("摇滚/金属同好", "你更吵的还是能哼的那种？给我入门曲。"),
-        "嘻哈/R&B": ("嘻哈/R&B同好", "最近有在听哪位？安利一波。"),
-        "电子/EDM": ("电子乐同频", "你是听着学习，还是听着想蹦？"),
-        "古典/爵士": ("古典/爵士也通", "有没有一首适合下雨天的？"),
-        "民谣/独立": ("民谣/独立同好", "最近哪首歌歌词把你戳到了？"),
-        "K-Pop/J-Pop": ("K/J-Pop 能聊", "最近墙头是谁？安利一支出门曲。"),
-        "文学/小说": ("都看书（文学向）", "最近封面上哪本让你想安利？"),
-        "历史/哲学": ("历史/哲学也能聊", "有没有一本让你读完想跟人辩两句的？"),
-        "心理学/自我提升": ("都啃一点心理/成长", "最近哪句「好像在说我」？"),
-        "科技/科普": ("科技/科普同好", "最近有什么冷知识想显摆一下？"),
-        "漫画/轻小说": ("漫/轻小说同好", "最近追哪部？雷点先告诉我我避开。"),
-        "MOBA（王者/LOL）": ("都打过 MOBA", "你是娱乐局选手，还是排位要喊麦的那种？"),
-        "FPS/射击": ("射击游戏同好", "最近在玩啥？野队还是固玩？"),
-        "RPG/开放世界": ("开放世界玩家会合", "最近沉浸在哪张地图里出不来？"),
-        "独立游戏": ("独立游戏品味接近", "有没有一款「神作但安利不出去」的？"),
-        "手游/休闲": ("手游/休闲也能搭子", "通勤都在点哪一款？"),
-        "桌游/剧本杀": ("桌游/剧本杀同好", "下次组局你更想跑本还是桌游？"),
-        "主机/PC大作": ("3A/大作同好", "最近通关或卡关在哪？"),
-        "篮球": ("都沾点篮球", "更爱看还是爱打？学校球场约不约？"),
-        "跑步/健身": ("跑步/健身同频", "你是早起跑，还是晚上报复性练？"),
-        "摄影": ("都喜欢摄影", "澳大/科大附近你觉得哪条路最好拍？"),
-        "旅行": ("都爱旅行", "下次短途更想海岛还是城市闲逛？"),
-        "美食": ("都是吃货浓度", "澳门/横琴有没有一家你想安利但怕排队的？"),
-        "电影": ("都爱看电影", "更想院线还是宿舍投影仪夜谈？"),
-        "音乐": ("音乐也能当入口", "分享你最近单曲循环？我回一首。"),
-        "编程": ("都碰过代码", "最近在写啥？是热爱还是作业逼的😂"),
-        "直接说爱与赞美": ("表达爱意都偏直接", "你更吃口头夸奖，还是突然被认真对待的那种？"),
-        "拥抱牵手等接触": ("都偏身体接触表达", "你是自然就上手，还是要熟一点才行？"),
-        "帮对方做事": ("都吃「用行动爱人」", "你觉得最加分的小事是啥？"),
-        "准备礼物惊喜": ("都吃惊喜礼物", "你是惊喜派，还是提前透底比较安心？"),
-    }
-
-    def _push_ice(tip, send):
-        if len(icebreakers) >= 3:
-            return
-        for item in icebreakers:
-            if item.get("send") == send:
-                return
-        icebreakers.append({"tip": tip, "send": send})
-
-    # 兴趣多选优先（最好开场）
-    for q in QUESTIONS:
-        if q["type"] != "multi" or len(icebreakers) >= 3:
-            continue
-        s1 = set(answers.get(q["id"], []) or [])
-        s2 = set(match_answers.get(q["id"], []) or [])
-        common = [x for x in (s1 & s2) if x not in (
-            "不玩游戏", "不太看书", "什么都听", "不运动", "暂不确定",
-        )]
-        if not common:
-            continue
-        shared_tags.extend(common[:3])
-        show = "、".join(common[:3])
-        strengths.append(f"兴趣能接上：都沾点「{show}」")
-        tip_tag = common[0]
-        tip, send = interest_openers.get(
-            tip_tag,
-            (f"都沾点「{tip_tag}」", f"说到{tip_tag}，你最近有没有想安利的？"),
-        )
-        _push_ice(f"军师看了眼：{tip}。别客套，直接扔具体问题——", send)
+    def _push_ice(text):
+        if len(icebreakers) < 3 and text not in icebreakers:
+            icebreakers.append(text)
 
     for q in QUESTIONS:
         qid = q["id"]
-        if q["type"] != "scale":
-            continue
-        try:
-            v1 = float(answers.get(qid, 3))
-            v2 = float(match_answers.get(qid, 3))
-        except (TypeError, ValueError):
-            continue
-        diff = abs(v1 - v2)
-        if diff <= 1:
-            mid = (v1 + v2) / 2
-            lean = q.get("left", "左侧") if mid <= 3 else q.get("right", "右侧")
-            if qid not in ice_ban_qids:
-                strengths.append(f"「{q['text']}」上接近，都更偏「{lean}」一侧")
-            if qid not in ice_ban_qids and diff == 0 and qid in scale_openers:
-                tip, send = scale_openers[qid]
-                _push_ice(f"军师小声说：{tip}。你可以丢这句试试——", send)
-        elif diff >= 3 and qid not in ice_ban_qids:
-            differences.append(
-                f"「{q['text']}」差得有点远（你偏「{q.get('left','一端')}」，对方偏「{q.get('right','另一端')}」）。"
-                f"军师建议：别一上来辩论对错，先好奇地问对方真实日常。"
-            )
+        if q["type"] == "scale":
+            try:
+                v1 = float(answers.get(qid, 3))
+                v2 = float(match_answers.get(qid, 3))
+            except (TypeError, ValueError):
+                continue
+            diff = abs(v1 - v2)
+            if diff <= 1:
+                mid = (v1 + v2) / 2
+                lean = q.get("left", "左侧") if mid <= 3 else q.get("right", "右侧")
+                if qid not in ice_ban_qids:
+                    strengths.append(f"在「{q['text']}」上很接近，都更偏向「{lean}」一侧")
+                    if diff == 0 and qid not in ice_ban_qids:
+                        _push_ice(
+                            f"你们对「{q['text']}」看法几乎一样——可以聊聊：平时遇到这种情况你会怎么做？"
+                        )
+            elif diff >= 3 and qid not in ice_ban_qids:
+                differences.append(
+                    f"「{q['text']}」差异较大（你偏「{q.get('left','一端')}」方向，对方偏「{q.get('right','另一端')}」方向）——见面时多问问对方真实习惯"
+                )
+        elif q["type"] == "multi":
+            s1 = set(answers.get(q["id"], []) or [])
+            s2 = set(match_answers.get(q["id"], []) or [])
+            common = list(s1 & s2)
+            if common:
+                shared_tags.extend(common[:3])
+                show = "、".join(common[:3])
+                strengths.append(f"「{q['text']}」都喜欢：{show}")
+                if len(icebreakers) < 5:
+                    tip = common[0]
+                    _push_ice(f"你们都喜欢「{tip}」——可以问问：最近有没有相关的安利/体验想分享？")
 
-    # 若兴趣循环没写 strengths 的 multi（已写），补没有 common 时的 multi 展示已在上面
-    # 再扫一遍 multi 只补 strengths（避免重复）——上面已处理
-
-    fallbacks = [
-        (
-            "军师经典开场：别从「你好」尬住。校园生活最好用——",
-            "最近校园里有没有你想去、但一个人懒得行动的地方？",
-        ),
-        (
-            "低压力约法三章：先短聚，别上来深谈人生——",
-            "这周方不方便食堂/咖啡坐半小时？我请第一杯（或AA也行）。",
-        ),
-        (
-            "实在没话题就交换「近期沉迷」清单——",
-            "你最近沉迷什么？（剧/歌/游戏/课题都行）我先说我的：……",
-        ),
-    ]
-    for tip, send in fallbacks:
+    # 补足破冰到 3 条
+    for fb in [
+        "先从「最近校园里有什么想去但一个人懒得去的活动」聊起？",
+        "互相问问对方问卷里「标记为很重要」的那几题，为什么在意？",
+        "约一个低压力场景：咖啡/食堂/散步 30 分钟，不聊太深也没关系。",
+    ]:
         if len(icebreakers) >= 3:
             break
-        _push_ice(tip, send)
+        _push_ice(fb)
 
     pct = None  # 不对用户展示匹配度百分比
     summary = (
-        f"军师速览：捞到 {len(strengths)} 处好接话的点、"
-        f"{len(differences)} 处以后再慢慢磨合的差异。"
-        "分数不重要，开口才重要。"
+        f"找到 {len(strengths)} 处相近、{len(differences)} 处差异。"
+        "把这次当作「系统给的开口理由」，轻松一点就好。"
     )
 
     if shared_tags:
         uniq = list(dict.fromkeys(shared_tags))[:4]
-        summary += f" 共同兴趣关键词：{'、'.join(uniq)}。"
+        summary += f" 共同标签：{'、'.join(uniq)}。"
 
     return {
         "summary": summary,
