@@ -4,15 +4,40 @@ All notable changes to CampusMatch.
 
 ---
 
-## [1.8.3] — 2026-07-29
+## [1.9.0] — 2026-07-29
 
 ### 问题（上次）
-- 破冰建议标题带有"（宿舍卧谈版）"字样，过于随意
-- 婚姻/孩子/出轨/吸烟/前任等敏感话题虽未作为开场词，但仍可能出现在「契合点」和「需要包容的差异」列表里，展示给用户看
+- 匹配成功后双方没有可靠的联系渠道——微信号既非所有人都有，也不该强制填写
+- 破冰话题生硬，像在念问卷报告，且无法直接复制发出
+- 破冰/契合点中会出现婚姻/孩子/出轨/吸烟/前任等敏感话题，容易尬场
+- 破冰标题带有"（宿舍卧谈版）"字样，不够正式
+- 问卷缺少让用户向对方自我介绍的出口
 
 ### 改动
-- **Fixed / 标题**：`email_service.py` 及 `static/i18n.js` 四语言版本中均去掉"（宿舍卧谈版）"，仅保留"军师支招"
-- **Fixed / 敏感话题隔离**：`questionnaire.py` 中 QID 5/6/8/13/24（婚姻/孩子/出轨/吸烟/前任）不再出现于「契合点」、「需要包容的差异」或破冰建议任何一栏；这 5 个维度仍参与算法计算，但完全从展示层移除
+
+#### 联系方式重构
+- **Changed / `models.py` `batch_job.py` `app.py`**：`wechat_id` 改为纯可选字段；匹配成功后自动互换双方学校邮箱（注册时已验证），无需额外填写
+- **Changed / `templates/profile.html` `static/i18n.js`**：联系方式输入框改为"附加联系方式（可选）"，示例格式 `wechat:mahuateng1998`
+- **Changed / `templates/matches.html`**：匹配卡片新增学校邮箱展示行，附加联系方式若有则显示
+- **Changed / `email_service.py`**：匹配通知邮件表格中增加学校邮箱列，附加联系方式单独一列（无填写时显示"—"）
+- **Changed / `app.py`**：移除"必须填微信才能参与匹配"的校验；`serialize_match_payload` 在有效配对时返回 `email` 字段
+
+#### 问卷自由留言（Q40）
+- **Added / `questionnaire.py`**：新增 Q40，类型 `text`，可选，最长 2000 字；不进入特征向量，不影响匹配分数
+- **Added / `questionnaire.py`**：`get_open_letter()` 函数用于提取留言内容
+- **Added / `templates/questionnaire.html`**：末尾新增 textarea 输入框，附说明"真诚就是必杀技"
+- **Added / `templates/matches.html` `email_service.py`**：配对结果页与邮件中展示"TA 留给你的话"
+
+#### 军师支招（破冰重构）
+- **Improved / `questionnaire.py`**：`get_compatibility_insight` 完全重写；兴趣题优先生成破冰，每条含 `tip`（军师耳语）和 `send`（可直接发出的文本）
+- **Fixed / 敏感话题**：QID 5/6/8/13/24（婚姻/孩子/出轨/吸烟/前任）从契合点、差异列表、破冰建议三处展示层全部移除；仍参与内部算法打分
+- **Fixed / 标题**：去掉"（宿舍卧谈版）"，统一为"军师支招"
+- **Added / `templates/matches.html` `static/style.css`**：每条破冰建议新增"复制"按钮，可一键复制可发送的开场白
+- **Added / `static/i18n.js`**：新增 `card.ice.send` `card.ice.copy` `card.ice.copied` 等四语言翻译 key
+
+#### 其他
+- **Improved / `app.py`**：问卷提交时正确跳过 `text` 类型题的「重要」加权；必答题数量计算排除可选题
+- **Improved / `templates/index.html`**：首页文案更新，说明学校邮箱自动互换机制
 
 ---
 
