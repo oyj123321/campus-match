@@ -4,6 +4,17 @@ All notable changes to CampusMatch.
 
 ---
 
+## [1.9.2] — 2026-07-29
+
+### 问题（上次）
+- 云服务器上线后，SQLite 库只在云机本地，缺少「定时拉回本机」的备份办法与说明
+
+### 改动
+- **Added / 本机拉库备份**：`scripts/backup-from-cloud.ps1`（scp 拉取云上 `campus_match.db` 到 `D:\backup\campus-match\`，保留约 60 天）
+- **Added / 说明**：`scripts/README-backup.md`（SSH 免密、Windows 计划任务每 3 天下午 15:30、还原步骤）
+
+---
+
 ## [1.9.1] — 2026-07-29
 
 ### 问题（上次）
