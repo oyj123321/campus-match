@@ -22,7 +22,8 @@ from config import (
     BATCH_MATCH_DAY, BATCH_MATCH_HOUR, BATCH_SCHEDULER_ENABLED,
     ADMIN_SECRET, WEEKDAY_LABELS,
     REVEAL_REQUIRE_OPT_IN, INSTANT_MATCH_ENABLED, CROSS_SCHOOL_MATCHING_ENABLED,
-    MAIL_ENABLED, MAIL_SERVER, MAIL_PORT, MAIL_USERNAME, MAIL_PASSWORD, MAIL_FROM,
+    MAIL_ENABLED, MAIL_PROVIDER, MAIL_SERVER, MAIL_PORT, MAIL_USERNAME, MAIL_PASSWORD, MAIL_FROM,
+    RESEND_API_KEY,
 )
 from models import db, User, UserTag, Match, Blocklist
 from questionnaire import QUESTIONS, build_feature_vector, get_compatibility_insight, get_open_letter
@@ -51,8 +52,14 @@ _register_hits = defaultdict(deque)
 
 def get_mail_config():
     return {
-        "enabled": MAIL_ENABLED, "server": MAIL_SERVER, "port": MAIL_PORT,
-        "username": MAIL_USERNAME, "password": MAIL_PASSWORD, "mail_from": MAIL_FROM,
+        "enabled": MAIL_ENABLED,
+        "provider": MAIL_PROVIDER,
+        "server": MAIL_SERVER,
+        "port": MAIL_PORT,
+        "username": MAIL_USERNAME,
+        "password": MAIL_PASSWORD,
+        "mail_from": MAIL_FROM,
+        "resend_api_key": RESEND_API_KEY,
         "public_url": PUBLIC_URL,
     }
 

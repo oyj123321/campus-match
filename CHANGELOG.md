@@ -4,6 +4,17 @@ All notable changes to CampusMatch.
 
 ---
 
+## [1.9.10] — 2026-07-30
+
+### 问题（上次）
+- QQ SMTP 高频易被拦；腾讯云个人 SES 不适配社交类场景，验证码投递仍不稳
+
+### 改动
+- **Added / Resend 发信**：`MAIL_PROVIDER=resend` + `RESEND_API_KEY`；验证码与匹配通知走 Resend HTTP API（无新增 pip 依赖）
+- **Improved / 兼容**：未设 Resend 时仍可用原 QQ SMTP（`MAIL_PROVIDER=smtp`）
+
+---
+
 ## [1.9.9] — 2026-07-30
 
 ### 问题（上次）

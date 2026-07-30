@@ -1,8 +1,19 @@
-"""邮件发送服务 — 验证码 + 匹配通知"""
+"""邮件发送服务 — 验证码 + 匹配通知（SMTP / Resend）"""
 
+import json
 import smtplib
+import urllib.error
+import urllib.request
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+
+
+def _dispatch_email(to_email, subject, html_body, mail_config):
+    """按 MAIL_PROVIDER 选择 Resend API 或 SMTP。"""
+    provider = (mail_config.get("provider") or "smtp").strip().lower()
+    if provider == "resend":
+        return _send_resend(to_email, subject, html_body, mail_config)
+    return _send_smtp(to_email, subject, html_body, mail_config)
 
 
 def send_verification_email(to_email, token, mail_config):
@@ -37,7 +48,7 @@ def send_verification_email(to_email, token, mail_config):
         print(f"{'='*60}\n")
         return True, "dev-printed"
 
-    return _send_smtp(to_email, subject, body, mail_config)
+    return _dispatch_email(to_email, subject, body, mail_config)
 
 
 def send_match_result_email(to_email, matches, mail_config, insight=None, reason=None):
@@ -90,7 +101,7 @@ def send_match_result_email(to_email, matches, mail_config, insight=None, reason
                 print(f"[DEV] reason: {reason_line}")
             print(f"{'='*60}\n")
             return True, "dev-printed"
-        return _send_smtp(to_email, subject, body, mail_config)
+        return _dispatch_email(to_email, subject, body, mail_config)
 
     rows = ""
     for i, (m_user, score) in enumerate(matches, 1):
@@ -193,7 +204,42 @@ def send_match_result_email(to_email, matches, mail_config, insight=None, reason
         print(f"{'='*60}\n")
         return True, "dev-printed"
 
-    return _send_smtp(to_email, subject, body, mail_config)
+    return _dispatch_email(to_email, subject, body, mail_config)
+
+
+def _send_resend(to_email, subject, html_body, mail_config):
+    api_key = (mail_config.get("resend_api_key") or "").strip()
+    if not api_key:
+        print(f"[ERROR] Resend 未配置 RESEND_API_KEY → {to_email}")
+        return False, "missing RESEND_API_KEY"
+
+    payload = {
+        "from": mail_config["mail_from"],
+        "to": [to_email],
+        "subject": subject,
+        "html": html_body,
+    }
+    data = json.dumps(payload).encode("utf-8")
+    req = urllib.request.Request(
+        "https://api.resend.com/emails",
+        data=data,
+        method="POST",
+        headers={
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json",
+        },
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            body = resp.read().decode("utf-8", errors="replace")
+            return True, body or "sent"
+    except urllib.error.HTTPError as e:
+        err = e.read().decode("utf-8", errors="replace")
+        print(f"[ERROR] Resend 发送失败 → {to_email}: HTTP {e.code} {err}")
+        return False, err or str(e)
+    except Exception as e:
+        print(f"[ERROR] Resend 发送失败 → {to_email}: {e}")
+        return False, str(e)
 
 
 def _send_smtp(to_email, subject, html_body, mail_config):

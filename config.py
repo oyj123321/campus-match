@@ -28,13 +28,17 @@ SQLALCHEMY_DATABASE_URI = os.environ.get(
 # 公网地址（serveo 隧道自动设置，也可手动指定）
 PUBLIC_URL = os.environ.get("PUBLIC_URL", "http://127.0.0.1:5000")
 
-# 邮件配置 — 设置 MAIL_ENABLED=true 并填入 QQ 邮箱 SMTP 授权码即可
+# 邮件配置 — MAIL_PROVIDER=smtp（QQ）或 resend
 MAIL_ENABLED = os.environ.get("MAIL_ENABLED", "false").lower() == "true"
+MAIL_PROVIDER = os.environ.get("MAIL_PROVIDER", "smtp").strip().lower()  # smtp | resend
 MAIL_SERVER = os.environ.get("MAIL_SERVER", "smtp.qq.com")
 MAIL_PORT = int(os.environ.get("MAIL_PORT", "587"))
 MAIL_USERNAME = os.environ.get("MAIL_USERNAME", "")       # 你的 QQ 邮箱地址
 MAIL_PASSWORD = os.environ.get("MAIL_PASSWORD", "")       # QQ 邮箱 SMTP 授权码（不是 QQ 密码！）
 MAIL_FROM = os.environ.get("MAIL_FROM", MAIL_USERNAME or "noreply@campus-match.local")
+# Resend：https://resend.com → API Keys；发信域名需先在 Resend 验证
+RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "")
+
 
 # ============================================================
 # 高校邮箱域名 — 扩展路径：
