@@ -26,7 +26,7 @@
 
     var I18N = {
     zh: {
-        'nav.matches': '匹配结果', 'nav.questionnaire': '问卷', 'nav.logout': '退出',
+        'nav.matches': '匹配结果', 'nav.questionnaire': '问卷', 'nav.logout': '返回首页',
         'footer.line1': 'CampusMatch — 深度问卷 · 算法匹配 · 每周揭晓',
         'footer.line2': '账号删除 / 反馈：请用学校邮箱联系运营（暂用注册所用 SMTP 发件邮箱）',
         // 首页
@@ -126,7 +126,7 @@
         'al.crossOn': '已开启跨校（对方也要开才会配对）', 'al.crossOff': '已关闭跨校，仅同校匹配', 'al.fail': '操作失败'
     },
     tw: {
-        'nav.matches': '配對結果', 'nav.questionnaire': '問卷', 'nav.logout': '登出',
+        'nav.matches': '配對結果', 'nav.questionnaire': '問卷', 'nav.logout': '返回首頁',
         'footer.line1': 'CampusMatch — 深度問卷 · 演算法配對 · 每週揭曉',
         'footer.line2': '帳號刪除 / 意見回饋：請用學校信箱聯絡營運（暫用註冊所用 SMTP 寄件信箱）',
         'kicker': 'Campus Match · 澳門 & 大灣區',
@@ -222,7 +222,7 @@
         'al.crossOn': '已開啟跨校（對方也要開才會配對）', 'al.crossOff': '已關閉跨校，僅同校配對', 'al.fail': '操作失敗'
     },
     en: {
-        'nav.matches': 'Matches', 'nav.questionnaire': 'Questionnaire', 'nav.logout': 'Log out',
+        'nav.matches': 'Matches', 'nav.questionnaire': 'Questionnaire', 'nav.logout': 'Back to home',
         'footer.line1': 'CampusMatch — deep questionnaire · algorithmic matching · weekly reveal',
         'footer.line2': 'Account deletion / feedback: contact us from your school email (SMTP sender used for registration)',
         'kicker': 'Campus Match · Macau & Greater Bay Area',
@@ -318,7 +318,7 @@
         'al.crossOn': 'Cross-school enabled (both sides must enable)', 'al.crossOff': 'Cross-school disabled — same school only', 'al.fail': 'Action failed'
     },
     pt: {
-        'nav.matches': 'Matches', 'nav.questionnaire': 'Questionário', 'nav.logout': 'Sair',
+        'nav.matches': 'Matches', 'nav.questionnaire': 'Questionário', 'nav.logout': 'Voltar ao início',
         'footer.line1': 'CampusMatch — questionário profundo · matching algorítmico · revelação semanal',
         'footer.line2': 'Eliminar conta / feedback: contacte-nos pelo email escolar (remetente SMTP do registo)',
         'kicker': 'Campus Match · Macau e Grande Baía',
