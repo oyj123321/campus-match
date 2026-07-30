@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CampusMatch — 校园恋爱匹配</title>
-    <link rel="stylesheet" href="/static/style.css">
-    <script src="/static/i18n.js"></script>
+    <link rel="stylesheet" href="/static/style.css?v=1931">
+    <script src="/static/i18n.js?v=1931"></script>
     <script>
         // 全局 Ajax 封装（带错误处理）——放在 head，保证页面内脚本可用
         async function api(method, url, body) {
@@ -145,10 +145,10 @@
                     <a href="/" class="nav-link" onclick="logout(); return false;" data-i18n="nav.logout">返回首页</a>
                 {% endif %}
                 <select id="lang-sel" class="lang-select" onchange="setLang(this.value)" aria-label="Language">
-                    <option value="zh">简体中文</option>
-                    <option value="tw">繁體中文</option>
-                    <option value="en">English</option>
-                    <option value="pt">Português</option>
+                    <option value="zh">简中</option>
+                    <option value="tw">繁中</option>
+                    <option value="en">EN</option>
+                    <option value="pt">PT</option>
                 </select>
             </div>
         </div>

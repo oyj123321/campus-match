@@ -416,12 +416,21 @@ input[type="text"]:focus, input[type="email"]:focus {
     border: 1.5px solid #cbd5e1;
     background: #fff; color: var(--text);
     font-weight: 700; font-size: 0.95em;
-    cursor: pointer; transition: all 0.15s;
+    cursor: pointer; transition: background 0.15s, border-color 0.15s, color 0.15s, box-shadow 0.15s, transform 0.15s;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-appearance: none; appearance: none;
+    outline: none;
+    overflow: hidden;
+    touch-action: manipulation;
 }
 .likert-btn:hover { border-color: var(--accent); color: var(--accent-deep); transform: translateY(-2px); box-shadow: 0 4px 12px rgba(99, 102, 241, 0.18); }
+.likert-btn:focus, .likert-btn:focus-visible, .likert-btn:active {
+    outline: none;
+    -webkit-tap-highlight-color: transparent;
+}
 .likert-btn.on {
     background: var(--grad); border-color: transparent; color: #fff;
-    box-shadow: 0 2px 14px rgba(99, 102, 241, 0.4);
+    box-shadow: 0 2px 10px rgba(99, 102, 241, 0.35);
 }
 
 /* 兼容旧滑块类名 */
@@ -515,18 +524,122 @@ textarea.open-letter:focus {
 }
 
 /* ── Responsive ── */
+.db-explain-compact { display: none; }
+.db-explain-compact summary {
+    font-weight: 700;
+    font-size: 0.9em;
+    cursor: pointer;
+    list-style: none;
+}
+.db-explain-compact summary::-webkit-details-marker { display: none; }
+.db-explain-compact summary::after {
+    content: ' ▾';
+    font-weight: 500;
+    opacity: 0.65;
+}
+.db-explain-compact[open] summary::after { content: ' ▴'; }
+
 @media (max-width: 720px) {
     .steps, .features { grid-template-columns: 1fr; }
 }
 @media (max-width: 640px) {
+    .nav {
+        padding: 0 10px;
+    }
+    .nav-inner {
+        height: auto;
+        min-height: 52px;
+        padding: 8px 0;
+        gap: 8px;
+        flex-wrap: wrap;
+        align-items: center;
+    }
+    .nav-brand { font-size: 0.95em; flex-shrink: 0; }
+    .nav-right {
+        gap: 8px;
+        flex: 1 1 auto;
+        min-width: 0;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        align-items: center;
+        font-size: 0.82em;
+        overflow: visible;
+    }
+    .nav-link {
+        white-space: nowrap;
+        font-size: 0.8em;
+        padding: 4px 2px;
+        flex-shrink: 0;
+    }
+    /* 避免 max-width 裁切文字/箭头，看起来像被挡住 */
+    .lang-select {
+        font-size: 12px;
+        padding: 5px 24px 5px 10px;
+        max-width: none;
+        flex-shrink: 0;
+        background-position: right 8px center;
+        line-height: 1.2;
+    }
+
     .hero h1 { font-size: 1.65em; }
     .card { padding: 16px; }
     .form-row { flex-direction: column; gap: 0; }
-    .likert-row { flex-direction: column; align-items: stretch; gap: 8px; }
-    .scale-l { max-width: none; text-align: center !important; }
-    .likert-opts { justify-content: space-between; min-width: 0; }
-    .likert-btn { width: 44px; height: 44px; }
-    .progress-sticky { top: 0; }
+
+    /* 粘性顶栏：进度 + 折叠版一票否决（PC 仍用完整说明） */
+    .progress-sticky { top: 52px; }
+    .db-explain-full { display: none !important; }
+    .db-explain-compact {
+        display: block;
+        padding: 8px 10px;
+        margin-top: 8px !important;
+    }
+    .db-explain-compact .hint {
+        font-size: 0.8em;
+        line-height: 1.45;
+    }
+
+    /*
+      Likert 手机：标签在按钮上方左右对齐（左=1，右=5），
+      避免长文案挤在两侧重叠按钮；PC 仍两侧横排。
+    */
+    .likert-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        grid-template-areas:
+            "left right"
+            "opts opts";
+        gap: 6px 10px;
+        align-items: end;
+    }
+    .scale-l {
+        max-width: none;
+        font-size: 0.72em;
+        line-height: 1.35;
+        flex-shrink: 0;
+    }
+    .scale-l-left {
+        grid-area: left;
+        text-align: left !important;
+    }
+    .scale-l-right {
+        grid-area: right;
+        text-align: right !important;
+    }
+    .likert-opts {
+        grid-area: opts;
+        gap: 6px;
+        flex: none;
+        width: 100%;
+        min-width: 0;
+        justify-content: space-between;
+    }
+    .likert-btn {
+        width: 40px;
+        height: 40px;
+        font-size: 0.9em;
+        flex-shrink: 0;
+    }
+
     .q-head { gap: 8px; }
     .orb { filter: blur(60px); }
 }
