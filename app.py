@@ -57,6 +57,14 @@ def get_mail_config():
     }
 
 
+def notify_no_match(user, reason=None):
+    """无论是否配对成功都应通知；无结果时发「暂未配对」邮件。"""
+    ok, info = send_match_result_email(
+        user.email, [], get_mail_config(), reason=reason,
+    )
+    return bool(ok), info
+
+
 # ---- Helpers ----
 
 def get_school_from_email(email):
@@ -603,12 +611,15 @@ def api_match():
         msg = "当前暂无符合你择偶取向的可匹配用户"
         if CROSS_SCHOOL_MATCHING_ENABLED and not user.allow_cross_school:
             msg += "（可在问卷页开启「允许跨校」扩大池子）"
+        mail_ok, mail_info = notify_no_match(user, reason=msg)
         return jsonify({
             "ok": True,
             "matches": [],
             "message": msg,
             "total_candidates": 0,
             "pool_size": pool_size,
+            "mail_sent": mail_ok,
+            "mail_info": str(mail_info)[:120] if mail_info else None,
             "quota": match_quota_status(user),
             "explain": _match_explain_text(mode),
             "note": "结果以本页为准；邮件仅作通知，发送失败不影响查看。",
@@ -630,15 +641,19 @@ def api_match():
         )
 
     if not my_matches:
+        msg = (
+            "池子里有人，但暂时没有足够合适的人选"
+            "（或合适人选本周已配过）。宁缺毋滥，请下周再试或完善问卷。"
+        )
+        mail_ok, mail_info = notify_no_match(user, reason=msg)
         return jsonify({
             "ok": True,
             "matches": [],
-            "message": (
-                "池子里有人，但暂时没有足够合适的人选"
-                "（或合适人选本周已配过）。宁缺毋滥，请下周再试或完善问卷。"
-            ),
+            "message": msg,
             "total_candidates": len(candidates),
             "pool_size": pool_size,
+            "mail_sent": mail_ok,
+            "mail_info": str(mail_info)[:120] if mail_info else None,
             "quota": match_quota_status(user),
             "explain": _match_explain_text(mode),
             "note": "结果以本页为准；邮件仅作通知，发送失败不影响查看。",
@@ -661,15 +676,19 @@ def api_match():
         if summary.get("quota_skipped"):
             parts.append("你的本周额度已用完")
         reason = "；".join(parts) if parts else "暂无合适人选"
+        msg = f"未能完成配对：{reason}。"
+        mail_ok, mail_info = notify_no_match(user, reason=msg)
         return jsonify({
             "ok": True,
             "matches": [],
-            "message": f"未能完成配对：{reason}。",
+            "message": msg,
             "total_candidates": len(candidates),
             "dealbreaker_skipped": summary["dealbreaker_skipped"],
             "quota_skipped": summary["quota_skipped"],
             "partner_quota_skipped": summary.get("partner_quota_skipped", 0),
             "low_score_skipped": summary.get("low_score_skipped", 0),
+            "mail_sent": mail_ok,
+            "mail_info": str(mail_info)[:120] if mail_info else None,
             "quota": match_quota_status(user),
             "explain": _match_explain_text(mode),
             "note": "结果以本页为准；邮件仅作通知。",

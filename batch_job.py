@@ -464,10 +464,28 @@ def run_batch_all(mail_cfg, require_opt_in=None):
         )
     cross = run_batch_cross(mail_cfg, require_opt_in=require_opt_in, exclude_ids=already)
     results.append(cross)
+    already |= cross.get("matched_ids") or set()
     print(
         f"  [跨校] users={cross['users']} pairs={cross.get('pairs', 0)} "
         f"created={cross.get('created', 0)} updated={cross.get('updated', 0)}"
     )
+
+    # 预约了本周但未配上的人：同样发「暂未配对」邮件
+    no_match_sent = 0
+    pool = ready_users(require_opt_in=require_opt_in) if require_opt_in else ready_users()
+    for u in pool:
+        if u.id in already:
+            continue
+        ok, _ = send_match_result_email(
+            u.email,
+            [],
+            mail_cfg,
+            reason="本周揭晓已结束，这一轮没有合适人选（池子人少、取向/底线不合，或对方本周已配过）。",
+        )
+        if ok:
+            no_match_sent += 1
+    print(f"  [未配对通知] sent={no_match_sent}")
+    results.append({"no_match_notified": no_match_sent})
     return results
 
 
