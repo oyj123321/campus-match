@@ -29,3 +29,5 @@ __debugger__
 # Runtime logs
 server.log
 *.log
+.public_url
+compact-claude-vm.ps1
