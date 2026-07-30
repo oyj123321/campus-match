@@ -4,6 +4,16 @@ All notable changes to CampusMatch.
 
 ---
 
+## [1.9.11] — 2026-07-30
+
+### 问题（上次）
+- Resend 发信从服务器返回 HTTP 403 `error code: 1010`，验证码落到页面「开发模式」兜底（并非内测号）
+
+### 改动
+- **Fixed / Resend User-Agent**：`urllib` 请求补上 `User-Agent`，避免 Cloudflare 拦截（官方文档 403/1010）
+
+---
+
 ## [1.9.10] — 2026-07-30
 
 ### 问题（上次）
