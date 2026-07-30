@@ -209,9 +209,7 @@ function renderMatchCards(matches, headerHtml) {
         }
 
         html += '<div class="wechat-line">' + t('card.email') + esc(m.email || t('card.nowechat')) + '</div>';
-        if (m.wechat_id) {
-            html += '<div class="wechat-line">' + t('card.wechat') + esc(m.wechat_id) + '</div>';
-        }
+        html += '<div class="wechat-line">' + t('card.wechat') + esc(m.wechat_id || t('card.nowechat')) + '</div>';
         html += '<p class="hint" style="margin-top:6px;">' + t('card.opener') + '</p>';
         if (m.id) {
             html += '<button type="button" class="btn btn-secondary" style="margin-top:8px;" onclick="blockUser(' + m.id + ', this)">' + t('btn.noMore') + '</button>';

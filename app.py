@@ -195,7 +195,7 @@ def _match_explain_text(mode):
             "4. 择偶取向：双方都愿意匹配对方的性别才进入候选。",
             "5. 黑名单双向生效；跨校需双方都勾选且总闸开启。",
             "6. 每人每周最多参与 1 次新匹配（发起或被配都算），不会反复抢走同一人。",
-            "7. 揭晓时互见学校邮箱；可另留微信；军师支招给你可复制的开场白（兴趣优先，避开出轨/婚姻等开场雷区）。",
+            "7. 揭晓时互见学校邮箱与附加联系方式；破冰话题帮你开口（避开出轨/婚姻等开场雷区）。",
         ],
         "why_not_many": "以前默认 Top-5 会一次出很多人，现已改为默认一对一，且每周双向各限一次。",
         "email_note": "匹配成功会尝试给你和对方发邮件；对方若是演示账号（假学校邮箱）常会失败，你的真实学校邮箱应能收到。",
@@ -551,6 +551,8 @@ def api_match():
             return jsonify({"ok": False, "error": "请先完成问卷并提交"}), 400
         if not user.gender or user.looking_for not in LOOKING_FOR_VALUES:
             return jsonify({"ok": False, "error": "请先在问卷页设置性别与择偶取向"}), 400
+        if not user.wechat_id:
+            return jsonify({"ok": False, "error": "请先填写附加联系方式"}), 400
         return jsonify({"ok": False, "error": "资料不完整，请返回问卷页补全"}), 400
 
     if not INSTANT_MATCH_ENABLED:
@@ -702,7 +704,7 @@ def api_match_opt_in():
     """预约 / 取消本周批量匹配。"""
     user = get_current_user()
     if not user.ready_to_match():
-        return jsonify({"ok": False, "error": "请先完成问卷、性别与择偶取向"}), 400
+        return jsonify({"ok": False, "error": "请先完成问卷、性别、择偶取向与附加联系方式"}), 400
 
     week = current_week_key()
     if request.method == "DELETE":
@@ -788,9 +790,10 @@ def api_me():
     if looking_for in LOOKING_FOR_VALUES:
         user.looking_for = looking_for
     contact = (data.get("wechat_id") or "").strip()
-    # 允许清空可选联系方式
     if "wechat_id" in data:
-        user.wechat_id = contact[:120] if contact else None
+        if not contact:
+            return jsonify({"ok": False, "error": "请填写附加联系方式（微信或其他均可）"}), 400
+        user.wechat_id = contact[:120]
     user.bio = (data.get("bio") or "").strip() or user.bio
     if "allow_cross_school" in data:
         user.allow_cross_school = bool(data.get("allow_cross_school"))

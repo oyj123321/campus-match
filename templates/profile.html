@@ -18,10 +18,10 @@
     </div>
 
     <div class="form-group">
-        <label for="wechat_id">附加联系方式（可选）</label>
+        <label for="wechat_id">附加联系方式（必填）</label>
         <input type="text" id="wechat_id" value="{{ user.wechat_id or '' }}" maxlength="120"
-               placeholder="例如：wechat:mahuateng1998">
-        <p class="hint">配对成功后会互见学校邮箱；此处可另留微信等</p>
+               placeholder="例如：wechat:mahuateng1998" required>
+        <p class="hint">配对成功后会互见学校邮箱，并互见此处填写的联系方式</p>
     </div>
 
     <div class="form-group">
@@ -59,7 +59,7 @@ async function saveProfile() {
 
     if (!data.name) return alert('请填写名字');
     if (!data.gender) return alert('请选择性别');
-    if (!data.name) return alert('请填写昵称');
+    if (!data.wechat_id) return alert('请填写附加联系方式');
     if (!tagsRaw.trim()) return alert('请至少写一个兴趣标签');
 
     const res = await api('PUT', '/api/profile', data);

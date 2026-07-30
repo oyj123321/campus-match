@@ -22,7 +22,7 @@ class User(db.Model):
     gender = db.Column(db.String(16))       # male / female
     # 择偶取向：想匹配的性别 male / female / both（男女不限）
     looking_for = db.Column(db.String(16))
-    wechat_id = db.Column(db.String(128))  # 可选附加联系方式（如微信）；学校邮箱配对成功后自动互见
+    wechat_id = db.Column(db.String(128))  # 附加联系方式（必填，如微信）；学校邮箱配对成功后也会互见
     bio = db.Column(db.Text)
 
     # 问卷答案 (JSON)
@@ -150,6 +150,7 @@ class User(db.Model):
             and self.questionnaire_completed()
             and self.gender in ("male", "female")
             and self.looking_for in ("male", "female", "both")
+            and self.wechat_id
             and self.feature_vector
         )
 
