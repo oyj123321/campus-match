@@ -227,6 +227,8 @@ def _send_resend(to_email, subject, html_body, mail_config):
         headers={
             "Authorization": f"Bearer {api_key}",
             "Content-Type": "application/json",
+            # Resend 在 Cloudflare 后：无 User-Agent 会 403 / error code 1010
+            "User-Agent": "CampusMatch/1.0 (+https://campusmatch.com.cn)",
         },
     )
     try:
