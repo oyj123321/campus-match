@@ -35,7 +35,11 @@ MAIL_SERVER = os.environ.get("MAIL_SERVER", "smtp.qq.com")
 MAIL_PORT = int(os.environ.get("MAIL_PORT", "587"))
 MAIL_USERNAME = os.environ.get("MAIL_USERNAME", "")       # 你的 QQ 邮箱地址
 MAIL_PASSWORD = os.environ.get("MAIL_PASSWORD", "")       # QQ 邮箱 SMTP 授权码（不是 QQ 密码！）
-MAIL_FROM = os.environ.get("MAIL_FROM", MAIL_USERNAME or "noreply@campus-match.local")
+# 发件人：勿用 noreply（Resend/邮箱服务商会降送达率）；用 hello@ 等可回复地址
+MAIL_FROM = os.environ.get(
+    "MAIL_FROM",
+    MAIL_USERNAME or "CampusMatch <hello@campusmatch.com.cn>",
+)
 # Resend：https://resend.com → API Keys；发信域名需先在 Resend 验证
 RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "")
 

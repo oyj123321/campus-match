@@ -4,6 +4,16 @@ All notable changes to CampusMatch.
 
 ---
 
+## [1.9.18] — 2026-07-31
+
+### 问题（上次）
+- Resend Insights 警告勿用 no-reply 发件地址，影响送达与回复体验
+
+### 改动
+- **Changed / 发件人**：默认与示例改为 `CampusMatch <hello@campusmatch.com.cn>`（勿再用 noreply）
+
+---
+
 ## [1.9.17] — 2026-07-31
 
 ### 问题（上次）
