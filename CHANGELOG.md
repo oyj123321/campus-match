@@ -4,6 +4,18 @@ All notable changes to CampusMatch.
 
 ---
 
+## [1.9.21] — 2026-07-31
+
+### 问题（上次）
+- Resend 邮件额度紧张，重复登录/重发验证码会浪费额度
+
+### 改动
+- **Added / 紧急限流**：`LOGIN_ONCE_PER_DAY`（默认开）每人每天仅可登录一次（澳门时区）；已验证用户当日首次免发验证码直登；未验证当天只发一封验证码（再点发送不重发，仍可进验证步骤续填）
+- **Added / 全站公告**：橙色条写明登录限流 + 不发未配对/随访 + 匹配成功仍发信（可用 `SITE_ANNOUNCEMENT` 覆盖；置空关闭）
+- **Changed / 省邮件**：默认关闭「暂未配对」邮件（`MAIL_NO_MATCH_ENABLED=false`）与破冰随访（`ICEBREAKER_FOLLOWUP_ENABLED=false`）；**匹配成功仍发信**
+
+---
+
 ## [1.9.20] — 2026-07-31
 
 ### 问题（上次）

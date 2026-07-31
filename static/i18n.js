@@ -27,6 +27,7 @@
     var I18N = {
     zh: {
         'nav.matches': '匹配结果', 'nav.questionnaire': '问卷', 'nav.logout': '返回首页',
+        'announce.loginOnce': '【紧急公告】因邮件额度紧张：①每人每天仅可登录一次（澳门时区；已在线可继续用，退出后请明天再登）；②暂不发送「未配对」与破冰随访邮件；③匹配成功仍会发邮件。敬请谅解。',
         'footer.line1': 'CampusMatch — 深度问卷 · 算法匹配 · 每周揭晓',
         'footer.line2': '账号删除 / 反馈：请用你的学校邮箱写信至',
         'footer.privacy': '隐私政策',
@@ -163,6 +164,7 @@
     },
     tw: {
         'nav.matches': '配對結果', 'nav.questionnaire': '問卷', 'nav.logout': '返回首頁',
+        'announce.loginOnce': '【緊急公告】因郵件額度緊張：①每人每天僅可登入一次（澳門時區；已在線可繼續用，退出後請明天再登）；②暫不發送「未配對」與破冰隨訪郵件；③配對成功仍會發郵件。敬請見諒。',
         'footer.line1': 'CampusMatch — 深度問卷 · 演算法配對 · 每週揭曉',
         'footer.line2': '帳號刪除 / 意見回饋：請用你的學校信箱寫信至',
         'footer.privacy': '隱私政策',
@@ -295,6 +297,7 @@
     },
     en: {
         'nav.matches': 'Matches', 'nav.questionnaire': 'Questionnaire', 'nav.logout': 'Back to home',
+        'announce.loginOnce': '[Notice] Limited email quota: ① one login per day (Macau time; stay signed in); ② no “no-match” or follow-up emails for now; ③ successful matches are still emailed. Sorry for the inconvenience.',
         'footer.line1': 'CampusMatch — deep questionnaire · algorithmic matching · weekly reveal',
         'footer.line2': 'Account deletion / feedback: email us from your school address at',
         'footer.privacy': 'Privacy Policy',
@@ -427,6 +430,7 @@
     },
     pt: {
         'nav.matches': 'Matches', 'nav.questionnaire': 'Questionário', 'nav.logout': 'Voltar ao início',
+        'announce.loginOnce': '[Aviso] Limite de emails: ① uma sessão por dia (Macau; mantém-te ligado); ② sem emails de “sem match” ou follow-up por agora; ③ matches com sucesso continuam a ser enviados. Pedimos desculpa.',
         'footer.line1': 'CampusMatch — questionário profundo · matching algorítmico · revelação semanal',
         'footer.line2': 'Eliminar conta / feedback: escreve-nos do teu email escolar para',
         'footer.privacy': 'Política de privacidade',

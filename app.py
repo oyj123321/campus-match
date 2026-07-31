@@ -7,7 +7,7 @@ CampusMatch v2 — 校园恋爱匹配系统
 
 import time, json, threading
 from collections import defaultdict, deque
-from datetime import datetime
+from datetime import datetime, timedelta, date
 from functools import wraps
 
 from flask import Flask, request, session, jsonify, render_template, redirect, url_for
@@ -22,10 +22,11 @@ from config import (
     BATCH_MATCH_DAY, BATCH_MATCH_HOUR, BATCH_SCHEDULER_ENABLED,
     ADMIN_SECRET, WEEKDAY_LABELS,
     REVEAL_REQUIRE_OPT_IN, INSTANT_MATCH_ENABLED, CROSS_SCHOOL_MATCHING_ENABLED,
-    ICEBREAKER_FOLLOWUP_DAYS,
+    ICEBREAKER_FOLLOWUP_DAYS, MAIL_NO_MATCH_ENABLED, ICEBREAKER_FOLLOWUP_ENABLED,
     MAIL_ENABLED, MAIL_PROVIDER, MAIL_SERVER, MAIL_PORT, MAIL_USERNAME, MAIL_PASSWORD, MAIL_FROM,
     CONTACT_EMAIL,
     RESEND_API_KEY,
+    LOGIN_ONCE_PER_DAY, SITE_ANNOUNCEMENT,
 )
 from models import db, User, UserTag, Match, Blocklist
 from questionnaire import QUESTIONS, build_feature_vector, get_compatibility_insight, get_open_letter
@@ -52,7 +53,11 @@ db.init_app(app)
 
 @app.context_processor
 def inject_globals():
-    return {"contact_email": CONTACT_EMAIL}
+    return {
+        "contact_email": CONTACT_EMAIL,
+        "site_announcement": (SITE_ANNOUNCEMENT or "").strip(),
+        "login_once_per_day": LOGIN_ONCE_PER_DAY,
+    }
 
 
 # 邮箱 → 近期请求时间戳（进程内限流，MVP 够用）
@@ -74,7 +79,9 @@ def get_mail_config():
 
 
 def notify_no_match(user, reason=None):
-    """无论是否配对成功都应通知；无结果时发「暂未配对」邮件。"""
+    """无结果时发「暂未配对」邮件；额度紧张时可 MAIL_NO_MATCH_ENABLED=false 关闭。"""
+    if not MAIL_NO_MATCH_ENABLED:
+        return False, "no-match-mail-disabled"
     ok, info = send_match_result_email(
         user.email, [], get_mail_config(), reason=reason,
     )
@@ -121,6 +128,49 @@ def check_register_rate(email):
         return False, f"发送过于频繁，请 {REGISTER_RATE_WINDOW // 60} 分钟后再试"
     q.append(now)
     return True, None
+
+
+def _macau_date(dt_utc_naive: datetime | None = None) -> date:
+    """UTC naive → 澳门/香港日历日（UTC+8）。"""
+    utc = dt_utc_naive or datetime.utcnow()
+    return (utc + timedelta(hours=8)).date()
+
+
+def _logged_in_today(user: User) -> bool:
+    if not user or not getattr(user, "last_login_at", None):
+        return False
+    return _macau_date(user.last_login_at) == _macau_date()
+
+
+def _email_sent_today(user: User) -> bool:
+    if not user or not user.verification_sent_at:
+        return False
+    return _macau_date(user.verification_sent_at) == _macau_date()
+
+
+def _mark_login(user: User) -> None:
+    user.last_login_at = datetime.utcnow()
+
+
+LOGIN_ONCE_MSG = (
+    "今日已登录过（紧急限流：每人每天仅可登录一次，以澳门时区计日）。"
+    "若你仍保持登录可继续使用；退出后请明天再试。给大家带来不便，敬请谅解。"
+)
+EMAIL_ONCE_MSG = (
+    "今日验证码已发送过，请查收学校邮箱（含垃圾箱），勿重复申请。"
+    "紧急限流期间每人每天仅发一封登录验证码。"
+)
+
+
+def _deny_login_once_today(user: User):
+    """若触发每日登录限制，返回 Flask 响应；否则 None。内测号豁免。"""
+    if not LOGIN_ONCE_PER_DAY or not user:
+        return None
+    if _is_beta_account(user.email):
+        return None
+    if _logged_in_today(user):
+        return jsonify({"ok": False, "error": LOGIN_ONCE_MSG}), 429
+    return None
 
 
 LOOKING_FOR_VALUES = {"male", "female", "both"}
@@ -337,10 +387,15 @@ def api_register():
         db.session.add(user)
         db.session.flush()
 
+    denied = _deny_login_once_today(user)
+    if denied:
+        return denied
+
     # 内测号：免邮件，注册后直接登录（验证码随便填也能进）
     if _is_beta_account(email):
         user.verification_token = None
         user.email_verified = True
+        _mark_login(user)
         db.session.commit()
         session["user_id"] = user.id
         return jsonify({
@@ -349,6 +404,28 @@ def api_register():
             "beta_skip_verify": True,
             "message": f"内测账号已直接登录（{email}）。验证码可随便填，或不填直接点验证亦可。",
             "dev_token": "任意",
+        })
+
+    # 已验证用户：紧急省邮件 — 当日首次直接登录，不发验证码
+    if user.email_verified and LOGIN_ONCE_PER_DAY:
+        _mark_login(user)
+        db.session.commit()
+        session["user_id"] = user.id
+        return jsonify({
+            "ok": True,
+            "mail_sent": False,
+            "direct_login": True,
+            "message": "已登录。紧急限流期间每人每天仅可登录一次，请勿随意退出。",
+        })
+
+    # 未验证：当天已发过验证码则不再发信，但仍放行进验证步骤（避免刷新后卡死）
+    if LOGIN_ONCE_PER_DAY and _email_sent_today(user):
+        return jsonify({
+            "ok": True,
+            "mail_sent": False,
+            "code_already_sent": True,
+            "message": "今日验证码已发送，请查收学校邮箱（含垃圾箱）并在下方输入；请勿重复申请。",
+            "dev_token": None if MAIL_ENABLED else user.verification_token,
         })
 
     token = user.generate_token()
@@ -386,11 +463,16 @@ def api_verify():
     if not user:
         return jsonify({"ok": False, "error": "用户不存在"}), 404
 
+    denied = _deny_login_once_today(user)
+    if denied:
+        return denied
+
     beta = _is_beta_account(email)
     # 内测号：任意验证码（可空）直接登录
     if beta:
         user.email_verified = True
         user.verification_token = None
+        _mark_login(user)
         db.session.commit()
         session["user_id"] = user.id
         return jsonify({"ok": True, "message": "内测账号已登录"})
@@ -398,8 +480,10 @@ def api_verify():
     if not token:
         return jsonify({"ok": False, "error": "邮箱和验证码不能为空"}), 400
 
-    # 已验证用户直接登录
+    # 已验证用户直接登录（仍受每日一次限制）
     if user.email_verified:
+        _mark_login(user)
+        db.session.commit()
         session["user_id"] = user.id
         return jsonify({"ok": True, "message": "已登录"})
 
@@ -413,6 +497,7 @@ def api_verify():
 
     user.email_verified = True
     user.verification_token = None
+    _mark_login(user)
     db.session.commit()
 
     session["user_id"] = user.id
@@ -427,6 +512,11 @@ def api_resend_verification():
     user = User.query.filter_by(email=email).first()
     if not user:
         return jsonify({"ok": False, "error": "用户不存在"}), 404
+
+    denied = _deny_login_once_today(user)
+    if denied:
+        return denied
+
     if user.email_verified and not _is_beta_account(email):
         return jsonify({"ok": True, "message": "已验证"})
 
@@ -437,6 +527,7 @@ def api_resend_verification():
     if _is_beta_account(email):
         user.verification_token = None
         user.email_verified = True
+        _mark_login(user)
         db.session.commit()
         session["user_id"] = user.id
         return jsonify({
@@ -445,6 +536,9 @@ def api_resend_verification():
             "dev_token": "任意",
             "message": "内测账号已登录，验证码可随便填",
         })
+
+    if LOGIN_ONCE_PER_DAY and _email_sent_today(user):
+        return jsonify({"ok": False, "error": EMAIL_ONCE_MSG}), 429
 
     token = user.generate_token()
     db.session.commit()
@@ -1116,6 +1210,11 @@ def ensure_schema():
         db.session.commit()
         print("[CampusMatch] migrated: users.mbti_json")
 
+    if "last_login_at" not in user_cols:
+        db.session.execute(text("ALTER TABLE users ADD COLUMN last_login_at DATETIME"))
+        db.session.commit()
+        print("[CampusMatch] migrated: users.last_login_at")
+
     if "icebreaker_followup_sent" not in match_cols:
         db.session.execute(text("ALTER TABLE matches ADD COLUMN icebreaker_followup_sent BOOLEAN DEFAULT 0"))
         db.session.execute(text(
@@ -1168,27 +1267,30 @@ def init_db():
 
 
 def start_batch_scheduler():
-    """后台线程：破冰随访（按小时）；可选每周批量匹配。"""
+    """后台线程：破冰随访（按小时，可关）；可选每周批量匹配。"""
     # Flask debug 重载会起两个进程，只在主进程开调度
     if FLASK_DEBUG and not os_environ_is_reloader_main():
         return
 
-    from email_service import send_due_icebreaker_followups
+    if ICEBREAKER_FOLLOWUP_ENABLED:
+        from email_service import send_due_icebreaker_followups
 
-    def _followup_loop():
-        while True:
-            try:
-                with app.app_context():
-                    n = send_due_icebreaker_followups(get_mail_config())
-                    if n:
-                        print(f"[followup] 破冰随访已处理 {n} 对")
-            except Exception as e:
-                print(f"[followup] 失败: {e}")
-            time.sleep(3600)
+        def _followup_loop():
+            while True:
+                try:
+                    with app.app_context():
+                        n = send_due_icebreaker_followups(get_mail_config())
+                        if n:
+                            print(f"[followup] 破冰随访已处理 {n} 对")
+                except Exception as e:
+                    print(f"[followup] 失败: {e}")
+                time.sleep(3600)
 
-    ft = threading.Thread(target=_followup_loop, name="icebreaker-followup", daemon=True)
-    ft.start()
-    print(f"  破冰随访线程已启动（配对后第 {ICEBREAKER_FOLLOWUP_DAYS} 天）")
+        ft = threading.Thread(target=_followup_loop, name="icebreaker-followup", daemon=True)
+        ft.start()
+        print(f"  破冰随访线程已启动（配对后第 {ICEBREAKER_FOLLOWUP_DAYS} 天）")
+    else:
+        print("  破冰随访已关闭（ICEBREAKER_FOLLOWUP_ENABLED=false）")
 
     if not BATCH_SCHEDULER_ENABLED:
         return

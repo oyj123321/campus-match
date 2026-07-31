@@ -125,6 +125,24 @@ body {
     *, *::before, *::after { animation: none !important; transition: none !important; }
 }
 
+/* ── 全站公告 ── */
+.site-announcement {
+    background: linear-gradient(90deg, #fff7ed, #ffedd5);
+    border-bottom: 1px solid rgba(180, 83, 9, 0.28);
+    color: #9a3412;
+    padding: 10px 16px;
+    position: relative;
+    z-index: 28;
+}
+.site-announcement-inner {
+    max-width: 900px;
+    margin: 0 auto;
+    font-size: 0.9em;
+    font-weight: 600;
+    line-height: 1.55;
+    text-align: center;
+}
+
 /* ── Nav ── */
 .nav {
     background: rgba(255, 255, 255, 0.72);

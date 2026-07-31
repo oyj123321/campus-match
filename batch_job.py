@@ -19,6 +19,7 @@ from datetime import datetime, timedelta
 from config import (
     BATCH_MATCH_DAY, BATCH_MATCH_HOUR, MATCH_MIN_SCORE, MATCH_WEEKLY_NEW_LIMIT,
     SCHOOL_DOMAINS, CROSS_SCHOOL_MATCHING_ENABLED,
+    MAIL_NO_MATCH_ENABLED, ICEBREAKER_FOLLOWUP_ENABLED,
 )
 from models import db, User, Match
 from matcher import batch_match_school, orientation_compatible
@@ -470,34 +471,37 @@ def run_batch_all(mail_cfg, require_opt_in=None):
         f"created={cross.get('created', 0)} updated={cross.get('updated', 0)}"
     )
 
-    # 预约了本周但未配上的人：同样发「暂未配对」邮件
+    # 预约了本周但未配上的人：可选发「暂未配对」邮件（省额度时默认关）
     no_match_sent = 0
-    pool = ready_users(require_opt_in=require_opt_in) if require_opt_in else ready_users()
-    for u in pool:
-        if u.id in already:
-            continue
-        ok, _ = send_match_result_email(
-            u.email,
-            [],
-            mail_cfg,
-            reason="本周揭晓已结束，这一轮没有合适人选（池子人少、取向/底线不合，或对方本周已配过）。",
-        )
-        if ok:
-            no_match_sent += 1
-    print(f"  [未配对通知] sent={no_match_sent}")
+    if MAIL_NO_MATCH_ENABLED:
+        pool = ready_users(require_opt_in=require_opt_in) if require_opt_in else ready_users()
+        for u in pool:
+            if u.id in already:
+                continue
+            ok, _ = send_match_result_email(
+                u.email,
+                [],
+                mail_cfg,
+                reason="本周揭晓已结束，这一轮没有合适人选（池子人少、取向/底线不合，或对方本周已配过）。",
+            )
+            if ok:
+                no_match_sent += 1
+        print(f"  [未配对通知] sent={no_match_sent}")
+    else:
+        print("  [未配对通知] skipped (MAIL_NO_MATCH_ENABLED=false)")
     results.append({"no_match_notified": no_match_sent})
     return results
 
 
 def schedule_loop(mail_cfg_factory, check_seconds=30):
-    """阻塞循环：到点执行批量匹配；周期性发送破冰随访。"""
+    """阻塞循环：到点执行批量匹配；周期性发送破冰随访（可关）。"""
     from email_service import send_due_icebreaker_followups
 
     print(f"[batch] 调度中：每{WEEKDAY_NAMES[BATCH_MATCH_DAY]} {BATCH_MATCH_HOUR}:00")
     last_followup = 0.0
     while True:
         now_ts = time.time()
-        if now_ts - last_followup >= 3600:
+        if ICEBREAKER_FOLLOWUP_ENABLED and now_ts - last_followup >= 3600:
             try:
                 n = send_due_icebreaker_followups(mail_cfg_factory())
                 if n:
@@ -513,8 +517,7 @@ def schedule_loop(mail_cfg_factory, check_seconds=30):
         end = time.time() + max(wait, 1)
         while time.time() < end:
             time.sleep(min(check_seconds, max(1, end - time.time())))
-            # 睡眠期间也按小时扫随访
-            if time.time() - last_followup >= 3600:
+            if ICEBREAKER_FOLLOWUP_ENABLED and time.time() - last_followup >= 3600:
                 try:
                     n = send_due_icebreaker_followups(mail_cfg_factory())
                     if n:

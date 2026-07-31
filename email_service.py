@@ -258,7 +258,10 @@ def send_due_icebreaker_followups(mail_config):
     from datetime import timedelta
     from models import db, Match, User
     from match_pool import is_blocked_pair
-    from config import ICEBREAKER_FOLLOWUP_DAYS
+    from config import ICEBREAKER_FOLLOWUP_DAYS, ICEBREAKER_FOLLOWUP_ENABLED
+
+    if not ICEBREAKER_FOLLOWUP_ENABLED:
+        return 0
 
     cutoff = datetime.utcnow() - timedelta(days=max(1, ICEBREAKER_FOLLOWUP_DAYS))
     rows = (
