@@ -1,4 +1,4 @@
-"""匹配池过滤：学校规则 + 黑名单 + 取向。"""
+"""匹配池过滤：学校规则 + 黑名单 + 取向 + 是否进池。"""
 
 from config import CROSS_SCHOOL_MATCHING_ENABLED
 from models import User, Blocklist
@@ -29,12 +29,14 @@ def is_blocked_pair(a_id, b_id):
 
 
 def school_compatible(user_a, user_b):
-    """同校始终可配；跨校需总闸开启且双方都允许。"""
+    """同校始终可配；跨校需总闸开启且双方白名单互相包含对方学校。"""
     if user_a.school == user_b.school:
         return True
     if not CROSS_SCHOOL_MATCHING_ENABLED:
         return False
-    return bool(getattr(user_a, "allow_cross_school", False) and getattr(user_b, "allow_cross_school", False))
+    a_list = set(user_a.get_cross_schools())
+    b_list = set(user_b.get_cross_schools())
+    return user_b.school in a_list and user_a.school in b_list
 
 
 def vectors_aligned(user_a, user_b):
@@ -44,7 +46,7 @@ def vectors_aligned(user_a, user_b):
 
 
 def eligible_candidates(user, exclude_ids=None):
-    """即时匹配候选：学校规则 + 黑名单 + 取向 + 向量维数对齐 + 对方本周仍有额度。"""
+    """即时匹配候选：进池 + 学校规则 + 黑名单 + 取向 + 向量 + 对方本周额度。"""
     exclude_ids = set(exclude_ids or ())
     exclude_ids.add(user.id)
     blocked = blocked_partner_ids(user.id)
@@ -54,13 +56,16 @@ def eligible_candidates(user, exclude_ids=None):
         User.feature_vector_json.isnot(None),
         User.gender.isnot(None),
     )
-    # 未开跨校：只查同校，少扫库
-    if not (CROSS_SCHOOL_MATCHING_ENABLED and getattr(user, "allow_cross_school", False)):
+    willing = user.get_cross_schools()
+    # 未选跨校：只查同校，少扫库
+    if not (CROSS_SCHOOL_MATCHING_ENABLED and willing):
         q = q.filter(User.school == user.school)
 
     out = []
     for c in q.all():
         if c.id in exclude_ids or c.id in blocked:
+            continue
+        if not c.in_match_pool():
             continue
         if not school_compatible(user, c):
             continue

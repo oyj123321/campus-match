@@ -4,6 +4,7 @@ import json
 import smtplib
 import urllib.error
 import urllib.request
+from datetime import datetime
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
@@ -182,6 +183,12 @@ def send_match_result_email(to_email, matches, mail_config, insight=None, reason
             <tbody>{rows}</tbody>
         </table>
         {insight_html}
+        <p style="font-size:13px;line-height:1.7;color:#64748b;margin:18px 0 0;">
+            建议尽快打个招呼（学校邮箱或附加联系方式均可）。友善、真诚比完美开场白更重要。
+        </p>
+        <p style="font-size:12px;line-height:1.7;color:#94a3b8;margin:10px 0 0;">
+            若暂时不想继续被匹配，可在网站「匹配中心」关闭「参与匹配」——资料会保留，历史结果仍可查看。
+        </p>
     </div>
     <p style="text-align:center;margin-top:16px;">
         <a href="{site_url}/matches" style="display:inline-block;padding:10px 24px;background:#ec4899;color:#fff;border-radius:8px;text-decoration:none;font-weight:600;">打开匹配页查看详情</a>
@@ -205,6 +212,84 @@ def send_match_result_email(to_email, matches, mail_config, insight=None, reason
         return True, "dev-printed"
 
     return _dispatch_email(to_email, subject, body, mail_config)
+
+
+def send_icebreaker_followup_email(to_email, partner_name, mail_config):
+    """配对约 3 天后催破冰（打招呼）。"""
+    site_url = mail_config.get("public_url", "#")
+    name = (partner_name or "对方").strip() or "对方"
+    safe_name = (
+        name.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+        .replace('"', "&quot;")
+    )
+    subject = "CampusMatch - 和 TA 打个招呼了吗？"
+    body = f"""<!DOCTYPE html>
+<html lang="zh-CN">
+<head><meta charset="utf-8"></head>
+<body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Noto Sans SC',sans-serif;max-width:480px;margin:0 auto;padding:24px;color:#1e293b;">
+    <div style="text-align:center;padding:20px 0;">
+        <h1 style="color:#ec4899;margin:0;font-size:22px;">还记得这次的配对吗？</h1>
+    </div>
+    <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:24px;">
+        <p style="font-size:16px;line-height:1.7;margin:0;">
+            你好，你和 <strong>{safe_name}</strong> 已经配对几天了。
+            如果还没联系，不妨用学校邮箱或附加联系方式<strong>先打个招呼</strong>——一句你好就很好。
+        </p>
+        <p style="font-size:14px;line-height:1.7;color:#64748b;margin:16px 0 0;">
+            请友善、真诚；对方也是同校同学。聊不来也没关系，礼貌收尾即可。
+        </p>
+        <div style="text-align:center;margin-top:20px;">
+            <a href="{site_url}/matches" style="display:inline-block;padding:10px 24px;background:#ec4899;color:#fff;border-radius:8px;text-decoration:none;font-weight:600;">打开匹配页</a>
+        </div>
+        <p style="font-size:12px;line-height:1.7;color:#94a3b8;margin:16px 0 0;">
+            若暂时不想继续匹配，可在匹配中心关闭「参与匹配」。
+        </p>
+    </div>
+</body>
+</html>"""
+    if not mail_config.get("enabled"):
+        print(f"[DEV] 破冰随访 → {to_email} · partner={name}")
+        return True, "dev-printed"
+    return _dispatch_email(to_email, subject, body, mail_config)
+
+
+def send_due_icebreaker_followups(mail_config):
+    """扫描到期配对，各发一封破冰随访；返回处理对数。"""
+    from datetime import timedelta
+    from models import db, Match, User
+    from match_pool import is_blocked_pair
+    from config import ICEBREAKER_FOLLOWUP_DAYS
+
+    cutoff = datetime.utcnow() - timedelta(days=max(1, ICEBREAKER_FOLLOWUP_DAYS))
+    rows = (
+        Match.query.filter(
+            Match.icebreaker_followup_sent.is_(False),
+            Match.notified.is_(True),
+            Match.created_at <= cutoff,
+        )
+        .order_by(Match.created_at.asc())
+        .limit(80)
+        .all()
+    )
+    handled = 0
+    for m in rows:
+        a = User.query.get(m.user1_id)
+        b = User.query.get(m.user2_id)
+        if not a or not b:
+            m.icebreaker_followup_sent = True
+            handled += 1
+            continue
+        if is_blocked_pair(a.id, b.id):
+            m.icebreaker_followup_sent = True
+            handled += 1
+            continue
+        send_icebreaker_followup_email(a.email, b.name or "对方", mail_config)
+        send_icebreaker_followup_email(b.email, a.name or "对方", mail_config)
+        m.icebreaker_followup_sent = True
+        handled += 1
+    if handled:
+        db.session.commit()
+    return handled
 
 
 def _send_resend(to_email, subject, html_body, mail_config):

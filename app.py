@@ -22,6 +22,7 @@ from config import (
     BATCH_MATCH_DAY, BATCH_MATCH_HOUR, BATCH_SCHEDULER_ENABLED,
     ADMIN_SECRET, WEEKDAY_LABELS,
     REVEAL_REQUIRE_OPT_IN, INSTANT_MATCH_ENABLED, CROSS_SCHOOL_MATCHING_ENABLED,
+    ICEBREAKER_FOLLOWUP_DAYS,
     MAIL_ENABLED, MAIL_PROVIDER, MAIL_SERVER, MAIL_PORT, MAIL_USERNAME, MAIL_PASSWORD, MAIL_FROM,
     RESEND_API_KEY,
 )
@@ -160,7 +161,10 @@ def match_quota_status(user):
         "has_active_match": bool(active_match),
         "seconds_to_reveal": max(0, int((nxt - now).total_seconds())) if not reveal_happened_this_week else 0,
         "cross_school_enabled": CROSS_SCHOOL_MATCHING_ENABLED,
-        "allow_cross_school": bool(getattr(user, "allow_cross_school", False)),
+        "allow_cross_school": bool(user.get_cross_schools()),
+        "cross_schools": user.get_cross_schools(),
+        "all_schools": list(SCHOOL_DOMAINS.keys()),
+        "open_to_match": user.is_open_to_match(),
         "explain": _match_explain_text(mode),
     }
 
@@ -192,7 +196,10 @@ def _match_explain_text(mode):
     school_line = (
         "一对一：在取向互相接受、本周仍有额度的人里算问卷相似度，"
         "只给你得分最高的 1 人；页面不展示匹配度分数，只给契合点与破冰话题"
-        + ("；默认同校，双方都开「允许跨校」时可跨校。" if CROSS_SCHOOL_MATCHING_ENABLED else "（同校）。")
+        + (
+            "；默认同校，跨校需双方互相勾选对方学校（双向白名单）。"
+            if CROSS_SCHOOL_MATCHING_ENABLED else "（同校）。"
+        )
     )
     return {
         "mode": mode,
@@ -262,7 +269,13 @@ def questionnaire_page():
     user = get_current_user()
     if not user.email_verified:
         return redirect(url_for("verify_page"))
-    return render_template("questionnaire.html", user=user, questions=QUESTIONS)
+    return render_template(
+        "questionnaire.html",
+        user=user,
+        questions=QUESTIONS,
+        schools=list(SCHOOL_DOMAINS.keys()),
+        cross_school_enabled=CROSS_SCHOOL_MATCHING_ENABLED,
+    )
 
 
 @app.route("/matches")
@@ -570,6 +583,13 @@ def api_match():
             return jsonify({"ok": False, "error": "请先填写附加联系方式"}), 400
         return jsonify({"ok": False, "error": "资料不完整，请返回问卷页补全"}), 400
 
+    if not user.is_open_to_match():
+        return jsonify({
+            "ok": False,
+            "error": "你已关闭「参与匹配」。可在匹配中心重新打开后再试。",
+            "quota": match_quota_status(user),
+        }), 403
+
     if not INSTANT_MATCH_ENABLED:
         return jsonify({
             "ok": False,
@@ -609,15 +629,15 @@ def api_match():
         User.feature_vector_json.isnot(None),
         User.gender.isnot(None),
     )
-    if not (CROSS_SCHOOL_MATCHING_ENABLED and user.allow_cross_school):
+    if not (CROSS_SCHOOL_MATCHING_ENABLED and user.get_cross_schools()):
         pool_q_size_hint = pool_q_size_hint.filter(User.school == user.school)
     pool_size = pool_q_size_hint.count()
     candidates = eligible_candidates(user)
 
     if not candidates:
         msg = "当前暂无符合你择偶取向的可匹配用户"
-        if CROSS_SCHOOL_MATCHING_ENABLED and not user.allow_cross_school:
-            msg += "（可在问卷页开启「允许跨校」扩大池子）"
+        if CROSS_SCHOOL_MATCHING_ENABLED and not user.get_cross_schools():
+            msg += "（可在问卷/匹配页勾选愿意跨配的学校，且对方也须勾选你的学校）"
         mail_ok, mail_info = notify_no_match(user, reason=msg)
         return jsonify({
             "ok": True,
@@ -731,6 +751,12 @@ def api_match_opt_in():
     user = get_current_user()
     if not user.ready_to_match():
         return jsonify({"ok": False, "error": "请先完成问卷、性别、择偶取向与附加联系方式"}), 400
+    if not user.is_open_to_match():
+        return jsonify({
+            "ok": False,
+            "error": "请先开启「参与匹配」，再预约本周揭晓",
+            "quota": match_quota_status(user),
+        }), 403
 
     week = current_week_key()
     if request.method == "DELETE":
@@ -821,8 +847,26 @@ def api_me():
             return jsonify({"ok": False, "error": "请填写附加联系方式（微信或其他均可）"}), 400
         user.wechat_id = contact[:120]
     user.bio = (data.get("bio") or "").strip() or user.bio
-    if "allow_cross_school" in data:
-        user.allow_cross_school = bool(data.get("allow_cross_school"))
+    if "cross_schools" in data:
+        raw = data.get("cross_schools")
+        if raw is None:
+            raw = []
+        if not isinstance(raw, list):
+            return jsonify({"ok": False, "error": "cross_schools 须为学校名列表"}), 400
+        if not CROSS_SCHOOL_MATCHING_ENABLED:
+            user.set_cross_schools([])
+        else:
+            user.set_cross_schools(raw)
+    elif "allow_cross_school" in data:
+        # 兼容旧前端：true = 勾选除本校外全部学校
+        if data.get("allow_cross_school") and CROSS_SCHOOL_MATCHING_ENABLED:
+            user.set_cross_schools([s for s in SCHOOL_DOMAINS.keys() if s != user.school])
+        else:
+            user.set_cross_schools([])
+    if "open_to_match" in data:
+        user.open_to_match = bool(data.get("open_to_match"))
+        if not user.open_to_match:
+            user.opt_in_week = None
     db.session.commit()
     return jsonify({"ok": True, "user": user.to_dict()})
 
@@ -1019,6 +1063,25 @@ def ensure_schema():
         db.session.commit()
         print("[CampusMatch] migrated: users.allow_cross_school")
 
+    if "cross_schools_json" not in user_cols:
+        db.session.execute(text("ALTER TABLE users ADD COLUMN cross_schools_json TEXT"))
+        db.session.commit()
+        print("[CampusMatch] migrated: users.cross_schools_json")
+
+    if "open_to_match" not in user_cols:
+        db.session.execute(text("ALTER TABLE users ADD COLUMN open_to_match BOOLEAN DEFAULT 1"))
+        db.session.execute(text("UPDATE users SET open_to_match = 1 WHERE open_to_match IS NULL"))
+        db.session.commit()
+        print("[CampusMatch] migrated: users.open_to_match")
+
+    if "icebreaker_followup_sent" not in match_cols:
+        db.session.execute(text("ALTER TABLE matches ADD COLUMN icebreaker_followup_sent BOOLEAN DEFAULT 0"))
+        db.session.execute(text(
+            "UPDATE matches SET icebreaker_followup_sent = 0 WHERE icebreaker_followup_sent IS NULL"
+        ))
+        db.session.commit()
+        print("[CampusMatch] migrated: matches.icebreaker_followup_sent")
+
     if "active" not in match_cols:
         db.session.execute(text("ALTER TABLE matches ADD COLUMN active BOOLEAN DEFAULT 1"))
         db.session.execute(text("UPDATE matches SET active = 1 WHERE active IS NULL"))
@@ -1063,11 +1126,29 @@ def init_db():
 
 
 def start_batch_scheduler():
-    """可选：进程内后台线程等待每周批量匹配时刻。"""
-    if not BATCH_SCHEDULER_ENABLED:
-        return
+    """后台线程：破冰随访（按小时）；可选每周批量匹配。"""
     # Flask debug 重载会起两个进程，只在主进程开调度
     if FLASK_DEBUG and not os_environ_is_reloader_main():
+        return
+
+    from email_service import send_due_icebreaker_followups
+
+    def _followup_loop():
+        while True:
+            try:
+                with app.app_context():
+                    n = send_due_icebreaker_followups(get_mail_config())
+                    if n:
+                        print(f"[followup] 破冰随访已处理 {n} 对")
+            except Exception as e:
+                print(f"[followup] 失败: {e}")
+            time.sleep(3600)
+
+    ft = threading.Thread(target=_followup_loop, name="icebreaker-followup", daemon=True)
+    ft.start()
+    print(f"  破冰随访线程已启动（配对后第 {ICEBREAKER_FOLLOWUP_DAYS} 天）")
+
+    if not BATCH_SCHEDULER_ENABLED:
         return
 
     def _run():

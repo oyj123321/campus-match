@@ -7,22 +7,36 @@
         <span data-i18n="{{ {'male':'g.male','female':'g.female'}.get(user.gender, 'g.unset') }}">性别</span> ·
         <span data-i18n="{{ {'male':'lf.male','female':'lf.female','both':'lf.both'}.get(user.effective_looking_for(), 'lf.unset') }}">取向</span> ·
         {% if user.answers %}<span data-i18n="hdr.answered">已答</span> {{ user.answers.keys()|length }} <span data-i18n="hdr.q">题</span>{% else %}<span data-i18n="hdr.noq">未填问卷</span>{% endif %}
-        · <span data-i18n="hdr.cross">跨校</span> <span data-i18n="{{ 'on' if user.allow_cross_school else 'off' }}">开</span>
+        · <span data-i18n="hdr.openMatch">参与匹配</span> <span id="hdr-open" data-i18n="{{ 'on' if user.is_open_to_match() else 'off' }}">开</span>
+        · <span data-i18n="hdr.cross">跨校</span> <span id="hdr-cross">{{ '开' if user.get_cross_schools() else '关' }}</span>
     </p>
+
+    <div id="pool-box" class="card box-dim" style="margin-top:14px;text-align:left;">
+        <h3 style="margin-bottom:8px;" data-i18n="pool.title">参与匹配</h3>
+        <p class="hint" data-i18n="pool.hint">关闭后不会再进入匹配池、不能预约/提前揭晓；历史配对仍可查看，资料不会删除。</p>
+        <p class="hint" style="margin-top:6px;"><span data-i18n="pool.status">当前：</span><strong id="q-open">…</strong></p>
+        <button type="button" class="btn btn-primary" id="open-btn" onclick="toggleOpenMatch()" style="margin-top:8px;" data-i18n="btn.openOn">开启参与匹配</button>
+    </div>
 
     <div id="reveal-box" class="card box-dim" style="margin-top:14px;text-align:left;">
         <h3 style="margin-bottom:8px;" data-i18n="rv.title">本周揭晓仪式</h3>
         <p class="hint" id="reveal-hint" data-i18n="rv.hint">每周二晚统一揭晓，制造期待；不是随时刷脸。</p>
         <p style="margin:8px 0;"><span data-i18n="rv.next">下次揭晓：</span><strong id="q-next-label">{{ quota.next_batch_label }}</strong>
             · <span id="q-countdown" data-i18n="rv.calc">计算中…</span></p>
-        <p class="hint"><span data-i18n="rv.optin">本周预约状态：</span><strong id="q-optin">…</strong>
-            · <span data-i18n="rv.crosspref">跨校偏好：</span><strong id="q-cross">…</strong></p>
+        <p class="hint"><span data-i18n="rv.optin">本周预约状态：</span><strong id="q-optin">…</strong></p>
         <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">
             <button type="button" class="btn btn-primary" id="optin-btn" onclick="toggleOptIn()" data-i18n="btn.optin">预约本周匹配</button>
-            <button type="button" class="btn btn-secondary" id="cross-btn" onclick="toggleCross()" data-i18n="btn.crossToggle">切换跨校</button>
             <button type="button" class="btn btn-secondary" onclick="loadHistory()" data-i18n="btn.current">查看当前配对</button>
             <a href="/questionnaire" class="btn btn-secondary" data-i18n="btn.editQ">修改问卷</a>
         </div>
+    </div>
+
+    <div id="cross-box" class="card box-dim" style="margin-top:14px;text-align:left;">
+        <h3 style="margin-bottom:8px;" data-i18n="cross.title">跨校学校（双向严选）</h3>
+        <p class="hint" data-i18n="cross.hint">勾选你愿意跨配的学校；对方也必须勾选你的学校才会配对。不勾 = 只同校。</p>
+        <div id="cross-schools-list" style="display:flex;flex-wrap:wrap;gap:8px 14px;margin-top:10px;"></div>
+        <button type="button" class="btn btn-secondary" id="cross-save-btn" onclick="saveCrossSchools()" style="margin-top:10px;" data-i18n="btn.saveCross">保存跨校偏好</button>
+        <p id="cross-save-status" class="hint" style="margin-top:6px;"></p>
     </div>
 
     <div id="quota-box" class="hint" style="margin-top:12px;line-height:1.7;">
@@ -101,19 +115,30 @@ function renderQuota(q) {
     document.getElementById('q-next-label').textContent = tBatch(q.next_batch_label) + '（' + q.next_batch_at + '）';
     document.getElementById('q-countdown').textContent = fmtCountdown(q.seconds_to_reveal || 0);
     document.getElementById('q-optin').textContent = q.opted_in ? t('opt.yes') : t('opt.no');
-    document.getElementById('q-cross').textContent = q.allow_cross_school ? t('cross.on') : t('cross.off');
     if (q.match_mode) document.getElementById('q-mode').textContent = q.match_mode;
+
+    var openOn = q.open_to_match !== false;
+    document.getElementById('q-open').textContent = openOn ? t('on') : t('off');
+    var hdrOpen = document.getElementById('hdr-open');
+    if (hdrOpen) hdrOpen.textContent = openOn ? t('on') : t('off');
+    var openBtn = document.getElementById('open-btn');
+    openBtn.textContent = openOn ? t('btn.openOff') : t('btn.openOn');
+    openBtn.className = openOn ? 'btn btn-secondary' : 'btn btn-primary';
 
     var optBtn = document.getElementById('optin-btn');
     optBtn.textContent = q.opted_in ? t('btn.optout') : t('btn.optin');
     optBtn.className = q.opted_in ? 'btn btn-secondary' : 'btn btn-primary';
+    optBtn.disabled = !openOn;
 
-    var crossBtn = document.getElementById('cross-btn');
-    if (!q.cross_school_enabled) {
-        crossBtn.style.display = 'none';
-    } else {
-        crossBtn.style.display = '';
-        crossBtn.textContent = q.allow_cross_school ? t('btn.crossOff') : t('btn.crossOn');
+    var crossBox = document.getElementById('cross-box');
+    if (crossBox) {
+        crossBox.style.display = q.cross_school_enabled ? '' : 'none';
+        if (q.cross_school_enabled) renderCrossList(q);
+    }
+    var hdrCross = document.getElementById('hdr-cross');
+    if (hdrCross) {
+        var n = (q.cross_schools || []).length;
+        hdrCross.textContent = n ? (t('cross.on') + '·' + n) : t('cross.off');
     }
 
     var wrap = document.getElementById('instant-wrap');
@@ -122,7 +147,10 @@ function renderQuota(q) {
         wrap.style.display = 'none';
     } else {
         wrap.style.display = 'block';
-        if (q.cooldown_seconds_left > 0) {
+        if (!openOn) {
+            btn.disabled = true;
+            btn.textContent = t('btn.openFirst');
+        } else if (q.cooldown_seconds_left > 0) {
             btn.disabled = true;
             btn.textContent = tf('btn.cooling', { m: Math.ceil(q.cooldown_seconds_left / 60) });
         } else if (q.weekly_remaining <= 0) {
@@ -238,12 +266,46 @@ async function toggleOptIn() {
     alert(opted ? t('al.optout') : (d.message || t('al.optin')));
 }
 
-async function toggleCross() {
-    var on = !!(lastQuota && lastQuota.allow_cross_school);
-    var d = await api('PUT', '/api/me', { allow_cross_school: !on });
+function renderCrossList(q) {
+    var list = document.getElementById('cross-schools-list');
+    if (!list) return;
+    var mySchool = (q && lastQuota && document.querySelector('[data-school]'))
+        ? document.querySelector('[data-school]').getAttribute('data-school')
+        : '';
+    var selected = {};
+    (q.cross_schools || []).forEach(function (s) { selected[s] = true; });
+    var html = '';
+    (q.all_schools || []).forEach(function (s) {
+        if (s === mySchool) return;
+        html += '<label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:0.92em;">'
+            + '<input type="checkbox" class="match-cross-cb" value="' + esc(s) + '"'
+            + (selected[s] ? ' checked' : '') + '> <span>' + esc(tSchool(s)) + '</span></label>';
+    });
+    list.innerHTML = html || '<span class="hint">—</span>';
+}
+
+async function toggleOpenMatch() {
+    var on = !!(lastQuota && lastQuota.open_to_match !== false);
+    var d = await api('PUT', '/api/me', { open_to_match: !on });
     if (!d.ok) { alert(d.error || t('al.fail')); return; }
     await refreshQuota();
-    alert(!on ? t('al.crossOn') : t('al.crossOff'));
+    alert(!on ? t('al.openOn') : t('al.openOff'));
+}
+
+async function saveCrossSchools() {
+    var schools = [];
+    document.querySelectorAll('.match-cross-cb:checked').forEach(function (el) {
+        schools.push(el.value);
+    });
+    var st = document.getElementById('cross-save-status');
+    st.textContent = t('qn.saving');
+    var d = await api('PUT', '/api/me', { cross_schools: schools });
+    if (!d.ok) {
+        st.innerHTML = '<span class="error">' + esc(d.error || t('al.fail')) + '</span>';
+        return;
+    }
+    await refreshQuota();
+    st.innerHTML = '<span class="t-ok">' + t('al.crossSaved') + '</span>';
 }
 
 async function searchBlock() {

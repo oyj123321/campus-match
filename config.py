@@ -78,8 +78,10 @@ ADMIN_SECRET = os.environ.get("ADMIN_SECRET", "")
 # 揭晓仪式：需本周 opt-in 才进批量池；冷启动仍可开即时匹配
 REVEAL_REQUIRE_OPT_IN = os.environ.get("REVEAL_REQUIRE_OPT_IN", "true").lower() == "true"
 INSTANT_MATCH_ENABLED = os.environ.get("INSTANT_MATCH_ENABLED", "true").lower() == "true"
-# 跨校总闸：true 时，双方都勾选 allow_cross_school 才可跨校配对
+# 跨校总闸：true 时，允许按「双方互相勾选对方学校」做跨校配对
 CROSS_SCHOOL_MATCHING_ENABLED = os.environ.get("CROSS_SCHOOL_MATCHING_ENABLED", "true").lower() == "true"
+# 配对成功后第 N 天发破冰随访（催打招呼；避开整周揭晓日）
+ICEBREAKER_FOLLOWUP_DAYS = int(os.environ.get("ICEBREAKER_FOLLOWUP_DAYS", "3"))
 
 # 验证码
 VERIFICATION_EXPIRE_SECONDS = 600  # 10 分钟

@@ -279,7 +279,7 @@ def ready_users(school=None, require_opt_in=False):
     )
     if school:
         q = q.filter(User.school == school)
-    users = [u for u in q.all() if u.ready_to_match()]
+    users = [u for u in q.all() if u.in_match_pool()]
     if require_opt_in:
         week = current_week_key()
         users = [u for u in users if u.opt_in_week == week]
@@ -360,14 +360,14 @@ def run_batch_school(school, mail_cfg, require_opt_in=False, exclude_ids=None):
 
 
 def run_batch_cross(mail_cfg, require_opt_in=False, exclude_ids=None):
-    """跨校池：仅双方都开 allow_cross_school 的用户。"""
+    """跨校池：已选跨校白名单且资料进池的用户（配对时再双向校验学校）。"""
     if not CROSS_SCHOOL_MATCHING_ENABLED:
         return {"school": "跨校", "users": 0, "pairs": 0, "created": 0, "updated": 0, "matched_ids": set()}
 
     exclude_ids = set(exclude_ids or ())
     users = [
         u for u in ready_users(None, require_opt_in=require_opt_in)
-        if u.id not in exclude_ids and getattr(u, "allow_cross_school", False)
+        if u.id not in exclude_ids and u.get_cross_schools()
     ]
     busy = users_without_weekly_quota([u.id for u in users])
     users = [u for u in users if u.id not in busy]
@@ -490,9 +490,22 @@ def run_batch_all(mail_cfg, require_opt_in=None):
 
 
 def schedule_loop(mail_cfg_factory, check_seconds=30):
-    """阻塞循环：到点执行批量匹配。"""
+    """阻塞循环：到点执行批量匹配；周期性发送破冰随访。"""
+    from email_service import send_due_icebreaker_followups
+
     print(f"[batch] 调度中：每{WEEKDAY_NAMES[BATCH_MATCH_DAY]} {BATCH_MATCH_HOUR}:00")
+    last_followup = 0.0
     while True:
+        now_ts = time.time()
+        if now_ts - last_followup >= 3600:
+            try:
+                n = send_due_icebreaker_followups(mail_cfg_factory())
+                if n:
+                    print(f"[batch] 破冰随访已处理 {n} 对")
+            except Exception as e:
+                print(f"[batch] 破冰随访失败: {e}")
+            last_followup = now_ts
+
         nxt = next_batch_datetime()
         wait = (nxt - datetime.now()).total_seconds()
         print(f"[batch] 下次执行: {nxt.isoformat()} （约 {int(wait)} 秒后）")
@@ -500,6 +513,15 @@ def schedule_loop(mail_cfg_factory, check_seconds=30):
         end = time.time() + max(wait, 1)
         while time.time() < end:
             time.sleep(min(check_seconds, max(1, end - time.time())))
+            # 睡眠期间也按小时扫随访
+            if time.time() - last_followup >= 3600:
+                try:
+                    n = send_due_icebreaker_followups(mail_cfg_factory())
+                    if n:
+                        print(f"[batch] 破冰随访已处理 {n} 对")
+                except Exception as e:
+                    print(f"[batch] 破冰随访失败: {e}")
+                last_followup = time.time()
         print(f"[batch] 开始执行 {datetime.now().isoformat()}")
         try:
             run_batch_all(mail_cfg_factory())

@@ -40,8 +40,12 @@ class User(db.Model):
     last_matched_at = db.Column(db.DateTime, nullable=True)
     # 本周预约匹配：ISO 周键，如 "2026-W31"；与当前周相同表示已 opt-in
     opt_in_week = db.Column(db.String(16))
-    # 是否愿意参与跨校匹配（需双方都开，且全局 CROSS_SCHOOL_MATCHING_ENABLED）
+    # 是否愿意参与跨校（兼容旧字段；与 cross_schools_json 同步：非空列表则为 True）
     allow_cross_school = db.Column(db.Boolean, default=False)
+    # 愿意跨配的学校名列表 JSON，如 ["澳门科技大学"]；双向白名单；空=只同校
+    cross_schools_json = db.Column(db.Text)
+    # 总开关：关则不进匹配池、不能预约/提前揭晓；历史配对仍可看
+    open_to_match = db.Column(db.Boolean, default=True)
 
     tags = db.relationship("UserTag", backref="user", lazy="joined", cascade="all, delete-orphan")
 
@@ -145,6 +149,7 @@ class User(db.Model):
         return True
 
     def ready_to_match(self):
+        """资料是否齐全（不含是否愿意进池）。"""
         return bool(
             self.email_verified
             and self.questionnaire_completed()
@@ -153,6 +158,43 @@ class User(db.Model):
             and self.wechat_id
             and self.feature_vector
         )
+
+    def is_open_to_match(self):
+        """是否愿意进入匹配池；NULL/缺省视为 True（兼容旧数据）。"""
+        return self.open_to_match is not False
+
+    def in_match_pool(self):
+        return self.ready_to_match() and self.is_open_to_match()
+
+    def get_cross_schools(self):
+        """愿意跨配的学校列表（不含本校）。旧数据仅 allow_cross_school=True 时视为「其它全部学校」。"""
+        from config import SCHOOL_DOMAINS
+
+        if self.cross_schools_json:
+            try:
+                raw = json.loads(self.cross_schools_json)
+            except (TypeError, ValueError, json.JSONDecodeError):
+                raw = []
+            out = []
+            for s in raw or []:
+                name = str(s).strip()
+                if name in SCHOOL_DOMAINS and name != self.school and name not in out:
+                    out.append(name)
+            return out
+        if self.allow_cross_school:
+            return [s for s in SCHOOL_DOMAINS.keys() if s != self.school]
+        return []
+
+    def set_cross_schools(self, schools):
+        from config import SCHOOL_DOMAINS
+
+        out = []
+        for s in schools or []:
+            name = str(s).strip()
+            if name in SCHOOL_DOMAINS and name != self.school and name not in out:
+                out.append(name)
+        self.cross_schools_json = json.dumps(out, ensure_ascii=False)
+        self.allow_cross_school = bool(out)
 
     def to_dict(self):
         return {
@@ -170,7 +212,9 @@ class User(db.Model):
             "answers": self.answers,
             "important_qids": list(self.important_qids),
             "opt_in_week": self.opt_in_week,
-            "allow_cross_school": bool(self.allow_cross_school),
+            "allow_cross_school": bool(self.get_cross_schools()),
+            "cross_schools": self.get_cross_schools(),
+            "open_to_match": self.is_open_to_match(),
         }
 
 
@@ -197,6 +241,8 @@ class Match(db.Model):
     insight_json = db.Column(db.Text)  # 匹配理由
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     notified = db.Column(db.Boolean, default=False)
+    # 配对约 3 天后破冰随访是否已发（每对只发一次）
+    icebreaker_followup_sent = db.Column(db.Boolean, default=False)
     # 一对一：同一用户同时只应有 1 条 active=True 的配对；旧 Top-N 多条会被降为 False
     active = db.Column(db.Boolean, default=True, index=True)
 
