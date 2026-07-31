@@ -90,6 +90,28 @@
     </div>
 </form>
 
+<div id="personality-modal" class="personality-modal" style="display:none;" aria-hidden="true">
+    <div class="personality-modal-backdrop" onclick="closePersonalityModal()"></div>
+    <div class="card personality-card personality-modal-panel" role="dialog" aria-labelledby="lp-modal-title">
+        <h3 id="lp-modal-title" data-i18n="lp.title">你的恋爱人格</h3>
+        <p class="hint" data-i18n="lp.sub">根据问卷生成，可截图分享 · 仅供娱乐</p>
+        <p class="personality-name" id="lp-modal-name">—</p>
+        <p class="personality-code" id="lp-modal-code">—</p>
+        <p class="personality-sub" id="lp-modal-subtitle"></p>
+        <div id="lp-modal-bars" class="personality-bars"></div>
+        <p class="hint" style="margin:12px 0 4px;font-weight:600;" data-i18n="lp.traits">核心特质</p>
+        <ul id="lp-modal-traits" class="hint" style="margin:0;padding-left:18px;line-height:1.7;"></ul>
+        <p class="hint" style="margin:12px 0 4px;"><span data-i18n="lp.strength">关系优势：</span><span id="lp-modal-strength"></span></p>
+        <p class="hint" style="margin:6px 0 12px;"><span data-i18n="lp.match">你可能适合：</span><span id="lp-modal-match"></span></p>
+        <div class="personality-actions" style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;">
+            <a class="btn btn-primary" href="/matches" data-i18n="lp.goMatches">进入匹配页</a>
+            <button type="button" class="btn btn-secondary" id="lp-modal-share" data-i18n="lp.share">分享报告</button>
+        </div>
+        <p class="hint" style="margin-top:12px;font-size:0.82em;" data-i18n="lp.disc">本结果仅供娱乐与破冰参考。</p>
+        <p class="lp-capture-brand hint" style="display:none;margin-top:10px;text-align:center;font-size:0.8em;">CampusMatch · campusmatch.com.cn</p>
+    </div>
+</div>
+
 <script>
 const QUESTIONS = {{ questions | tojson }};
 const EXISTING_ANSWERS = {{ (user.answers or {}) | tojson }};
@@ -452,15 +474,88 @@ async function submitAll() {
 
     if (r2.ok) {
         status.innerHTML = '<span class="t-ok">' + t('qn.saved') + '</span>';
-        setTimeout(function () { location.href = '/matches'; }, 600);
+        var p = r2.personality || r2.mbti;
+        if (p && (p.code || p.name)) {
+            showPersonalityModal(p);
+        } else {
+            setTimeout(function () { location.href = '/matches'; }, 600);
+        }
     } else {
         status.innerHTML = '<span class="error">' + t('qn.saveFail') + esc(r2.error || '') + '</span>';
     }
 }
 
+var modalPersonality = null;
+
+function showPersonalityModal(raw) {
+    var p = (typeof localizeLovePersonality === 'function') ? localizeLovePersonality(raw) : raw;
+    modalPersonality = p;
+    document.getElementById('lp-modal-name').textContent = p.name || '—';
+    document.getElementById('lp-modal-code').textContent = p.code || p.type || '—';
+    document.getElementById('lp-modal-subtitle').textContent = p.subtitle || p.summary || '';
+    document.getElementById('lp-modal-strength').textContent = p.strength || '';
+    document.getElementById('lp-modal-match').textContent = p.match_tip || '';
+    var bars = document.getElementById('lp-modal-bars');
+    bars.innerHTML = '';
+    var dims = p.dimensions || {};
+    ['expression', 'rhythm', 'boundary', 'risk'].forEach(function (key) {
+        var d = dims[key];
+        if (!d) return;
+        var pct = Math.max(0, Math.min(100, d.score || 0));
+        var row = document.createElement('div');
+        row.className = 'personality-bar-row';
+        row.innerHTML = '<span class="personality-bar-label">' + esc(d.label || key) + '</span>'
+            + '<div class="personality-bar-track"><div class="personality-bar-fill" style="width:' + pct + '%"></div></div>'
+            + '<span class="personality-bar-pole">' + esc(d.pole || '') + '</span>';
+        bars.appendChild(row);
+    });
+    var ul = document.getElementById('lp-modal-traits');
+    ul.innerHTML = '';
+    (p.traits || []).forEach(function (line) {
+        var li = document.createElement('li');
+        li.textContent = line;
+        ul.appendChild(li);
+    });
+    var modal = document.getElementById('personality-modal');
+    modal.style.display = 'flex';
+    modal.setAttribute('aria-hidden', 'false');
+    document.getElementById('lp-modal-share').onclick = shareModalPersonality;
+}
+
+function closePersonalityModal() {
+    var modal = document.getElementById('personality-modal');
+    modal.style.display = 'none';
+    modal.setAttribute('aria-hidden', 'true');
+}
+
+async function shareModalPersonality() {
+    var m = modalPersonality;
+    if (!m) return;
+    var card = document.querySelector('#personality-modal .personality-modal-panel');
+    if (typeof sharePersonalityCard === 'function' && card) {
+        await sharePersonalityCard(card, m);
+        return;
+    }
+    var text = (typeof lovePersonalityShareText === 'function')
+        ? lovePersonalityShareText(m)
+        : tf('lp.shareBody', { name: m.name || '', code: m.code || '', subtitle: m.subtitle || '', url: location.origin || 'https://campusmatch.com.cn' });
+    try {
+        await navigator.clipboard.writeText(text);
+        alert(t('lp.copied'));
+    } catch (e2) {
+        prompt(t('lp.copyManual'), text);
+    }
+}
+
 render();
 
-// 切换语言时就地重渲染题目（答案保存在内存，不丢失）
-window.addEventListener('cm:lang', function () { render(); });
+// 切换语言时就地重渲染题目（答案保存在内存，不丢失）；弹窗开着则刷新文案
+window.addEventListener('cm:lang', function () {
+    render();
+    var modal = document.getElementById('personality-modal');
+    if (modal && modal.style.display === 'flex' && modalPersonality) {
+        showPersonalityModal(modalPersonality);
+    }
+});
 </script>
 {% endblock %}

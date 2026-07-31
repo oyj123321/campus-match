@@ -11,20 +11,22 @@
         · <span data-i18n="hdr.cross">跨校</span> <span id="hdr-cross">{{ '开' if user.get_cross_schools() else '关' }}</span>
     </p>
 
-    <div id="mbti-box" class="card box-dim" style="margin-top:14px;text-align:left;display:none;">
-        <h3 style="margin-bottom:8px;" data-i18n="mbti.title">问卷推演 MBTI</h3>
-        <p class="hint" data-i18n="mbti.sub">根据恋爱问卷近似映射，仅供参考。</p>
-        <p style="margin:10px 0 6px;font-size:1.35em;font-weight:700;">
-            <span id="mbti-type">—</span>
-            <span id="mbti-label" class="hint" style="font-size:0.75em;font-weight:500;margin-left:8px;"></span>
-        </p>
-        <p id="mbti-summary" style="margin:0 0 8px;line-height:1.65;"></p>
-        <p id="mbti-self" class="hint" style="margin:0 0 6px;line-height:1.65;"></p>
-        <p id="mbti-love" class="hint" style="margin:0 0 6px;line-height:1.65;"></p>
-        <p id="mbti-caution" class="hint" style="margin:0 0 8px;line-height:1.65;"></p>
-        <p style="margin:0 0 6px;"><span data-i18n="mbti.compat">更合拍类型：</span><strong id="mbti-compat">—</strong></p>
-        <ul id="mbti-hits" class="hint" style="margin:8px 0 0;padding-left:18px;line-height:1.65;"></ul>
+    <div id="mbti-box" class="card personality-card" style="margin-top:14px;text-align:left;display:none;">
+        <h3 style="margin-bottom:4px;" data-i18n="lp.title">你的恋爱人格</h3>
+        <p class="hint" data-i18n="lp.sub">根据问卷生成，可截图分享 · 仅供娱乐</p>
+        <p class="personality-name"><span id="mbti-label">—</span></p>
+        <p class="personality-code" id="mbti-type">—</p>
+        <p class="personality-sub" id="mbti-summary"></p>
+        <div id="mbti-bars" class="personality-bars"></div>
+        <p class="hint" style="margin:12px 0 4px;font-weight:600;" data-i18n="lp.traits">核心特质</p>
+        <ul id="mbti-hits" class="hint" style="margin:0;padding-left:18px;line-height:1.7;"></ul>
+        <p class="hint" style="margin:12px 0 4px;"><span data-i18n="lp.strength">关系优势：</span><span id="mbti-love"></span></p>
+        <p class="hint" style="margin:6px 0 0;"><span data-i18n="lp.match">你可能适合：</span><span id="mbti-compat"></span></p>
+        <div class="personality-actions" style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;">
+            <button type="button" class="btn btn-secondary" onclick="sharePersonality()" data-i18n="lp.share">分享报告</button>
+        </div>
         <p id="mbti-disc" class="hint" style="margin-top:12px;font-size:0.82em;"></p>
+        <p class="lp-capture-brand hint" style="display:none;margin-top:10px;text-align:center;font-size:0.8em;">CampusMatch · campusmatch.com.cn</p>
     </div>
 
     <div id="pool-box" class="card box-dim" style="margin-top:14px;text-align:left;">
@@ -427,32 +429,71 @@ async function loadHistory() {
     div.innerHTML = renderMatchCards(d.matches, header);
 }
 
+var lastPersonality = null;
+
+function renderPersonalityBars(dims) {
+    var box = document.getElementById('mbti-bars');
+    if (!box) return;
+    box.innerHTML = '';
+    if (!dims) return;
+    ['expression', 'rhythm', 'boundary', 'risk'].forEach(function (key) {
+        var d = dims[key];
+        if (!d) return;
+        var pct = Math.max(0, Math.min(100, d.score || 0));
+        var row = document.createElement('div');
+        row.className = 'personality-bar-row';
+        row.innerHTML = '<span class="personality-bar-label">' + esc(d.label || key) + '</span>'
+            + '<div class="personality-bar-track"><div class="personality-bar-fill" style="width:' + pct + '%"></div></div>'
+            + '<span class="personality-bar-pole">' + esc(d.pole || '') + '</span>';
+        box.appendChild(row);
+    });
+}
+
 async function loadMbti() {
     var box = document.getElementById('mbti-box');
     if (!box) return;
     var d = await api('GET', '/api/me/mbti');
-    if (!d.ok || !d.mbti) {
+    var m = d.personality || d.mbti;
+    if (!d.ok || !m) {
         box.style.display = 'none';
         return;
     }
-    var m = d.mbti;
+    m = (typeof localizeLovePersonality === 'function') ? localizeLovePersonality(m) : m;
+    lastPersonality = m;
     box.style.display = '';
-    document.getElementById('mbti-type').textContent = m.type || '—';
-    document.getElementById('mbti-label').textContent = m.label ? ('· ' + m.label) : '';
-    document.getElementById('mbti-summary').textContent = m.summary || '';
-    document.getElementById('mbti-self').textContent = m.self ? (t('mbti.self') + m.self) : '';
-    document.getElementById('mbti-love').textContent = m.love ? (t('mbti.love') + m.love) : '';
-    document.getElementById('mbti-caution').textContent = m.caution ? (t('mbti.caution') + m.caution) : '';
-    document.getElementById('mbti-compat').textContent = (m.compatible && m.compatible.length)
-        ? m.compatible.join('、') : '—';
+    document.getElementById('mbti-label').textContent = m.name || m.label || '—';
+    document.getElementById('mbti-type').textContent = m.code || m.type || '—';
+    document.getElementById('mbti-summary').textContent = m.subtitle || m.summary || '';
+    document.getElementById('mbti-love').textContent = m.strength || m.love || '';
+    document.getElementById('mbti-compat').textContent = m.match_tip || '—';
+    renderPersonalityBars(m.dimensions);
     var hits = document.getElementById('mbti-hits');
     hits.innerHTML = '';
-    (m.hits || []).forEach(function (line) {
+    (m.traits || m.hits || []).forEach(function (line) {
         var li = document.createElement('li');
         li.textContent = line;
         hits.appendChild(li);
     });
-    document.getElementById('mbti-disc').textContent = m.disclaimer || t('mbti.disc');
+    document.getElementById('mbti-disc').textContent = m.disclaimer || t('lp.disc');
+}
+
+async function sharePersonality() {
+    var m = lastPersonality;
+    if (!m) return;
+    var card = document.getElementById('mbti-box');
+    if (typeof sharePersonalityCard === 'function' && card) {
+        await sharePersonalityCard(card, m);
+        return;
+    }
+    var text = (typeof lovePersonalityShareText === 'function')
+        ? lovePersonalityShareText(m)
+        : tf('lp.shareBody', { name: m.name || '', code: m.code || '', subtitle: m.subtitle || '', url: location.origin || 'https://campusmatch.com.cn' });
+    try {
+        await navigator.clipboard.writeText(text);
+        alert(t('lp.copied'));
+    } catch (e2) {
+        prompt(t('lp.copyManual'), text);
+    }
 }
 
 renderQuota({{ quota | tojson }});

@@ -29,7 +29,7 @@ from config import (
 )
 from models import db, User, UserTag, Match, Blocklist
 from questionnaire import QUESTIONS, build_feature_vector, get_compatibility_insight, get_open_letter
-from mbti_report import build_mbti_report
+from personality import build_love_personality
 from matcher import real_time_match, batch_match_school
 from email_service import send_verification_email, send_match_result_email
 from batch_job import (
@@ -562,8 +562,8 @@ def api_questionnaire():
                     seen_tags.add(opt)
                     db.session.add(UserTag(user_id=user.id, tag=opt))
 
-    mbti = build_mbti_report(answers)
-    user.mbti_report = mbti
+    personality = build_love_personality(answers)
+    user.mbti_report = personality
 
     db.session.commit()
 
@@ -572,7 +572,8 @@ def api_questionnaire():
         "message": "问卷已保存",
         "vector_dim": len(vec),
         "completed": user.questionnaire_completed(),
-        "mbti": mbti,
+        "personality": personality,
+        "mbti": personality,  # 兼容旧前端字段名
     })
 
 
@@ -590,16 +591,16 @@ def api_match_status():
 @app.route("/api/me/mbti", methods=["GET"])
 @login_required
 def api_me_mbti():
-    """问卷推演 MBTI（娱乐向）；无缓存则按当前答案现算并落库。"""
+    """恋爱人格报告（存 mbti_json）；旧 MBTI 缓存会按答案重算覆盖。"""
     user = get_current_user()
     if not user.answers:
         return jsonify({"ok": False, "error": "请先完成问卷"}), 400
     report = user.mbti_report
-    if not report or not report.get("type"):
-        report = build_mbti_report(user.answers)
+    if not report or report.get("kind") != "love_personality":
+        report = build_love_personality(user.answers)
         user.mbti_report = report
         db.session.commit()
-    return jsonify({"ok": True, "mbti": report})
+    return jsonify({"ok": True, "mbti": report, "personality": report})
 
 
 @app.route("/api/match", methods=["POST"])

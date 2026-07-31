@@ -86,7 +86,10 @@ def cmd_users(con: sqlite3.Connection, limit: int) -> None:
         mbti = ""
         if "mbti_json" in r.keys() and r["mbti_json"]:
             try:
-                mbti = json.loads(r["mbti_json"]).get("type", "")
+                mj = json.loads(r["mbti_json"])
+                mbti = mj.get("code") or mj.get("type") or ""
+                if mj.get("name") or mj.get("label"):
+                    mbti = f"{mbti}:{mj.get('name') or mj.get('label')}"
             except (TypeError, ValueError, json.JSONDecodeError):
                 mbti = "?"
         print(

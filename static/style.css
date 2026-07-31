@@ -643,3 +643,244 @@ textarea.open-letter:focus {
     .q-head { gap: 8px; }
     .orb { filter: blur(60px); }
 }
+
+/* —— 恋爱人格报告 —— */
+.personality-card {
+    background: linear-gradient(165deg, rgba(255,255,255,0.95), rgba(240,248,255,0.92));
+    border: 1px solid rgba(37, 99, 235, 0.12);
+}
+.personality-name {
+    font-size: 1.6em;
+    font-weight: 800;
+    margin: 12px 0 2px;
+    letter-spacing: 0.02em;
+    color: #1e3a5f;
+}
+.personality-code {
+    font-size: 0.95em;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    color: #2563eb;
+    margin: 0 0 8px;
+}
+.personality-sub {
+    font-size: 1.02em;
+    line-height: 1.65;
+    color: #334155;
+    margin: 0 0 14px;
+    font-style: italic;
+}
+.personality-bars { display: flex; flex-direction: column; gap: 8px; }
+.personality-bar-row {
+    display: grid;
+    grid-template-columns: 4.5em 1fr 4.5em;
+    gap: 8px;
+    align-items: center;
+    font-size: 0.85em;
+}
+.personality-bar-label { color: #64748b; }
+.personality-bar-pole { color: #475569; text-align: right; font-size: 0.9em; }
+.personality-bar-track {
+    height: 8px;
+    border-radius: 99px;
+    background: #e2e8f0;
+    overflow: hidden;
+}
+.personality-bar-fill {
+    height: 100%;
+    border-radius: 99px;
+    background: linear-gradient(90deg, #38bdf8, #2563eb);
+}
+.personality-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 80;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+}
+.personality-modal-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.45);
+}
+.personality-modal-panel {
+    position: relative;
+    z-index: 1;
+    width: min(440px, 100%);
+    max-height: min(88vh, 720px);
+    overflow: auto;
+    margin: 0;
+    text-align: left;
+}
+
+/* 分享卡舞台：必须在视口内（iOS 对 left:-9999 会截出空白） */
+.lp-share-stage {
+    position: fixed;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: min(420px, calc(100vw - 24px));
+    z-index: 190;
+    pointer-events: none;
+}
+.lp-share-stage-live {
+    /* 截图瞬间可见，上方有半透明 mask 挡住用户视线 */
+    visibility: visible;
+    opacity: 1;
+}
+.lp-share-mask {
+    position: fixed;
+    inset: 0;
+    z-index: 200;
+    background: rgba(15, 23, 42, 0.45);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-weight: 600;
+    font-size: 1.05em;
+    letter-spacing: 0.02em;
+}
+.lp-share-frame {
+    padding: 28px 24px;
+    border-radius: 28px;
+    background: linear-gradient(165deg, #e8f0ff 0%, #fdf2f8 48%, #fff7ed 100%);
+    box-sizing: border-box;
+}
+.lp-share-card {
+    background: linear-gradient(165deg, #ffffff 0%, #f3f8ff 55%, #eef6ff 100%);
+    border: 1px solid rgba(99, 102, 241, 0.22);
+    border-radius: 20px;
+    padding: 26px 28px 20px;
+    box-shadow:
+        0 4px 6px rgba(99, 102, 241, 0.06),
+        0 18px 40px rgba(99, 102, 241, 0.16);
+    text-align: left;
+    color: #273349;
+    box-sizing: border-box;
+}
+.lp-share-card h3 {
+    font-size: 1.15em;
+    font-weight: 800;
+    margin: 0 0 4px;
+    color: #1e293b;
+}
+.lp-share-card .hint {
+    color: #5f6f8a;
+    margin-top: 4px;
+}
+.lp-share-card .personality-name {
+    font-size: 1.7em;
+    font-weight: 800;
+    margin: 14px 0 2px;
+    color: #1e3a5f;
+    letter-spacing: 0.02em;
+}
+.lp-share-card .personality-code {
+    font-size: 0.95em;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    color: #4f46e5;
+    margin: 0 0 8px;
+}
+.lp-share-card .personality-sub {
+    font-size: 1.02em;
+    line-height: 1.65;
+    color: #334155;
+    margin: 0 0 16px;
+    font-style: italic;
+}
+.lp-share-card .personality-bars { display: flex; flex-direction: column; gap: 10px; }
+.lp-share-card .personality-bar-row {
+    display: grid;
+    grid-template-columns: 4.5em 1fr 4.5em;
+    gap: 8px;
+    align-items: center;
+    font-size: 0.85em;
+}
+.lp-share-card .personality-bar-label { color: #64748b; }
+.lp-share-card .personality-bar-pole { color: #475569; text-align: right; font-size: 0.9em; }
+.lp-share-card .personality-bar-track {
+    height: 9px;
+    border-radius: 99px;
+    background: #e2e8f0;
+    overflow: hidden;
+}
+.lp-share-card .personality-bar-fill {
+    height: 100%;
+    border-radius: 99px;
+    background: linear-gradient(90deg, #38bdf8, #6366f1);
+}
+.lp-share-card ul.hint {
+    margin: 0;
+    padding-left: 18px;
+    line-height: 1.7;
+    color: #475569;
+}
+.lp-share-card .lp-capture-brand {
+    display: block !important;
+    margin-top: 14px;
+    text-align: center;
+    font-size: 0.8em;
+    color: #6366f1;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+}
+
+/* 分享预览：截图后长按保存 / 系统分享失败时的回退 */
+.lp-share-preview {
+    position: fixed;
+    inset: 0;
+    z-index: 120;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+}
+.lp-share-preview-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.55);
+}
+.lp-share-preview-panel {
+    position: relative;
+    z-index: 1;
+    width: min(420px, 100%);
+    max-height: 90vh;
+    overflow: auto;
+    text-align: center;
+    margin: 0;
+}
+.lp-share-longpress-tip {
+    margin: 10px 0 0;
+    text-align: center;
+    font-weight: 700;
+    font-size: 1.05em;
+    color: #4f46e5;
+    letter-spacing: 0.02em;
+}
+.lp-share-preview-img {
+    display: block;
+    width: 100%;
+    border-radius: 12px;
+    margin: 12px 0;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
+    -webkit-touch-callout: default;
+    user-select: none;
+}
+.lp-share-preview-img-pulse {
+    outline: 3px solid #6366f1;
+    animation: lpPulse 0.9s ease-in-out infinite;
+}
+@keyframes lpPulse {
+    0%, 100% { outline-color: rgba(99, 102, 241, 0.55); box-shadow: 0 8px 24px rgba(99, 102, 241, 0.12); }
+    50% { outline-color: rgba(236, 72, 153, 0.85); box-shadow: 0 8px 28px rgba(236, 72, 153, 0.22); }
+}
+.lp-share-preview-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+}
