@@ -4,6 +4,17 @@ All notable changes to CampusMatch.
 
 ---
 
+## [1.9.15] — 2026-07-31
+
+### 问题（上次）
+- 填完问卷缺少即时、高认可度的性格反馈；自创「星盘/四潮」文案不伦不类
+
+### 改动
+- **Added / 问卷推演 MBTI**：`mbti_report.py` 由恋爱问卷近似映射十六型；提交后写入 `mbti_json`；匹配中心展示（正经文案、更合拍仅字母、无四维条）
+- **Improved / 文档**：`personality-fun-report.md` / `personality-copy-draft.md` 收敛为 MBTI 方案
+
+---
+
 ## [1.9.14] — 2026-07-31
 
 ### 问题（上次）

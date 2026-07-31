@@ -46,8 +46,26 @@ class User(db.Model):
     cross_schools_json = db.Column(db.Text)
     # 总开关：关则不进匹配池、不能预约/提前揭晓；历史配对仍可看
     open_to_match = db.Column(db.Boolean, default=True)
+    # 问卷推演 MBTI 报告 JSON（娱乐向，不参与匹配）
+    mbti_json = db.Column(db.Text)
 
     tags = db.relationship("UserTag", backref="user", lazy="joined", cascade="all, delete-orphan")
+
+    @property
+    def mbti_report(self):
+        if not self.mbti_json:
+            return None
+        try:
+            return json.loads(self.mbti_json)
+        except (TypeError, ValueError, json.JSONDecodeError):
+            return None
+
+    @mbti_report.setter
+    def mbti_report(self, value):
+        if value is None:
+            self.mbti_json = None
+        else:
+            self.mbti_json = json.dumps(value, ensure_ascii=False)
 
     @property
     def answers(self):
@@ -215,6 +233,7 @@ class User(db.Model):
             "allow_cross_school": bool(self.get_cross_schools()),
             "cross_schools": self.get_cross_schools(),
             "open_to_match": self.is_open_to_match(),
+            "mbti": self.mbti_report,
         }
 
 

@@ -28,6 +28,7 @@ from config import (
 )
 from models import db, User, UserTag, Match, Blocklist
 from questionnaire import QUESTIONS, build_feature_vector, get_compatibility_insight, get_open_letter
+from mbti_report import build_mbti_report
 from matcher import real_time_match, batch_match_school
 from email_service import send_verification_email, send_match_result_email
 from batch_job import (
@@ -545,6 +546,9 @@ def api_questionnaire():
                     seen_tags.add(opt)
                     db.session.add(UserTag(user_id=user.id, tag=opt))
 
+    mbti = build_mbti_report(answers)
+    user.mbti_report = mbti
+
     db.session.commit()
 
     return jsonify({
@@ -552,6 +556,7 @@ def api_questionnaire():
         "message": "问卷已保存",
         "vector_dim": len(vec),
         "completed": user.questionnaire_completed(),
+        "mbti": mbti,
     })
 
 
@@ -564,6 +569,21 @@ def api_questionnaire():
 def api_match_status():
     user = get_current_user()
     return jsonify({"ok": True, "quota": match_quota_status(user)})
+
+
+@app.route("/api/me/mbti", methods=["GET"])
+@login_required
+def api_me_mbti():
+    """问卷推演 MBTI（娱乐向）；无缓存则按当前答案现算并落库。"""
+    user = get_current_user()
+    if not user.answers:
+        return jsonify({"ok": False, "error": "请先完成问卷"}), 400
+    report = user.mbti_report
+    if not report or not report.get("type"):
+        report = build_mbti_report(user.answers)
+        user.mbti_report = report
+        db.session.commit()
+    return jsonify({"ok": True, "mbti": report})
 
 
 @app.route("/api/match", methods=["POST"])
@@ -1073,6 +1093,11 @@ def ensure_schema():
         db.session.execute(text("UPDATE users SET open_to_match = 1 WHERE open_to_match IS NULL"))
         db.session.commit()
         print("[CampusMatch] migrated: users.open_to_match")
+
+    if "mbti_json" not in user_cols:
+        db.session.execute(text("ALTER TABLE users ADD COLUMN mbti_json TEXT"))
+        db.session.commit()
+        print("[CampusMatch] migrated: users.mbti_json")
 
     if "icebreaker_followup_sent" not in match_cols:
         db.session.execute(text("ALTER TABLE matches ADD COLUMN icebreaker_followup_sent BOOLEAN DEFAULT 0"))

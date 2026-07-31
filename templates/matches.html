@@ -11,6 +11,22 @@
         · <span data-i18n="hdr.cross">跨校</span> <span id="hdr-cross">{{ '开' if user.get_cross_schools() else '关' }}</span>
     </p>
 
+    <div id="mbti-box" class="card box-dim" style="margin-top:14px;text-align:left;display:none;">
+        <h3 style="margin-bottom:8px;" data-i18n="mbti.title">问卷推演 MBTI</h3>
+        <p class="hint" data-i18n="mbti.sub">根据恋爱问卷近似映射，仅供参考。</p>
+        <p style="margin:10px 0 6px;font-size:1.35em;font-weight:700;">
+            <span id="mbti-type">—</span>
+            <span id="mbti-label" class="hint" style="font-size:0.75em;font-weight:500;margin-left:8px;"></span>
+        </p>
+        <p id="mbti-summary" style="margin:0 0 8px;line-height:1.65;"></p>
+        <p id="mbti-self" class="hint" style="margin:0 0 6px;line-height:1.65;"></p>
+        <p id="mbti-love" class="hint" style="margin:0 0 6px;line-height:1.65;"></p>
+        <p id="mbti-caution" class="hint" style="margin:0 0 8px;line-height:1.65;"></p>
+        <p style="margin:0 0 6px;"><span data-i18n="mbti.compat">更合拍类型：</span><strong id="mbti-compat">—</strong></p>
+        <ul id="mbti-hits" class="hint" style="margin:8px 0 0;padding-left:18px;line-height:1.65;"></ul>
+        <p id="mbti-disc" class="hint" style="margin-top:12px;font-size:0.82em;"></p>
+    </div>
+
     <div id="pool-box" class="card box-dim" style="margin-top:14px;text-align:left;">
         <h3 style="margin-bottom:8px;" data-i18n="pool.title">参与匹配</h3>
         <p class="hint" data-i18n="pool.hint">关闭后不会再进入匹配池、不能预约/提前揭晓；历史配对仍可查看，资料不会删除。</p>
@@ -411,7 +427,36 @@ async function loadHistory() {
     div.innerHTML = renderMatchCards(d.matches, header);
 }
 
+async function loadMbti() {
+    var box = document.getElementById('mbti-box');
+    if (!box) return;
+    var d = await api('GET', '/api/me/mbti');
+    if (!d.ok || !d.mbti) {
+        box.style.display = 'none';
+        return;
+    }
+    var m = d.mbti;
+    box.style.display = '';
+    document.getElementById('mbti-type').textContent = m.type || '—';
+    document.getElementById('mbti-label').textContent = m.label ? ('· ' + m.label) : '';
+    document.getElementById('mbti-summary').textContent = m.summary || '';
+    document.getElementById('mbti-self').textContent = m.self ? (t('mbti.self') + m.self) : '';
+    document.getElementById('mbti-love').textContent = m.love ? (t('mbti.love') + m.love) : '';
+    document.getElementById('mbti-caution').textContent = m.caution ? (t('mbti.caution') + m.caution) : '';
+    document.getElementById('mbti-compat').textContent = (m.compatible && m.compatible.length)
+        ? m.compatible.join('、') : '—';
+    var hits = document.getElementById('mbti-hits');
+    hits.innerHTML = '';
+    (m.hits || []).forEach(function (line) {
+        var li = document.createElement('li');
+        li.textContent = line;
+        hits.appendChild(li);
+    });
+    document.getElementById('mbti-disc').textContent = m.disclaimer || t('mbti.disc');
+}
+
 renderQuota({{ quota | tojson }});
+loadMbti();
 loadHistory();
 loadBlocklist();
 setInterval(refreshQuota, 60000);
@@ -419,6 +464,7 @@ setInterval(refreshQuota, 60000);
 // 切换语言时重渲染动态区域
 window.addEventListener('cm:lang', function () {
     if (lastQuota) renderQuota(lastQuota);
+    loadMbti();
     loadHistory();
     loadBlocklist();
     document.getElementById('block-search').innerHTML = '';
