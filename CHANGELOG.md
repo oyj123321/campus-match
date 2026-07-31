@@ -4,6 +4,16 @@ All notable changes to CampusMatch.
 
 ---
 
+## [1.9.13] — 2026-07-31
+
+### 问题（上次）
+- 匹配「126 维 + 余弦得分」只有概览，缺少用真实配对一点点推出分数的文档
+
+### 改动
+- **Added / 文档**：`docs/matching-score-walkthrough.md`（本机样例内测10×Jack，逐题点积到 0.5849）；`matching-explained.md` 增加入口链接
+
+---
+
 ## [1.9.12] — 2026-07-31
 
 ### 问题（上次）
