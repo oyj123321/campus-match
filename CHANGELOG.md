@@ -4,6 +4,16 @@ All notable changes to CampusMatch.
 
 ---
 
+## [1.9.14] — 2026-07-31
+
+### 问题（上次）
+- 内测反馈希望填完问卷有「像星座一样」的趣味性格解读；与多 Agent VIP 易混淆，缺少单独技术路线文档
+
+### 改动
+- **Added / 文档**：`docs/personality-fun-report.md`（单人趣味星盘 A/B/C 分期；与陪审团边界）；`multi-agent-vip-features.md` 增加入口链接
+
+---
+
 ## [1.9.13] — 2026-07-31
 
 ### 问题（上次）
