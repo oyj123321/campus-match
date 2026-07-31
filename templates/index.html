@@ -18,6 +18,14 @@
         <input type="email" id="email" placeholder="例如：yc12345@um.edu.mo" data-i18n-ph="form.email.ph" autocomplete="email"
                onkeydown="if(event.key==='Enter')register()">
     </div>
+    <label class="hint" style="display:flex;align-items:flex-start;gap:8px;margin:12px 0;cursor:pointer;line-height:1.55;">
+        <input type="checkbox" id="privacy-accept" style="margin-top:3px;flex-shrink:0;">
+        <span>
+            <span data-i18n="privacy.accept1">我已阅读并同意</span>
+            <a href="/privacy" target="_blank" rel="noopener" data-i18n="privacy.link">《隐私政策》</a>
+            <span data-i18n="privacy.accept2">（含账号删除方式）</span>
+        </span>
+    </label>
     <button class="btn btn-primary" id="register-btn" onclick="register()"><span data-i18n="btn.send">发送验证码</span></button>
     <p class="hint" style="margin-top:12px;margin-bottom:0;" data-i18n="schools.support">支持学校（已验证人数）：</p>
     {% set rows = [] %}
@@ -101,7 +109,7 @@
         <li data-i18n="privacy.li1">仅接受支持列表内的学校邮箱注册，用于确认在校身份。</li>
         <li data-i18n="privacy.li2">问卷与择偶取向用于匹配；学校邮箱与附加联系方式仅在匹配成功后互见。</li>
         <li data-i18n="privacy.li3">每人每周最多匹配一次（双向）；结果只展示契合点与联系渠道，不以分数衡量；以网站页面为准。</li>
-        <li data-i18n="privacy.li4">可随时退出登录；如需删除账号请联系运营邮箱（见页脚）。</li>
+        <li data-i18n="privacy.li4">可随时退出登录；删除账号请用注册学校邮箱联系页脚邮箱，并阅读《隐私政策》。</li>
         <li data-i18n="privacy.li5">请友善使用，禁止骚扰；本平台不提供线下担保。</li>
     </ul>
 </div>
@@ -131,12 +139,16 @@ var currentEmail = '';
 async function register() {
     var email = document.getElementById('email').value.trim();
     if (!email) { alert(t('msg.enterEmail')); return; }
+    if (!document.getElementById('privacy-accept').checked) {
+        alert(t('msg.needPrivacy'));
+        return;
+    }
 
     var btn = document.getElementById('register-btn');
     btn.disabled = true;
     btn.textContent = t('msg.sending');
 
-    var data = await api('POST', '/api/register', { email: email });
+    var data = await api('POST', '/api/register', { email: email, privacy_accepted: true });
     btn.disabled = false;
     btn.textContent = t('btn.resendCode');
 

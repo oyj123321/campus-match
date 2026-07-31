@@ -24,6 +24,7 @@ from config import (
     REVEAL_REQUIRE_OPT_IN, INSTANT_MATCH_ENABLED, CROSS_SCHOOL_MATCHING_ENABLED,
     ICEBREAKER_FOLLOWUP_DAYS,
     MAIL_ENABLED, MAIL_PROVIDER, MAIL_SERVER, MAIL_PORT, MAIL_USERNAME, MAIL_PASSWORD, MAIL_FROM,
+    CONTACT_EMAIL,
     RESEND_API_KEY,
 )
 from models import db, User, UserTag, Match, Blocklist
@@ -47,6 +48,12 @@ app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
 if PUBLIC_URL.startswith("https://"):
     app.config["SESSION_COOKIE_SECURE"] = True
 db.init_app(app)
+
+
+@app.context_processor
+def inject_globals():
+    return {"contact_email": CONTACT_EMAIL}
+
 
 # 邮箱 → 近期请求时间戳（进程内限流，MVP 够用）
 _register_hits = defaultdict(deque)
@@ -229,6 +236,12 @@ def _match_explain_text(mode):
 # 页面路由
 # ============================================================
 
+@app.route("/privacy")
+def privacy_page():
+    """隐私政策（注册前可阅读）。"""
+    return render_template("privacy.html", contact_email=CONTACT_EMAIL)
+
+
 @app.route("/")
 def index():
     user = get_current_user()
@@ -303,6 +316,9 @@ def api_register():
 
     if not email or "@" not in email:
         return jsonify({"ok": False, "error": "请输入有效的邮箱地址"}), 400
+
+    if not data.get("privacy_accepted"):
+        return jsonify({"ok": False, "error": "请先阅读并同意《隐私政策》"}), 400
 
     school = get_school_from_email(email)
     if not school:

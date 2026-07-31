@@ -40,6 +40,27 @@ MAIL_FROM = os.environ.get("MAIL_FROM", MAIL_USERNAME or "noreply@campus-match.l
 RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "")
 
 
+def _extract_email(raw: str) -> str:
+    """从 `Name <a@b.com>` 或纯地址中取出邮箱。"""
+    import re
+
+    s = (raw or "").strip()
+    m = re.search(r"<([^>]+)>", s)
+    if m:
+        return m.group(1).strip()
+    if "@" in s and " " not in s:
+        return s
+    m2 = re.search(r"[\w.+\-]+@[\w.\-]+\.\w+", s)
+    return m2.group(0) if m2 else s
+
+
+# 运营联系 / 删号申请（可写在 .env；与发信 MAIL_FROM 分开）
+CONTACT_EMAIL = (
+    os.environ.get("CONTACT_EMAIL")
+    or "y283664393@gmail.com"
+)
+
+
 # ============================================================
 # 高校邮箱域名 — 扩展路径：
 #   澳门大学 → 澳门科技/理工/旅游 → 香港 → 深圳/珠海

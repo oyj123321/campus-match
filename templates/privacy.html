@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card" style="text-align:left;max-width:720px;margin:0 auto;">
+    <h1 style="margin:0 0 8px;font-size:1.5em;" data-i18n="priv.pageTitle">隐私政策</h1>
+    <p class="hint" style="margin:0 0 20px;" data-i18n="priv.updated">更新日期：2026-07-31 · 适用于 CampusMatch 网站服务（内测阶段）</p>
+
+    <section style="margin-bottom:18px;">
+        <h2 style="font-size:1.1em;margin:0 0 8px;">1. 我们是谁</h2>
+        <p class="hint" style="margin:0;line-height:1.75;">
+            CampusMatch 是面向澳门及大湾区高校在校生的校园匹配服务（学生团队运营，内测阶段）。
+            本政策说明我们如何收集、使用与保护你的个人信息。使用注册/验证即表示你已阅读并同意本政策。
+        </p>
+        <p class="hint" style="margin:10px 0 0;line-height:1.75;">
+            联系邮箱（账号删除、反馈、隐私相关）：
+            <a href="mailto:{{ contact_email }}"><strong>{{ contact_email }}</strong></a>
+        </p>
+    </section>
+
+    <section style="margin-bottom:18px;">
+        <h2 style="font-size:1.1em;margin:0 0 8px;">2. 我们收集哪些信息</h2>
+        <ul class="hint" style="margin:0;padding-left:18px;line-height:1.75;">
+            <li><strong>学校邮箱</strong>：用于验证在校身份、登录与发送通知。</li>
+            <li><strong>资料</strong>：昵称、性别、择偶取向、一句话介绍、附加联系方式（如微信等）。</li>
+            <li><strong>问卷答案</strong>：价值观、生活习惯、情感风格、兴趣与相处预期等（用于匹配与趣味 MBTI 推演）。</li>
+            <li><strong>匹配相关</strong>：预约状态、跨校偏好、参与匹配开关、配对记录、拉黑名单。</li>
+            <li><strong>技术日志</strong>：为保障服务安全与排障，可能记录访问时间、大致请求信息（不含公开陈列个人资料）。</li>
+        </ul>
+    </section>
+
+    <section style="margin-bottom:18px;">
+        <h2 style="font-size:1.1em;margin:0 0 8px;">3. 我们如何使用信息</h2>
+        <ul class="hint" style="margin:0;padding-left:18px;line-height:1.75;">
+            <li>发送验证码、匹配结果、未配对通知与破冰提醒等邮件；</li>
+            <li>运行匹配算法（含向量相似度、一票否决等规则）并展示契合点与破冰话题；</li>
+            <li>生成「问卷推演 MBTI」等娱乐向展示（非正式心理测评）；</li>
+            <li>防止滥用（如频率限制）、处理投诉与安全问题；</li>
+            <li>改进产品（聚合统计，不向公众展示你的完整答卷）。</li>
+        </ul>
+    </section>
+
+    <section style="margin-bottom:18px;">
+        <h2 style="font-size:1.1em;margin:0 0 8px;">4. 何时会与他人共享</h2>
+        <ul class="hint" style="margin:0;padding-left:18px;line-height:1.75;">
+            <li><strong>匹配成功后</strong>：对方可见你的昵称、学校、学校邮箱、你填写的附加联系方式，以及用于相处说明的相关摘要（如契合点）；不会公开展示你的完整问卷给所有用户浏览。</li>
+            <li><strong>邮件服务商</strong>：为发送邮件，收件地址与邮件内容会经我们使用的发信服务处理（例如 Resend 等）。</li>
+            <li><strong>云主机提供商</strong>：数据存储于我们使用的服务器环境中（当前部署区域为香港）。</li>
+            <li>我们不会出售你的个人信息。除法律要求或保护用户安全所必需外，不向无关第三方提供可识别个人的答卷原文。</li>
+        </ul>
+    </section>
+
+    <section style="margin-bottom:18px;">
+        <h2 style="font-size:1.1em;margin:0 0 8px;">5. 存储与保留</h2>
+        <p class="hint" style="margin:0;line-height:1.75;">
+            数据保存在 CampusMatch 运营所使用的服务器数据库中。账号存续期间保留为提供服务所必需的信息。
+            你申请删除账号并经核实后，我们将删除或匿名化与你账号直接关联的个人资料与答卷（备份中的残留数据将在合理周期内覆盖）。
+            为排查滥用，极少量日志可能短期保留。
+        </p>
+    </section>
+
+    <section style="margin-bottom:18px;">
+        <h2 style="font-size:1.1em;margin:0 0 8px;">6. 你的选择与权利</h2>
+        <ul class="hint" style="margin:0;padding-left:18px;line-height:1.75;">
+            <li>可在匹配中心关闭「参与匹配」，停止进入匹配池（历史结果仍可能可见）。</li>
+            <li>可修改问卷与资料；可拉黑不想再匹配的人。</li>
+            <li><strong>删除账号</strong>：请使用<strong>你注册时的学校邮箱</strong>写信至
+                <a href="mailto:{{ contact_email }}">{{ contact_email }}</a>，
+                主题注明「删除账号」，正文写明该学校邮箱。我们核实后处理删除。</li>
+            <li>可随时退出登录；退出不等于删除账号。</li>
+        </ul>
+    </section>
+
+    <section style="margin-bottom:18px;">
+        <h2 style="font-size:1.1em;margin:0 0 8px;">7. 安全与行为</h2>
+        <p class="hint" style="margin:0;line-height:1.75;">
+            我们采取合理技术措施保护数据，但互联网传输无法保证绝对安全。请勿在问卷中填写身份证号、银行卡等非必要敏感信息。
+            请友善使用，禁止骚扰、诈骗或其他违法用途；违规账号可能被限制或删除。本平台不提供线下见面担保。
+        </p>
+    </section>
+
+    <section style="margin-bottom:18px;">
+        <h2 style="font-size:1.1em;margin:0 0 8px;">8. 未成年人</h2>
+        <p class="hint" style="margin:0;line-height:1.75;">
+            本服务面向高校在校生。若你未达所在地相应年龄要求，请勿注册使用。
+        </p>
+    </section>
+
+    <section style="margin-bottom:8px;">
+        <h2 style="font-size:1.1em;margin:0 0 8px;">9. 政策更新</h2>
+        <p class="hint" style="margin:0;line-height:1.75;">
+            我们可能更新本政策，并在本页调整「更新日期」。重大变更时，我们可能通过网站提示或邮件告知。
+            继续使用服务即视为了解更新后的政策。
+        </p>
+    </section>
+
+    <p style="margin-top:24px;">
+        <a href="/" class="btn btn-secondary" data-i18n="priv.back">返回首页</a>
+    </p>
+</div>
+{% endblock %}

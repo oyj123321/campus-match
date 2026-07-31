@@ -4,6 +4,18 @@ All notable changes to CampusMatch.
 
 ---
 
+## [1.9.16] — 2026-07-31
+
+### 问题（上次）
+- 内测前缺少可读的隐私政策、注册同意与明确删号渠道
+
+### 改动
+- **Added / 隐私政策**：`/privacy` 说明收集范围、用途、共享、港区存储与删号流程；`CONTACT_EMAIL` 可配置
+- **Added / 注册同意**：首页发送验证码前须勾选同意；`POST /api/register` 校验 `privacy_accepted`
+- **Improved / 页脚**：隐私政策链接 + 删号联系邮箱
+
+---
+
 ## [1.9.15] — 2026-07-31
 
 ### 问题（上次）
