@@ -99,6 +99,35 @@ def get_school_from_email(email):
     return None
 
 
+def _email_local_part(email: str) -> str:
+    return (email or "").strip().lower().split("@", 1)[0]
+
+
+def find_sibling_account(email: str, school: str | None = None):
+    """同校其他域名、相同本地名的已有账号（一人多号风险）。"""
+    email = (email or "").strip().lower()
+    if "@" not in email:
+        return None
+    school = school or get_school_from_email(email)
+    if not school:
+        return None
+    local = _email_local_part(email)
+    if not local:
+        return None
+    domains = SCHOOL_DOMAINS.get(school) or []
+    others = [f"{local}@{d}" for d in domains if f"{local}@{d}" != email]
+    if not others:
+        return None
+    return User.query.filter(User.email.in_(others)).first()
+
+
+def sibling_account_error(sibling: User):
+    return (
+        f"该学号/账号已在本平台使用邮箱 {sibling.email} 注册过。"
+        f"请用该邮箱登录，勿用同校其他域名重复注册。"
+    )
+
+
 def login_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
@@ -377,6 +406,11 @@ def api_register():
             "error": "暂不支持该学校邮箱。目前支持: " + "、".join(SCHOOL_DOMAINS.keys()),
         }), 400
 
+    # 同校同本地名只允许一个账号（兼容多域名时防一人多号）
+    sibling = find_sibling_account(email, school)
+    if sibling:
+        return jsonify({"ok": False, "error": sibling_account_error(sibling)}), 409
+
     ok_rate, rate_err = check_register_rate(email)
     if not ok_rate:
         return jsonify({"ok": False, "error": rate_err}), 429
@@ -470,6 +504,9 @@ def api_verify():
     beta = _is_beta_account(email)
     # 内测号：任意验证码（可空）直接登录
     if beta:
+        sibling = find_sibling_account(email, user.school)
+        if sibling and sibling.email_verified and sibling.id != user.id:
+            return jsonify({"ok": False, "error": sibling_account_error(sibling)}), 409
         user.email_verified = True
         user.verification_token = None
         _mark_login(user)
@@ -494,6 +531,11 @@ def api_verify():
         elapsed = (datetime.utcnow() - user.verification_sent_at).total_seconds()
         if elapsed > VERIFICATION_EXPIRE_SECONDS:
             return jsonify({"ok": False, "error": "验证码已过期"}), 400
+
+    # 验证落库前再拦一次，防止并发双号同时过验证
+    sibling = find_sibling_account(email, user.school)
+    if sibling and sibling.email_verified and sibling.id != user.id:
+        return jsonify({"ok": False, "error": sibling_account_error(sibling)}), 409
 
     user.email_verified = True
     user.verification_token = None

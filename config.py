@@ -71,10 +71,12 @@ CONTACT_EMAIL = (
 # ============================================================
 SCHOOL_DOMAINS = {
     # ---- 澳门 ----
-    "澳门大学":       ["um.edu.mo", "umac.mo"],
+    # 澳大：主域 @um.edu.mo；兼容学生 Connect @connect.um.edu.mo、旧域 @umac.mo
+    "澳门大学":       ["um.edu.mo", "connect.um.edu.mo", "umac.mo"],
     "澳门科技大学":   ["must.edu.mo"],
     "澳门理工大学":   ["mpu.edu.mo"],
-    "澳门旅游大学":   ["iftm.edu.mo"],
+    # 旅游大学：现行 @utm.edu.mo；兼容 IFTM/IFT 旧域
+    "澳门旅游大学":   ["utm.edu.mo", "iftm.edu.mo", "ift.edu.mo"],
     "澳门城市大学":   ["cityu.edu.mo"],
 
     # ---- 香港（后续开放）----
