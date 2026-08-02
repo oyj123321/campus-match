@@ -8,6 +8,7 @@ All notable changes to CampusMatch.
 
 ### 问题（上次）
 - 16 型恋爱人格卡共用同一套蓝紫配色，收藏/分享辨识度弱
+- 英/葡文案更长时，人格弹窗被 `overflow:hidden` 裁切，底部「匹配/分享」点不到，也无法向下滚
 
 ### 改动
 - **Added / 16 型主题**：`personality_themes.css` 每型独立渐变、顶条/侧条 accent、光晕纹样（沿用首页科技色：靛/青/粉/琥珀等），页面卡与分享截图同步
@@ -19,6 +20,9 @@ All notable changes to CampusMatch.
 - **Improved / 版式**：正文左右留白（仍左对齐）；顶栏信息带 + 型名层次
 - **Added / 预览**：Debug 下 `/dev/personality-themes`、`/dev/personality-spacing`、`/dev/personality-compare`
 - **Docs / 设计溯源**：`docs/personality-card-design.md` 记录极简科技卡吸收的开源思路（Jokeyou 几何头像、Tabler 线稿）与首页色板、以及刻意未采用的插画路线
+- **Fixed / 英葡弹窗**：主题 `overflow:hidden` 曾裁切长文案且无法滚动；弹窗改为内区滚动 + 底栏固定「匹配/分享」按钮，并隐藏印章以免压字
+- **Fixed / 弹窗底栏**：按钮区去掉白底与阴影，透出主题渐变，与卡片背景一致
+- **Improved / 顶栏色带**：标题区不再另铺饱和 `--lp-frame`，透出卡片渐变，仅保留淡分隔线
 
 ---
 

@@ -727,8 +727,8 @@ textarea.open-letter:focus {
     position: relative;
     z-index: 1;
     width: min(440px, 100%);
-    max-height: min(88vh, 720px);
-    overflow: auto;
+    max-height: min(92vh, 780px);
+    overflow: hidden; /* 滚动交给内部 .lp-modal-scroll */
     margin: 0;
     text-align: left;
 }

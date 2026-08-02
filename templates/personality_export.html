@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+body { background: #e8eef8 !important; }
+.main { max-width: 480px; }
+.export-card-wrap {
+    margin: 24px auto 48px;
+    width: min(420px, 100%);
+}
+.export-card-wrap .lp-share-frame {
+    padding: 28px 24px;
+    border-radius: 28px;
+}
+.export-card-wrap .lp-share-card {
+    /* 与分享卡一致 */
+}
+.export-card-wrap .personality-actions { display: none !important; }
+.export-card-wrap .lp-capture-brand { display: block !important; }
+.export-skip { display: none; }
+</style>
+
+<p class="export-skip hint">宣发导出页（Debug）</p>
+
+{% for code, p in personalities.items() %}
+<div class="export-card-wrap" id="wrap-{{ code }}">
+    <div class="lp-share-frame" data-export-frame="{{ code }}">
+        <div class="card personality-card lp-share-card" id="card-{{ code }}" data-lp-code="{{ code }}">
+            <h3>你的恋爱人格</h3>
+            <p class="hint">根据问卷生成，可截图分享 · 仅供娱乐</p>
+            <p class="personality-name">{{ p.name }}</p>
+            <p class="personality-code">{{ code }}</p>
+            <p class="personality-sub">{{ p.subtitle }}</p>
+            <div class="personality-bars">
+                {% set bars = demo_bars[code] %}
+                {% for b in bars %}
+                <div class="personality-bar-row">
+                    <span class="personality-bar-label">{{ b.label }}</span>
+                    <div class="personality-bar-track"><div class="personality-bar-fill" style="width:{{ b.pct }}%"></div></div>
+                    <span class="personality-bar-pole">{{ b.pole }}</span>
+                </div>
+                {% endfor %}
+            </div>
+            <p class="hint lp-body-block" style="margin:12px 0 4px;font-weight:600;">核心特质</p>
+            <ul class="hint lp-body-block" style="margin:0;line-height:1.7;">
+                {% for t in p.traits %}
+                <li>{{ t }}</li>
+                {% endfor %}
+            </ul>
+            <p class="hint lp-body-block" style="margin:12px 0 4px;">关系优势：{{ p.strength }}</p>
+            <p class="hint lp-body-block" style="margin:6px 0 0;">你可能适合：{{ p.match_tip }}</p>
+            <p class="hint lp-body-block" style="margin-top:12px;font-size:0.82em;">本结果由恋爱问卷规则生成，仅供娱乐与破冰，不构成心理诊断。</p>
+            <p class="lp-capture-brand hint" style="margin-top:10px;font-size:0.8em;">CampusMatch · campusmatch.com.cn</p>
+        </div>
+    </div>
+</div>
+{% endfor %}
+
+<script>
+document.querySelectorAll('.lp-share-card[data-lp-code]').forEach(function (el) {
+    var code = el.getAttribute('data-lp-code');
+    if (typeof applyLovePersonalityTheme === 'function') {
+        applyLovePersonalityTheme(el, code);
+    }
+    var frame = el.closest('[data-export-frame]');
+    if (frame && typeof applyLovePersonalityColors === 'function') {
+        applyLovePersonalityColors(frame, code);
+    } else if (frame && typeof applyLovePersonalityTheme === 'function') {
+        frame.setAttribute('data-lp-code', code);
+        frame.classList.add('lp-theme-' + code);
+    }
+});
+</script>
+{% endblock %}

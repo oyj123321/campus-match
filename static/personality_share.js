@@ -240,9 +240,8 @@
             window.applyLovePersonalityTheme(card, themeCode);
         }
 
-        var kids = cardEl.children;
-        for (var i = 0; i < kids.length; i++) {
-            var node = kids[i];
+        function appendClone(node) {
+            if (!node || !node.cloneNode) return;
             if (node.classList && (
                 node.classList.contains('personality-actions')
                 || node.classList.contains('lp-no-capture')
@@ -251,12 +250,27 @@
                 || node.classList.contains('lp-watermark')
                 || node.classList.contains('lp-corners')
                 || node.classList.contains('lp-grid')
-            )) continue;
+                || node.classList.contains('lp-modal-scroll')
+            )) return;
             var clone = node.cloneNode(true);
             if (clone.classList && clone.classList.contains('lp-capture-brand')) {
                 clone.style.display = 'block';
             }
             card.appendChild(clone);
+        }
+
+        var kids = cardEl.children;
+        for (var i = 0; i < kids.length; i++) {
+            var node = kids[i];
+            // 弹窗内容包在 .lp-modal-scroll 里：摊平其子节点，保证分享卡结构一致
+            if (node.classList && node.classList.contains('lp-modal-scroll')) {
+                var inner = node.children;
+                for (var j = 0; j < inner.length; j++) {
+                    appendClone(inner[j]);
+                }
+                continue;
+            }
+            appendClone(node);
         }
         /* 徽章由 applyLovePersonalityTheme 重新挂上，避免重复 */
 

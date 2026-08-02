@@ -7,8 +7,13 @@
 .lp-share-frame[data-lp-code],
 .lp-share-card[data-lp-code] {
     position: relative;
-    overflow: hidden;
     isolation: isolate;
+}
+/* 分享卡裁切装饰；弹窗必须可滚动（英/葡文更长） */
+.personality-card[data-lp-code]:not(.personality-modal-panel),
+.lp-share-frame[data-lp-code],
+.lp-share-card[data-lp-code] {
+    overflow: hidden;
 }
 
 .personality-card[data-lp-code]::before,
@@ -49,21 +54,23 @@
     text-align: left;
 }
 
-/* 顶部信息带全宽铺色，文字与正文同一左边线 */
+/* 顶部标题区：透出卡片渐变（避免另铺 --lp-frame 造成色带） */
 .personality-card[data-lp-code] > h3,
+.personality-card[data-lp-code] .lp-modal-scroll > h3,
 .lp-share-card[data-lp-code] > h3 {
     margin: 0 calc(-1 * var(--lp-pad-x));
     padding: 18px 80px 4px var(--lp-pad-x);
     line-height: 1.35;
-    background: var(--lp-frame);
+    background: transparent;
     text-align: left;
 }
 .personality-card[data-lp-code] > h3 + .hint,
+.personality-card[data-lp-code] .lp-modal-scroll > h3 + .hint,
 .lp-share-card[data-lp-code] > h3 + .hint {
     margin: 0 calc(-1 * var(--lp-pad-x)) !important;
     padding: 0 80px 16px var(--lp-pad-x);
     line-height: 1.5;
-    background: var(--lp-frame);
+    background: transparent;
     border-bottom: 1px solid var(--lp-border);
     text-align: left;
     /* 避免「仅供娱 / 乐」孤字折行 */
@@ -286,6 +293,40 @@
 .personality-card[data-lp-code] .lp-capture-brand,
 .lp-share-card[data-lp-code] .lp-capture-brand {
     padding-bottom: 4px;
+}
+
+/* 弹窗：可滚 + 底栏按钮常驻；隐藏印章/水印以免压住英葡长文 */
+.personality-modal-panel.personality-card[data-lp-code] {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden !important; /* 外层不滚，内层滚 */
+    max-height: min(92vh, 780px);
+    padding-bottom: 0 !important;
+}
+.personality-modal-panel .lp-modal-scroll {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    padding: 0 0 12px;
+}
+.personality-modal-panel .lp-stamp,
+.personality-modal-panel .lp-watermark,
+.personality-modal-panel .lp-corners {
+    display: none !important;
+}
+.personality-modal-panel .personality-actions {
+    flex: 0 0 auto;
+    position: relative;
+    z-index: 6;
+    margin: 0 calc(-1 * var(--lp-pad-x, 36px));
+    padding: 12px var(--lp-pad-x, 36px) 16px;
+    border-top: 1px solid var(--lp-border, rgba(99, 102, 241, 0.16));
+    /* 透出卡片主题渐变，避免底栏白块切断背景 */
+    background: transparent;
+    box-shadow: none;
 }
 
 /* 顶条 accent（默认） */

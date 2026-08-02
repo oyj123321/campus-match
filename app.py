@@ -417,6 +417,46 @@ def personality_spacing_compare():
     )
 
 
+@app.route("/dev/personality-export")
+def personality_export_page():
+    """16 型分享卡导出页（宣发截图用，仅 Debug）。"""
+    if not FLASK_DEBUG:
+        return "Not found", 404
+    from personality import PERSONALITIES, DIM_META
+
+    def demo_bars(code: str):
+        e, s, c, r = code[0], code[1], code[2], code[3]
+        return [
+            {
+                "label": DIM_META["expression"]["label"],
+                "pct": 78 if e == "E" else 32,
+                "pole": DIM_META["expression"]["high"][1] if e == "E" else DIM_META["expression"]["low"][1],
+            },
+            {
+                "label": DIM_META["rhythm"]["label"],
+                "pct": 72 if s == "S" else 38,
+                "pole": DIM_META["rhythm"]["high"][1] if s == "S" else DIM_META["rhythm"]["low"][1],
+            },
+            {
+                "label": DIM_META["boundary"]["label"],
+                "pct": 70 if c == "C" else 35,
+                "pole": DIM_META["boundary"]["high"][1] if c == "C" else DIM_META["boundary"]["low"][1],
+            },
+            {
+                "label": DIM_META["risk"]["label"],
+                "pct": 74 if r == "P" else 36,
+                "pole": DIM_META["risk"]["high"][1] if r == "P" else DIM_META["risk"]["low"][1],
+            },
+        ]
+
+    demo = {code: demo_bars(code) for code in PERSONALITIES}
+    return render_template(
+        "personality_export.html",
+        personalities=PERSONALITIES,
+        demo_bars=demo,
+    )
+
+
 # ============================================================
 # Auth API
 # ============================================================

@@ -93,22 +93,24 @@
 <div id="personality-modal" class="personality-modal" style="display:none;" aria-hidden="true">
     <div class="personality-modal-backdrop" onclick="closePersonalityModal()"></div>
     <div class="card personality-card personality-modal-panel" role="dialog" aria-labelledby="lp-modal-title">
-        <h3 id="lp-modal-title" data-i18n="lp.title">你的恋爱人格</h3>
-        <p class="hint" data-i18n="lp.sub">根据问卷生成，可截图分享 · 仅供娱乐</p>
-        <p class="personality-name" id="lp-modal-name">—</p>
-        <p class="personality-code" id="lp-modal-code">—</p>
-        <p class="personality-sub" id="lp-modal-subtitle"></p>
-        <div id="lp-modal-bars" class="personality-bars"></div>
-        <p class="hint lp-body-block" style="margin:12px 0 4px;font-weight:600;" data-i18n="lp.traits">核心特质</p>
-        <ul id="lp-modal-traits" class="hint lp-body-block" style="margin:0;line-height:1.7;"></ul>
-        <p class="hint lp-body-block" style="margin:12px 0 4px;"><span data-i18n="lp.strength">关系优势：</span><span id="lp-modal-strength"></span></p>
-        <p class="hint lp-body-block" style="margin:6px 0 12px;"><span data-i18n="lp.match">你可能适合：</span><span id="lp-modal-match"></span></p>
+        <div class="lp-modal-scroll">
+            <h3 id="lp-modal-title" data-i18n="lp.title">你的恋爱人格</h3>
+            <p class="hint" data-i18n="lp.sub">根据问卷生成，可截图分享 · 仅供娱乐</p>
+            <p class="personality-name" id="lp-modal-name">—</p>
+            <p class="personality-code" id="lp-modal-code">—</p>
+            <p class="personality-sub" id="lp-modal-subtitle"></p>
+            <div id="lp-modal-bars" class="personality-bars"></div>
+            <p class="hint lp-body-block" style="margin:12px 0 4px;font-weight:600;" data-i18n="lp.traits">核心特质</p>
+            <ul id="lp-modal-traits" class="hint lp-body-block" style="margin:0;line-height:1.7;"></ul>
+            <p class="hint lp-body-block" style="margin:12px 0 4px;"><span data-i18n="lp.strength">关系优势：</span><span id="lp-modal-strength"></span></p>
+            <p class="hint lp-body-block" style="margin:6px 0 12px;"><span data-i18n="lp.match">你可能适合：</span><span id="lp-modal-match"></span></p>
+            <p class="hint lp-body-block" style="margin-top:12px;font-size:0.82em;" data-i18n="lp.disc">本结果仅供娱乐与破冰参考。</p>
+            <p class="lp-capture-brand hint" style="display:none;margin-top:10px;font-size:0.8em;">CampusMatch · campusmatch.com.cn</p>
+        </div>
         <div class="personality-actions" style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;">
             <a class="btn btn-primary" href="/matches" data-i18n="lp.goMatches">进入匹配页</a>
             <button type="button" class="btn btn-secondary" id="lp-modal-share" data-i18n="lp.share">分享报告</button>
         </div>
-        <p class="hint lp-body-block" style="margin-top:12px;font-size:0.82em;" data-i18n="lp.disc">本结果仅供娱乐与破冰参考。</p>
-        <p class="lp-capture-brand hint" style="display:none;margin-top:10px;font-size:0.8em;">CampusMatch · campusmatch.com.cn</p>
     </div>
 </div>
 
