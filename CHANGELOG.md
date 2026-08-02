@@ -18,6 +18,7 @@ All notable changes to CampusMatch.
 - **Fixed / 分享叠图**：外框只铺渐变，徽章/印章/水印仅挂内卡，避免右上角与 `No. CODE` 双重重叠
 - **Improved / 版式**：正文左右留白（仍左对齐）；顶栏信息带 + 型名层次
 - **Added / 预览**：Debug 下 `/dev/personality-themes`、`/dev/personality-spacing`、`/dev/personality-compare`
+- **Docs / 设计溯源**：`docs/personality-card-design.md` 记录极简科技卡吸收的开源思路（Jokeyou 几何头像、Tabler 线稿）与首页色板、以及刻意未采用的插画路线
 
 ---
 
