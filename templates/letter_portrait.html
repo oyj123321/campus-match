@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+body { background: #e8eef8 !important; }
+.main { max-width: 480px; }
+.letter-portrait-page { margin: 12px auto 32px; }
+.letter-portrait-page .hint-top { margin-bottom: 14px; line-height: 1.6; }
+.letter-portrait-stage {
+    width: min(420px, 100%);
+    margin: 0 auto;
+}
+.letter-portrait-stage .lp-share-frame {
+    padding: 28px 24px;
+    border-radius: 28px;
+}
+.letter-portrait-actions {
+    margin-top: 16px;
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+</style>
+
+<div class="letter-portrait-page">
+    <h2 style="margin-bottom:6px;">文字侧写卡</h2>
+    <p class="hint hint-top">
+        Debug 预览。从歌词随笔读到的恋爱人格侧写（非问卷、非诊断）。可截图或点「分享报告」导出图片。
+    </p>
+
+    <div class="letter-portrait-stage" id="letter-portrait-wrap">
+        <div class="lp-share-frame" id="letter-portrait-frame" data-export-frame="IFOA">
+            <div class="card personality-card lp-share-card" id="letter-portrait-card" data-lp-code="IFOA">
+                <h3>从你的文字里读到的</h3>
+                <p class="hint">文字侧写 · 仅供娱乐 · 可截图分享</p>
+                <p class="personality-name">山脚星尘型</p>
+                <p class="personality-code">IFOA·侧写</p>
+                <p class="personality-sub">独自上山很自由——翻山后的喜极而泣，也想有人同享</p>
+                <div class="personality-bars">
+                    {% for b in bars %}
+                    <div class="personality-bar-row">
+                        <span class="personality-bar-label">{{ b.label }}</span>
+                        <div class="personality-bar-track"><div class="personality-bar-fill" style="width:{{ b.pct }}%"></div></div>
+                        <span class="personality-bar-pole">{{ b.pole }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+                <p class="hint lp-body-block" style="margin:12px 0 4px;font-weight:600;">核心特质</p>
+                <ul class="hint lp-body-block" style="margin:0;line-height:1.7;">
+                    {% for t in traits %}
+                    <li>{{ t }}</li>
+                    {% endfor %}
+                </ul>
+                <p class="hint lp-body-block" style="margin:12px 0 4px;">关系优势：{{ strength }}</p>
+                <p class="hint lp-body-block" style="margin:6px 0 0;">你可能适合：{{ match_tip }}</p>
+                <p class="hint lp-body-block" style="margin-top:12px;font-size:0.82em;">
+                    本结果由文字侧写生成，仅供娱乐与破冰，不构成心理诊断。
+                </p>
+                <p class="lp-capture-brand hint" style="display:block;margin-top:10px;font-size:0.8em;">CampusMatch · campusmatch.com.cn</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="letter-portrait-actions lp-no-capture">
+        <button type="button" class="btn btn-secondary" id="letter-portrait-share">分享报告</button>
+    </div>
+</div>
+
+<script>
+(function () {
+    var card = document.getElementById('letter-portrait-card');
+    var frame = document.getElementById('letter-portrait-frame');
+    var code = 'IFOA';
+    if (card && typeof applyLovePersonalityTheme === 'function') {
+        applyLovePersonalityTheme(card, code);
+    }
+    if (frame && typeof applyLovePersonalityColors === 'function') {
+        applyLovePersonalityColors(frame, code);
+    } else if (frame && typeof applyLovePersonalityTheme === 'function') {
+        frame.setAttribute('data-lp-code', code);
+        frame.classList.add('lp-theme-' + code);
+    }
+
+    var btn = document.getElementById('letter-portrait-share');
+    if (btn) {
+        btn.addEventListener('click', function () {
+            if (typeof sharePersonalityCard === 'function') {
+                sharePersonalityCard(card, {
+                    code: code,
+                    type: code,
+                    name: '山脚星尘型',
+                    subtitle: '独自上山很自由——翻山后的喜极而泣，也想有人同享'
+                });
+            }
+        });
+    }
+})();
+</script>
+{% endblock %}

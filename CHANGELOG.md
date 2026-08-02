@@ -4,6 +4,21 @@ All notable changes to CampusMatch.
 
 ---
 
+## [1.9.24] — 2026-08-02
+
+### 问题（上次）
+- 紧急省邮件期间关闭「暂未配对」与破冰随访，增长期召回变弱；橙色紧急公告仍写「不发邮件」，与恢复运营不一致
+- 16 型卡面文案偏功能说明书，气质偏平，缺少可分享的情感层次
+
+### 改动
+- **Changed / 邮件默认**：`MAIL_NO_MATCH_ENABLED`、`ICEBREAKER_FOLLOWUP_ENABLED` 默认改回 `true`；`LOGIN_ONCE_PER_DAY` 默认 `false`
+- **Changed / 全站公告**：默认文案改为「邮件已恢复 + 欢迎预约本周匹配」；仍可用 `SITE_ANNOUNCEMENT=` 覆盖或清空
+- **Improved / 16 型文案**：重写副标/特质/优势/适合谁（`personality.py` + 四语 `love_personality_i18n.js`），型名保留
+- **Added / Debug**：文案前后对照 `/dev/personality-copy-compare`；导出支持 `?lang=tw`；本机可绑 `FLASK_HOST`/`FLASK_PORT`
+- **Improved / 运维脚本**：`inspect_db.py` 增加 `stats`（池子人数 / 已匹配人数）
+
+---
+
 ## [1.9.23] — 2026-08-02
 
 ### 问题（上次）

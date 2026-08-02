@@ -109,9 +109,9 @@ INSTANT_MATCH_ENABLED = os.environ.get("INSTANT_MATCH_ENABLED", "true").lower() 
 CROSS_SCHOOL_MATCHING_ENABLED = os.environ.get("CROSS_SCHOOL_MATCHING_ENABLED", "true").lower() == "true"
 # 配对成功后第 N 天发破冰随访（催打招呼；避开整周揭晓日）
 ICEBREAKER_FOLLOWUP_DAYS = int(os.environ.get("ICEBREAKER_FOLLOWUP_DAYS", "3"))
-# 邮件省额度：默认关「暂未配对」与破冰随访；匹配成功仍发信
-MAIL_NO_MATCH_ENABLED = os.environ.get("MAIL_NO_MATCH_ENABLED", "false").lower() == "true"
-ICEBREAKER_FOLLOWUP_ENABLED = os.environ.get("ICEBREAKER_FOLLOWUP_ENABLED", "false").lower() == "true"
+# 「暂未配对」提醒 + 破冰随访（匹配成功始终发信）
+MAIL_NO_MATCH_ENABLED = os.environ.get("MAIL_NO_MATCH_ENABLED", "true").lower() == "true"
+ICEBREAKER_FOLLOWUP_ENABLED = os.environ.get("ICEBREAKER_FOLLOWUP_ENABLED", "true").lower() == "true"
 
 # 验证码
 VERIFICATION_EXPIRE_SECONDS = 600  # 10 分钟
@@ -119,20 +119,19 @@ VERIFICATION_EXPIRE_SECONDS = 600  # 10 分钟
 REGISTER_RATE_LIMIT = int(os.environ.get("REGISTER_RATE_LIMIT", "5"))  # 窗口内最多次数
 REGISTER_RATE_WINDOW = int(os.environ.get("REGISTER_RATE_WINDOW", "3600"))  # 秒
 
-# 紧急：每人每天仅可登录一次（澳门时区日界），省 Resend 额度；设 false 关闭
-LOGIN_ONCE_PER_DAY = os.environ.get("LOGIN_ONCE_PER_DAY", "true").lower() == "true"
-# 全站公告：未设置时，限流开启则显示默认文案；限流关闭则不显示。设 SITE_ANNOUNCEMENT= 可强制清空。
-_DEFAULT_LOGIN_ANNOUNCEMENT = (
-    "【紧急公告】因邮件额度紧张："
-    "①每人每天仅可登录一次（澳门时区计日；已在线可继续用，退出后请明天再登）；"
-    "②暂不发送「未配对」通知与破冰随访邮件；"
-    "③匹配成功仍会发邮件通知。"
-    "给大家带来不便，敬请谅解。"
+# 每人每天仅可登录一次（澳门时区日界）；额度紧张时可 true
+LOGIN_ONCE_PER_DAY = os.environ.get("LOGIN_ONCE_PER_DAY", "false").lower() == "true"
+# 全站公告：.env 设 SITE_ANNOUNCEMENT= 可强制清空；未设置则用默认运营文案
+_DEFAULT_SITE_ANNOUNCEMENT = (
+    "【通知】邮件已恢复正常："
+    "①将重新发送「暂未配对」提醒与破冰随访；"
+    "②匹配成功仍会发邮件；"
+    "③欢迎预约本周匹配，每周二晚揭晓——多一人进池，多一分遇见。"
 )
 if "SITE_ANNOUNCEMENT" in os.environ:
     SITE_ANNOUNCEMENT = os.environ.get("SITE_ANNOUNCEMENT", "").strip()
 else:
-    SITE_ANNOUNCEMENT = _DEFAULT_LOGIN_ANNOUNCEMENT if LOGIN_ONCE_PER_DAY else ""
+    SITE_ANNOUNCEMENT = _DEFAULT_SITE_ANNOUNCEMENT
 
 # weekday 显示名（供前端）
 WEEKDAY_LABELS = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"]

@@ -25,8 +25,8 @@ body { background: #e8eef8 !important; }
 <div class="export-card-wrap" id="wrap-{{ code }}">
     <div class="lp-share-frame" data-export-frame="{{ code }}">
         <div class="card personality-card lp-share-card" id="card-{{ code }}" data-lp-code="{{ code }}">
-            <h3>你的恋爱人格</h3>
-            <p class="hint">根据问卷生成，可截图分享 · 仅供娱乐</p>
+            <h3>{{ ui.title }}</h3>
+            <p class="hint">{{ ui.sub }}</p>
             <p class="personality-name">{{ p.name }}</p>
             <p class="personality-code">{{ code }}</p>
             <p class="personality-sub">{{ p.subtitle }}</p>
@@ -40,15 +40,15 @@ body { background: #e8eef8 !important; }
                 </div>
                 {% endfor %}
             </div>
-            <p class="hint lp-body-block" style="margin:12px 0 4px;font-weight:600;">核心特质</p>
+            <p class="hint lp-body-block" style="margin:12px 0 4px;font-weight:600;">{{ ui.traits }}</p>
             <ul class="hint lp-body-block" style="margin:0;line-height:1.7;">
                 {% for t in p.traits %}
                 <li>{{ t }}</li>
                 {% endfor %}
             </ul>
-            <p class="hint lp-body-block" style="margin:12px 0 4px;">关系优势：{{ p.strength }}</p>
-            <p class="hint lp-body-block" style="margin:6px 0 0;">你可能适合：{{ p.match_tip }}</p>
-            <p class="hint lp-body-block" style="margin-top:12px;font-size:0.82em;">本结果由恋爱问卷规则生成，仅供娱乐与破冰，不构成心理诊断。</p>
+            <p class="hint lp-body-block" style="margin:12px 0 4px;">{{ ui.strength }}{{ p.strength }}</p>
+            <p class="hint lp-body-block" style="margin:6px 0 0;">{{ ui.match }}{{ p.match_tip }}</p>
+            <p class="hint lp-body-block" style="margin-top:12px;font-size:0.82em;">{{ ui.disc }}</p>
             <p class="lp-capture-brand hint" style="margin-top:10px;font-size:0.8em;">CampusMatch · campusmatch.com.cn</p>
         </div>
     </div>

@@ -4,11 +4,12 @@ CampusMatch 数据速查（只读）
 
 用法（项目根目录）：
   python scripts/inspect_db.py
-  python scripts/inspect_db.py --db /opt/campus-match/instance/campus_match.db
+  python scripts/inspect_db.py stats          # 池子人数 + 匹配过人数（推荐）
+  python scripts/inspect_db.py pool           # 池子名单
+  python scripts/inspect_db.py matches
+  python scripts/inspect_db.py --db /opt/campus-match/instance/campus_match.db stats
   python scripts/inspect_db.py users
   python scripts/inspect_db.py incomplete
-  python scripts/inspect_db.py pool
-  python scripts/inspect_db.py matches
   python scripts/inspect_db.py user --id 1
   python scripts/inspect_db.py user --email mc64796@um.edu.mo
 """
@@ -38,6 +39,21 @@ def cols(con: sqlite3.Connection, table: str) -> set[str]:
     return {r["name"] for r in con.execute(f"PRAGMA table_info({table})")}
 
 
+def _pool_sql(uc: set[str]) -> str:
+    """近似 User.in_match_pool()：已验证 + 向量 + 性别取向微信 + open。"""
+    open_clause = "1=1"
+    if "open_to_match" in uc:
+        open_clause = "(open_to_match IS NULL OR open_to_match = 1)"
+    return f"""
+        email_verified = 1
+          AND feature_vector_json IS NOT NULL AND feature_vector_json != ''
+          AND gender IN ('male', 'female')
+          AND looking_for IN ('male', 'female', 'both')
+          AND wechat_id IS NOT NULL AND wechat_id != ''
+          AND {open_clause}
+    """
+
+
 def cmd_summary(con: sqlite3.Connection) -> None:
     uc = cols(con, "users")
     n_users = con.execute("SELECT COUNT(*) FROM users").fetchone()[0]
@@ -52,16 +68,83 @@ def cmd_summary(con: sqlite3.Connection) -> None:
         "SELECT COUNT(*) FROM matches WHERE active = 1"
     ).fetchone()[0]
 
+    pool_where = _pool_sql(uc)
+    n_pool = con.execute(
+        f"SELECT COUNT(*) FROM users WHERE {pool_where}"
+    ).fetchone()[0]
+
+    # 至少出现在一条配对记录里的去重用户数
+    n_ever = con.execute(
+        """
+        SELECT COUNT(DISTINCT uid) FROM (
+            SELECT user1_id AS uid FROM matches
+            UNION
+            SELECT user2_id AS uid FROM matches
+        )
+        """
+    ).fetchone()[0]
+    n_ever_active = con.execute(
+        """
+        SELECT COUNT(DISTINCT uid) FROM (
+            SELECT user1_id AS uid FROM matches WHERE active = 1
+            UNION
+            SELECT user2_id AS uid FROM matches WHERE active = 1
+        )
+        """
+    ).fetchone()[0]
+
     print("=== 概览 ===")
     print(f"users 总计: {n_users}")
     print(f"  已验证邮箱: {n_verified}")
     print(f"  有问卷答案: {n_answers}")
-    print(f"matches 总计: {n_matches}（active={n_active}）")
+    print()
+    print("=== 匹配池 / 配对 ===")
+    print(f"当前在匹配池（近似 in_match_pool）: {n_pool} 人")
+    print(f"配对记录: {n_matches} 条（其中 active={n_active}）")
+    print(f"曾匹配过（出现在任意配对里）: {n_ever} 人")
+    print(f"当前有 active 配对: {n_ever_active} 人")
     if "open_to_match" in uc:
         n_open = con.execute(
             "SELECT COUNT(*) FROM users WHERE open_to_match IS NULL OR open_to_match = 1"
         ).fetchone()[0]
-        print(f"  open_to_match 开/空: {n_open}")
+        print(f"open_to_match 开/空: {n_open}")
+    print()
+
+
+def cmd_stats(con: sqlite3.Connection) -> None:
+    """只打池子与配对关键数字（给快速盯盘用）。"""
+    cmd_summary(con)
+    uc = cols(con, "users")
+    pool_where = _pool_sql(uc)
+    rows = con.execute(
+        f"""
+        SELECT school, COUNT(*) AS n
+        FROM users
+        WHERE {pool_where}
+        GROUP BY school
+        ORDER BY n DESC
+        """
+    ).fetchall()
+    print("=== 匹配池按校 ===")
+    for r in rows:
+        print(f"  {r['school']}: {r['n']}")
+    if not rows:
+        print("  （空）")
+    print()
+    modes = con.execute(
+        """
+        SELECT COALESCE(mode, '(null)') AS mode, COUNT(*) AS n,
+               SUM(CASE WHEN active = 1 THEN 1 ELSE 0 END) AS active_n
+        FROM matches
+        GROUP BY mode
+        ORDER BY n DESC
+        """
+    ).fetchall()
+    print("=== 配对按 mode ===")
+    for r in modes:
+        print(f"  {r['mode']}: {r['n']} 条（active={r['active_n']}）")
+    if not modes:
+        print("  （尚无配对）")
     print()
 
 
@@ -141,19 +224,12 @@ def cmd_incomplete(con: sqlite3.Connection) -> None:
 def cmd_pool(con: sqlite3.Connection) -> None:
     """近似 in_match_pool：已验证 + 有向量 + 性别取向微信 + open_to_match。"""
     uc = cols(con, "users")
-    open_clause = "1=1"
-    if "open_to_match" in uc:
-        open_clause = "(open_to_match IS NULL OR open_to_match = 1)"
+    pool_where = _pool_sql(uc)
     rows = con.execute(
         f"""
         SELECT id, email, name, school, gender, looking_for, opt_in_week
         FROM users
-        WHERE email_verified = 1
-          AND feature_vector_json IS NOT NULL AND feature_vector_json != ''
-          AND gender IN ('male', 'female')
-          AND looking_for IN ('male', 'female', 'both')
-          AND wechat_id IS NOT NULL AND wechat_id != ''
-          AND {open_clause}
+        WHERE {pool_where}
         ORDER BY school, id
         """
     ).fetchall()
@@ -257,9 +333,10 @@ def main() -> None:
     sub = p.add_subparsers(dest="cmd")
 
     sub.add_parser("summary", help="概览（默认）")
+    sub.add_parser("stats", help="匹配池人数 + 已匹配人数")
     sub.add_parser("users", help="用户列表")
     sub.add_parser("incomplete", help="未完成注册/问卷")
-    sub.add_parser("pool", help="近似匹配池")
+    sub.add_parser("pool", help="近似匹配池名单")
     sub.add_parser("matches", help="配对列表")
     u = sub.add_parser("user", help="单用户详情")
     u.add_argument("--id", type=int)
@@ -273,6 +350,8 @@ def main() -> None:
         cmd_summary(con)
         cmd_users(con, min(args.limit, 20))
         cmd_incomplete(con)
+    elif cmd == "stats":
+        cmd_stats(con)
     elif cmd == "users":
         cmd_users(con, args.limit)
     elif cmd == "incomplete":

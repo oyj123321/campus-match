@@ -5,6 +5,7 @@ CampusMatch v2 — 校园恋爱匹配系统
   深度问卷 → 特征向量 → 余弦相似度 → 匈牙利全局匹配 → 邮件通知
 """
 
+import os
 import time, json, threading
 from collections import defaultdict, deque
 from datetime import datetime, timedelta, date
@@ -393,6 +394,39 @@ def personality_themes_gallery():
     return render_template("personality_themes.html", personalities=PERSONALITIES)
 
 
+@app.route("/dev/personality-copy-compare")
+def personality_copy_compare():
+    """16 型文案：吸收前（git HEAD）vs 吸收后（工作区）并排对照，仅 Debug。"""
+    if not FLASK_DEBUG:
+        return "Not found", 404
+    import subprocess
+    from pathlib import Path
+    from personality import PERSONALITIES
+
+    before = {}
+    err = None
+    try:
+        raw = subprocess.check_output(
+            ["git", "show", "HEAD:personality.py"],
+            cwd=str(Path(__file__).resolve().parent),
+            text=True,
+            encoding="utf-8",
+        )
+        ns = {}
+        exec(compile(raw, "personality_git_HEAD.py", "exec"), ns)  # noqa: S102
+        before = ns.get("PERSONALITIES") or {}
+    except Exception as exc:  # noqa: BLE001
+        before = {}
+        err = str(exc)
+
+    return render_template(
+        "personality_copy_compare.html",
+        after=PERSONALITIES,
+        before=before,
+        load_error=err,
+    )
+
+
 @app.route("/dev/personality-compare")
 def personality_style_compare():
     """花园隐士型：极简科技 vs 插画 并排对比（仅 Debug）。"""
@@ -419,41 +453,137 @@ def personality_spacing_compare():
 
 @app.route("/dev/personality-export")
 def personality_export_page():
-    """16 型分享卡导出页（宣发截图用，仅 Debug）。"""
+    """16 型分享卡导出页（宣发截图用，仅 Debug）。?lang=tw 出繁体。"""
     if not FLASK_DEBUG:
         return "Not found", 404
+    from copy import deepcopy
     from personality import PERSONALITIES, DIM_META
+
+    lang = (request.args.get("lang") or "zh").lower()
+    if lang not in ("zh", "tw"):
+        lang = "zh"
+
+    def _t(s: str) -> str:
+        if lang != "tw" or not s:
+            return s
+        try:
+            from opencc import OpenCC
+            return OpenCC("s2t").convert(s)
+        except Exception:
+            return s
+
+    personalities = {}
+    for code, meta in PERSONALITIES.items():
+        personalities[code] = {
+            "name": _t(meta["name"]),
+            "subtitle": _t(meta["subtitle"]),
+            "traits": [_t(x) for x in meta["traits"]],
+            "strength": _t(meta["strength"]),
+            "match_tip": _t(meta["match_tip"]),
+        }
+
+    dim = deepcopy(DIM_META)
+    if lang == "tw":
+        for key in dim:
+            dim[key]["label"] = _t(dim[key]["label"])
+            dim[key]["high"] = (dim[key]["high"][0], _t(dim[key]["high"][1]))
+            dim[key]["low"] = (dim[key]["low"][0], _t(dim[key]["low"][1]))
 
     def demo_bars(code: str):
         e, s, c, r = code[0], code[1], code[2], code[3]
         return [
             {
-                "label": DIM_META["expression"]["label"],
+                "label": dim["expression"]["label"],
                 "pct": 78 if e == "E" else 32,
-                "pole": DIM_META["expression"]["high"][1] if e == "E" else DIM_META["expression"]["low"][1],
+                "pole": dim["expression"]["high"][1] if e == "E" else dim["expression"]["low"][1],
             },
             {
-                "label": DIM_META["rhythm"]["label"],
+                "label": dim["rhythm"]["label"],
                 "pct": 72 if s == "S" else 38,
-                "pole": DIM_META["rhythm"]["high"][1] if s == "S" else DIM_META["rhythm"]["low"][1],
+                "pole": dim["rhythm"]["high"][1] if s == "S" else dim["rhythm"]["low"][1],
             },
             {
-                "label": DIM_META["boundary"]["label"],
+                "label": dim["boundary"]["label"],
                 "pct": 70 if c == "C" else 35,
-                "pole": DIM_META["boundary"]["high"][1] if c == "C" else DIM_META["boundary"]["low"][1],
+                "pole": dim["boundary"]["high"][1] if c == "C" else dim["boundary"]["low"][1],
             },
             {
-                "label": DIM_META["risk"]["label"],
+                "label": dim["risk"]["label"],
                 "pct": 74 if r == "P" else 36,
-                "pole": DIM_META["risk"]["high"][1] if r == "P" else DIM_META["risk"]["low"][1],
+                "pole": dim["risk"]["high"][1] if r == "P" else dim["risk"]["low"][1],
             },
         ]
 
-    demo = {code: demo_bars(code) for code in PERSONALITIES}
+    ui = {
+        "zh": {
+            "title": "你的恋爱人格",
+            "sub": "根据问卷生成，可截图分享 · 仅供娱乐",
+            "traits": "核心特质",
+            "strength": "关系优势：",
+            "match": "你可能适合：",
+            "disc": "本结果由恋爱问卷规则生成，仅供娱乐与破冰，不构成心理诊断。",
+        },
+        "tw": {
+            "title": "你的戀愛人格",
+            "sub": "根據問卷生成，可截圖分享 · 僅供娛樂",
+            "traits": "核心特質",
+            "strength": "關係優勢：",
+            "match": "你可能適合：",
+            "disc": "本結果由戀愛問卷規則生成，僅供娛樂與破冰，不構成心理診斷。",
+        },
+    }[lang]
+
+    demo = {code: demo_bars(code) for code in personalities}
     return render_template(
         "personality_export.html",
-        personalities=PERSONALITIES,
+        personalities=personalities,
         demo_bars=demo,
+        ui=ui,
+        export_lang=lang,
+    )
+
+
+@app.route("/dev/letter-portrait")
+def letter_portrait_page():
+    """歌词随笔文字侧写分享卡（私人预览，仅 Debug）。"""
+    if not FLASK_DEBUG:
+        return "Not found", 404
+    from personality import DIM_META
+
+    # IFOA 底色：内敛 / 随性 / 独立 / 开放；文案掺花园隐士式守候
+    bars = [
+        {
+            "label": DIM_META["expression"]["label"],
+            "pct": 28,
+            "pole": DIM_META["expression"]["low"][1],
+        },
+        {
+            "label": DIM_META["rhythm"]["label"],
+            "pct": 34,
+            "pole": DIM_META["rhythm"]["low"][1],
+        },
+        {
+            "label": DIM_META["boundary"]["label"],
+            "pct": 30,
+            "pole": DIM_META["boundary"]["low"][1],
+        },
+        {
+            "label": DIM_META["risk"]["label"],
+            "pct": 42,
+            "pole": DIM_META["risk"]["low"][1],
+        },
+    ]
+    return render_template(
+        "letter_portrait.html",
+        bars=bars,
+        traits=[
+            "以沟通为爱的功课——要正视、要触碰，不轻轻带过",
+            "羊群外仍渴望并肩：独山上山很自由，翻山后也想有人同享",
+            "苦中带甜的余韵：不写非黑即白，记苦是为了来日回甘",
+            "敬纯粹，也怕爱的重量——会风险评估，仍向往不计较得失的靠近",
+        ],
+        strength="能把感受写成可被触碰的文字；独立完整，不靠关系填空；一旦靠近会认真谈。",
+        match_tip="愿意互相触碰、接得住深情又不急着入账的人——轻声靠近，不侵入她的氧。",
     )
 
 
@@ -1433,4 +1563,4 @@ if __name__ == "__main__":
     print(f"  支持学校: {', '.join(SCHOOL_DOMAINS.keys())}")
     print(f"  邮件: {'真实发送' if MAIL_ENABLED else '开发模式'}")
     start_batch_scheduler()
-    app.run(debug=FLASK_DEBUG, host="127.0.0.1", port=5000)
+    app.run(debug=FLASK_DEBUG, host=os.environ.get("FLASK_HOST", "0.0.0.0"), port=int(os.environ.get("FLASK_PORT", "5000")))

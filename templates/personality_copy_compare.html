@@ -1,0 +1,144 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+.lp-copy-compare-page h2 { margin-bottom: 6px; }
+.lp-copy-compare-page .legend {
+    display: flex; gap: 16px; flex-wrap: wrap; margin: 10px 0 18px; font-size: 0.9em;
+}
+.lp-copy-compare-page .legend span::before {
+    content: ""; display: inline-block; width: 10px; height: 10px;
+    border-radius: 2px; margin-right: 6px; vertical-align: middle;
+}
+.lp-copy-compare-page .legend .before::before { background: #94a3b8; }
+.lp-copy-compare-page .legend .after::before { background: #6366f1; }
+.lp-copy-pair {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin: 0 0 28px;
+}
+@media (max-width: 860px) {
+    .lp-copy-pair { grid-template-columns: 1fr; }
+}
+.lp-copy-col {
+    border-radius: 16px;
+    padding: 14px 16px 16px;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    background: #fff;
+}
+.lp-copy-col.before { border-top: 3px solid #94a3b8; }
+.lp-copy-col.after { border-top: 3px solid #6366f1; }
+.lp-copy-col h4 {
+    margin: 0 0 10px;
+    font-size: 0.85em;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: #64748b;
+}
+.lp-copy-col .name {
+    font-size: 1.15em;
+    font-weight: 700;
+    color: #0f172a;
+    margin-bottom: 4px;
+}
+.lp-copy-col .code {
+    font-size: 0.85em;
+    color: #6366f1;
+    margin-bottom: 10px;
+}
+.lp-copy-field { margin: 0 0 10px; line-height: 1.55; font-size: 0.92em; }
+.lp-copy-field .k {
+    display: block;
+    font-size: 0.78em;
+    color: #94a3b8;
+    margin-bottom: 2px;
+}
+.lp-copy-field.changed .v {
+    background: linear-gradient(90deg, rgba(99,102,241,0.1), transparent);
+    border-radius: 4px;
+    padding: 2px 4px;
+    margin: 0 -4px;
+}
+.lp-copy-field ul { margin: 4px 0 0; padding-left: 1.15em; }
+.lp-copy-nav {
+    position: sticky; top: 8px; z-index: 5;
+    display: flex; flex-wrap: wrap; gap: 6px;
+    padding: 8px 0 12px;
+    background: linear-gradient(180deg, #f8fafc 70%, transparent);
+}
+.lp-copy-nav a {
+    font-size: 0.78em;
+    padding: 4px 8px;
+    border-radius: 99px;
+    background: #e2e8f0;
+    color: #334155;
+    text-decoration: none;
+}
+.lp-copy-nav a:hover { background: #c7d2fe; }
+</style>
+
+<div class="card lp-copy-compare-page" style="text-align:left;">
+    <h2>文案对照 · 吸收前 vs 吸收后</h2>
+    <p class="hint">左：git HEAD（上线/提交版）· 右：当前工作区（吸收能量后的重写）。高亮条表示该字段有改动。仅 Debug。</p>
+    {% if load_error %}
+    <p class="hint" style="color:#b91c1c;">未能读取 git HEAD：{{ load_error }}</p>
+    {% endif %}
+    <div class="legend">
+        <span class="before">吸收前</span>
+        <span class="after">吸收后</span>
+    </div>
+    <div class="lp-copy-nav">
+        {% for code in after.keys() %}
+        <a href="#pair-{{ code }}">{{ code }}</a>
+        {% endfor %}
+    </div>
+</div>
+
+{% for code, a in after.items() %}
+{% set b = before.get(code, {}) %}
+<div class="lp-copy-pair" id="pair-{{ code }}">
+    <div class="lp-copy-col before">
+        <h4>吸收前</h4>
+        <div class="name">{{ b.name or '—' }}</div>
+        <div class="code">{{ code }}</div>
+        <div class="lp-copy-field">
+            <span class="k">副标</span>
+            <span class="v">{{ b.subtitle or '—' }}</span>
+        </div>
+        <div class="lp-copy-field">
+            <span class="k">特质</span>
+            <ul>{% for t in b.traits or [] %}<li>{{ t }}</li>{% else %}<li>—</li>{% endfor %}</ul>
+        </div>
+        <div class="lp-copy-field">
+            <span class="k">关系优势</span>
+            <span class="v">{{ b.strength or '—' }}</span>
+        </div>
+        <div class="lp-copy-field">
+            <span class="k">你可能适合</span>
+            <span class="v">{{ b.match_tip or '—' }}</span>
+        </div>
+    </div>
+    <div class="lp-copy-col after">
+        <h4>吸收后</h4>
+        <div class="name">{{ a.name }}</div>
+        <div class="code">{{ code }}</div>
+        <div class="lp-copy-field {% if b and a.subtitle != b.get('subtitle') %}changed{% endif %}">
+            <span class="k">副标</span>
+            <span class="v">{{ a.subtitle }}</span>
+        </div>
+        <div class="lp-copy-field {% if b and a.traits != b.get('traits') %}changed{% endif %}">
+            <span class="k">特质</span>
+            <ul>{% for t in a.traits %}<li>{{ t }}</li>{% endfor %}</ul>
+        </div>
+        <div class="lp-copy-field {% if b and a.strength != b.get('strength') %}changed{% endif %}">
+            <span class="k">关系优势</span>
+            <span class="v">{{ a.strength }}</span>
+        </div>
+        <div class="lp-copy-field {% if b and a.match_tip != b.get('match_tip') %}changed{% endif %}">
+            <span class="k">你可能适合</span>
+            <span class="v">{{ a.match_tip }}</span>
+        </div>
+    </div>
+</div>
+{% endfor %}
+{% endblock %}
