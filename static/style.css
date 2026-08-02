@@ -771,7 +771,7 @@ textarea.open-letter:focus {
     background: linear-gradient(165deg, #ffffff 0%, #f3f8ff 55%, #eef6ff 100%);
     border: 1px solid rgba(99, 102, 241, 0.22);
     border-radius: 20px;
-    padding: 26px 28px 20px;
+    padding: 14px 28px 20px; /* 仅抬高：上边距小于原先 26px */
     box-shadow:
         0 4px 6px rgba(99, 102, 241, 0.06),
         0 18px 40px rgba(99, 102, 241, 0.16);
@@ -792,7 +792,7 @@ textarea.open-letter:focus {
 .lp-share-card .personality-name {
     font-size: 1.7em;
     font-weight: 800;
-    margin: 14px 0 2px;
+    margin: 12px 0 2px;
     color: #1e3a5f;
     letter-spacing: 0.02em;
 }

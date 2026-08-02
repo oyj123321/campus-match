@@ -12,6 +12,40 @@
         return (navigator.maxTouchPoints > 1 && Math.min(window.innerWidth, window.innerHeight) < 900);
     }
 
+    function normalizeLpCode(code) {
+        return String(code || '').toUpperCase().replace(/[^A-Z]/g, '').slice(0, 4);
+    }
+
+    /** 只套配色/class（外框用）；不挂徽章，避免 frame+card 双重装饰重叠 */
+    window.applyLovePersonalityColors = function (el, code) {
+        if (!el) return;
+        var c = normalizeLpCode(code);
+        el.className = String(el.className || '')
+            .replace(/\blp-theme-[A-Z]{4}\b/g, '')
+            .replace(/\s+/g, ' ')
+            .trim();
+        if (c.length === 4) {
+            el.setAttribute('data-lp-code', c);
+            el.classList.add('lp-theme-' + c);
+        } else {
+            el.removeAttribute('data-lp-code');
+        }
+    };
+
+    /** 给人格卡套上 16 型主题（配色 + 徽章/水印等装饰） */
+    window.applyLovePersonalityTheme = function (el, code) {
+        if (!el) return;
+        var c = normalizeLpCode(code);
+        window.applyLovePersonalityColors(el, c);
+        if (c.length === 4) {
+            if (typeof window.ensureLovePersonalityEmblem === 'function') {
+                window.ensureLovePersonalityEmblem(el, c);
+            }
+        } else if (typeof window.ensureLovePersonalityEmblem === 'function') {
+            window.ensureLovePersonalityEmblem(el, '');
+        }
+    };
+
     function ensurePreviewDom() {
         var root = document.getElementById('lp-share-preview');
         if (root) return root;
@@ -198,12 +232,25 @@
         var card = document.createElement('div');
         card.className = 'lp-share-card';
 
+        var themeCode = cardEl.getAttribute('data-lp-code')
+            || normalizeLpCode(cardEl.dataset && cardEl.dataset.lpCode);
+        if (themeCode && themeCode.length === 4) {
+            // 外框只铺渐变底；徽章/印章/水印只挂在内卡，防止重叠
+            window.applyLovePersonalityColors(frame, themeCode);
+            window.applyLovePersonalityTheme(card, themeCode);
+        }
+
         var kids = cardEl.children;
         for (var i = 0; i < kids.length; i++) {
             var node = kids[i];
             if (node.classList && (
                 node.classList.contains('personality-actions')
                 || node.classList.contains('lp-no-capture')
+                || node.classList.contains('lp-emblem')
+                || node.classList.contains('lp-stamp')
+                || node.classList.contains('lp-watermark')
+                || node.classList.contains('lp-corners')
+                || node.classList.contains('lp-grid')
             )) continue;
             var clone = node.cloneNode(true);
             if (clone.classList && clone.classList.contains('lp-capture-brand')) {
@@ -211,6 +258,7 @@
             }
             card.appendChild(clone);
         }
+        /* 徽章由 applyLovePersonalityTheme 重新挂上，避免重复 */
 
         if (!card.querySelector('.lp-capture-brand')) {
             var brand = document.createElement('p');
@@ -245,27 +293,52 @@
         window.scrollTo(0, 0);
         await new Promise(function (r) {
             requestAnimationFrame(function () {
-                requestAnimationFrame(function () { setTimeout(r, 80); });
+                requestAnimationFrame(function () { setTimeout(r, 120); });
             });
         });
         var mobile = isTouchMobile();
         var scale = mobile
             ? Math.min(2, window.devicePixelRatio || 2)
-            : Math.min(2.5, (window.devicePixelRatio || 2) * 1.25);
+            : Math.min(2.2, (window.devicePixelRatio || 2) * 1.1);
+        var opts = {
+            backgroundColor: '#ffffff',
+            scale: scale,
+            useCORS: true,
+            allowTaint: true,
+            logging: false,
+            scrollX: 0,
+            scrollY: 0,
+            windowWidth: Math.max(stage.offsetWidth, 320),
+            windowHeight: Math.max(stage.offsetHeight, 200),
+            x: 0,
+            y: 0,
+            ignoreElements: function (el) {
+                return !!(el && el.classList && el.classList.contains('lp-grid'));
+            },
+            onclone: function (doc) {
+                var root = doc.getElementById('lp-share-stage');
+                if (!root) return;
+                root.querySelectorAll('.lp-emblem-ring').forEach(function (n) {
+                    n.style.animation = 'none';
+                });
+                root.querySelectorAll('.lp-grid').forEach(function (n) {
+                    if (n.parentNode) n.parentNode.removeChild(n);
+                });
+            }
+        };
         try {
-            return await html2canvas(stage, {
-                backgroundColor: null,
-                scale: scale,
-                useCORS: true,
-                allowTaint: true,
-                logging: false,
-                scrollX: 0,
-                scrollY: 0,
-                windowWidth: stage.offsetWidth,
-                windowHeight: stage.offsetHeight,
-                x: 0,
-                y: 0
-            });
+            try {
+                return await html2canvas(stage, opts);
+            } catch (err1) {
+                console.warn('themed capture failed, retry simplified', err1);
+                // 降级：去掉装饰层再截，避免冷门 CSS 拖垮 html2canvas
+                stage.querySelectorAll('.lp-emblem, .lp-stamp, .lp-watermark, .lp-corners, .lp-grid')
+                    .forEach(function (n) {
+                        if (n.parentNode) n.parentNode.removeChild(n);
+                    });
+                await new Promise(function (r) { setTimeout(r, 40); });
+                return await html2canvas(stage, opts);
+            }
         } finally {
             if (stage && stage.parentNode) stage.parentNode.removeChild(stage);
             if (mask && mask.parentNode) mask.parentNode.removeChild(mask);
@@ -275,6 +348,9 @@
 
     window.sharePersonalityCard = async function (cardEl, personality) {
         if (!cardEl) return;
+        if (personality) {
+            window.applyLovePersonalityTheme(cardEl, personality.code || personality.type);
+        }
         var btn = document.activeElement;
         var oldLabel = btn && btn.textContent;
         if (btn && btn.tagName === 'BUTTON') {

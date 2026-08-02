@@ -384,6 +384,39 @@ def matches_page():
     )
 
 
+@app.route("/dev/personality-themes")
+def personality_themes_gallery():
+    """本地预览 16 型卡片主题（仅 Debug）。"""
+    if not FLASK_DEBUG:
+        return "Not found", 404
+    from personality import PERSONALITIES
+    return render_template("personality_themes.html", personalities=PERSONALITIES)
+
+
+@app.route("/dev/personality-compare")
+def personality_style_compare():
+    """花园隐士型：极简科技 vs 插画 并排对比（仅 Debug）。"""
+    if not FLASK_DEBUG:
+        return "Not found", 404
+    from personality import PERSONALITIES
+    return render_template(
+        "personality_compare.html",
+        p=PERSONALITIES["IFOP"],
+    )
+
+
+@app.route("/dev/personality-spacing")
+def personality_spacing_compare():
+    """花园隐士型：间距改前 vs 改后（仅 Debug）。"""
+    if not FLASK_DEBUG:
+        return "Not found", 404
+    from personality import PERSONALITIES
+    return render_template(
+        "personality_spacing_compare.html",
+        p=PERSONALITIES["IFOP"],
+    )
+
+
 # ============================================================
 # Auth API
 # ============================================================

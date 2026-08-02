@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card" style="text-align:left;">
+    <h2>布局修复对比 · 花园隐士型</h2>
+    <p class="hint">左：装饰层误占文档流 → 标题上方大块空白。右：装饰回浮层 + 顶部信息带。</p>
+</div>
+
+<div class="lp-compare-row">
+    <div>
+        <p class="lp-compare-label">问题版（示意）</p>
+        <div id="card-before" class="card personality-card lp-theme-IFOP lp-bug-demo" data-lp-code="IFOP">
+            <h3>你的恋爱人格</h3>
+            <p class="hint">CampusMatch · 仅供娱乐</p>
+            <p class="personality-name">{{ p.name }}</p>
+            <p class="personality-code">IFOP</p>
+            <p class="personality-sub">{{ p.subtitle }}</p>
+            <div class="personality-bars">
+                <div class="personality-bar-row">
+                    <span class="personality-bar-label">情感表达</span>
+                    <div class="personality-bar-track"><div class="personality-bar-fill" style="width:38%"></div></div>
+                    <span class="personality-bar-pole">内敛含蓄</span>
+                </div>
+                <div class="personality-bar-row">
+                    <span class="personality-bar-label">生活节奏</span>
+                    <div class="personality-bar-track"><div class="personality-bar-fill" style="width:42%"></div></div>
+                    <span class="personality-bar-pole">随性自由</span>
+                </div>
+            </div>
+            <p class="hint" style="margin-top:10px;">{{ p.strength }}</p>
+            <p class="lp-capture-brand hint" style="margin-top:10px;text-align:center;font-size:0.8em;">CampusMatch · campusmatch.com.cn</p>
+        </div>
+    </div>
+    <div>
+        <p class="lp-compare-label">修复后</p>
+        <div id="card-after" class="card personality-card lp-theme-IFOP" data-lp-code="IFOP">
+            <h3>你的恋爱人格</h3>
+            <p class="hint">CampusMatch · 仅供娱乐</p>
+            <p class="personality-name">{{ p.name }}</p>
+            <p class="personality-code">IFOP</p>
+            <p class="personality-sub">{{ p.subtitle }}</p>
+            <div class="personality-bars">
+                <div class="personality-bar-row">
+                    <span class="personality-bar-label">情感表达</span>
+                    <div class="personality-bar-track"><div class="personality-bar-fill" style="width:38%"></div></div>
+                    <span class="personality-bar-pole">内敛含蓄</span>
+                </div>
+                <div class="personality-bar-row">
+                    <span class="personality-bar-label">生活节奏</span>
+                    <div class="personality-bar-track"><div class="personality-bar-fill" style="width:42%"></div></div>
+                    <span class="personality-bar-pole">随性自由</span>
+                </div>
+            </div>
+            <p class="hint" style="margin-top:10px;">{{ p.strength }}</p>
+            <p class="lp-capture-brand hint" style="margin-top:10px;text-align:center;font-size:0.8em;">CampusMatch · campusmatch.com.cn</p>
+        </div>
+    </div>
+</div>
+
+<style>
+.lp-compare-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin: 20px 0 48px;
+    align-items: start;
+}
+.lp-compare-label {
+    font-weight: 800;
+    font-size: 1.1em;
+    margin: 0 0 10px;
+    color: #1e3a5f;
+}
+/* 故意复现：装饰被 relative 推进文档流 */
+.lp-bug-demo.personality-card[data-lp-code] > .lp-emblem,
+.lp-bug-demo.personality-card[data-lp-code] > .lp-watermark,
+.lp-bug-demo.personality-card[data-lp-code] > .lp-corners,
+.lp-bug-demo.personality-card[data-lp-code] > .lp-grid {
+    position: relative !important;
+    inset: auto !important;
+    top: auto !important;
+    right: auto !important;
+    left: auto !important;
+    bottom: auto !important;
+    display: block;
+    margin: 8px auto;
+    opacity: 0.25;
+}
+.lp-bug-demo.personality-card[data-lp-code] > .lp-watermark {
+    font-size: 2.4em;
+    transform: none;
+    text-align: center;
+}
+.lp-bug-demo.personality-card[data-lp-code] > .lp-corners {
+    height: 20px;
+}
+.lp-bug-demo.personality-card[data-lp-code] > .lp-grid {
+    height: 24px;
+    mask-image: none;
+    -webkit-mask-image: none;
+}
+.lp-bug-demo.personality-card[data-lp-code] {
+    padding: 16px 20px 2.6em !important;
+}
+.lp-bug-demo.personality-card[data-lp-code] > h3,
+.lp-bug-demo.personality-card[data-lp-code] > h3 + .hint {
+    background: none !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+}
+@media (max-width: 720px) {
+    .lp-compare-row { grid-template-columns: 1fr; }
+}
+</style>
+<script>
+if (typeof applyLovePersonalityTheme === 'function') {
+    applyLovePersonalityTheme(document.getElementById('card-before'), 'IFOP');
+    applyLovePersonalityTheme(document.getElementById('card-after'), 'IFOP');
+}
+</script>
+{% endblock %}

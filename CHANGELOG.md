@@ -4,6 +4,23 @@ All notable changes to CampusMatch.
 
 ---
 
+## [1.9.23] — 2026-08-02
+
+### 问题（上次）
+- 16 型恋爱人格卡共用同一套蓝紫配色，收藏/分享辨识度弱
+
+### 改动
+- **Added / 16 型主题**：`personality_themes.css` 每型独立渐变、顶条/侧条 accent、光晕纹样（沿用首页科技色：靛/青/粉/琥珀等），页面卡与分享截图同步
+- **Added / 型徽章**：`personality_emblems.js` 每型原创几何小图案（盾/罗盘/灯塔/星尘等）+ 虚线光环 + 左下角 `No. CODE` 印章；截图一并带上
+- **Improved / 极简科技加料**：大号斜铺型代码水印 + 四角面板框 + 右下淡网格（仍非插画）
+- **Fixed / 卡顶空白**：装饰层曾被 `position:relative` 挤进文档流，标题上方出现大块空区；现强制浮层，并加顶部渐变信息带承载标题/徽章
+- **Fixed / 分享截图**：去掉 html2canvas 不兼容的 `color-mix`/`mask`；截图失败时降级去掉装饰再试；段落间距略放宽减压迫感
+- **Fixed / 分享叠图**：外框只铺渐变，徽章/印章/水印仅挂内卡，避免右上角与 `No. CODE` 双重重叠
+- **Improved / 版式**：正文左右留白（仍左对齐）；顶栏信息带 + 型名层次
+- **Added / 预览**：Debug 下 `/dev/personality-themes`、`/dev/personality-spacing`、`/dev/personality-compare`
+
+---
+
 ## [1.9.22] — 2026-08-01
 
 ### 问题（上次）

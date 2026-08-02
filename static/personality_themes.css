@@ -1,0 +1,619 @@
+/* ════════════════════════════════════════════════════════════
+   恋爱人格 16 型卡片主题
+   保留原卡片版式；每型独立配色 + 光晕纹样（首页科技色系）
+   ════════════════════════════════════════════════════════════ */
+
+.personality-card[data-lp-code],
+.lp-share-frame[data-lp-code],
+.lp-share-card[data-lp-code] {
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
+}
+
+.personality-card[data-lp-code]::before,
+.lp-share-card[data-lp-code]::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    opacity: 0.9;
+}
+
+.personality-card[data-lp-code]::after,
+.lp-share-card[data-lp-code]::after {
+    content: "";
+    position: absolute;
+    z-index: 2;
+    pointer-events: none;
+}
+
+/* 正文叠在装饰之上；装饰层必须保持 absolute，否则会在标题上方撑出大块空白 */
+.personality-card[data-lp-code] > *:not(.lp-emblem):not(.lp-watermark):not(.lp-corners):not(.lp-grid):not(.lp-stamp),
+.lp-share-card[data-lp-code] > *:not(.lp-emblem):not(.lp-watermark):not(.lp-corners):not(.lp-grid):not(.lp-stamp) {
+    position: relative;
+    z-index: 1;
+}
+
+.personality-card[data-lp-code],
+.lp-share-card[data-lp-code] {
+    --lp-pad-x: 36px; /* 正文左右留白，避免贴边 */
+    background: var(--lp-card);
+    border: 1px solid var(--lp-border);
+    box-shadow:
+        0 4px 10px rgba(15, 23, 42, 0.04),
+        0 16px 36px var(--lp-glow);
+    /* 关键：用左右 padding 把整块文字从边缘推开（仍左对齐） */
+    padding: 0 var(--lp-pad-x) 2.8em !important;
+    text-align: left;
+}
+
+/* 顶部信息带全宽铺色，文字与正文同一左边线 */
+.personality-card[data-lp-code] > h3,
+.lp-share-card[data-lp-code] > h3 {
+    margin: 0 calc(-1 * var(--lp-pad-x));
+    padding: 18px 80px 4px var(--lp-pad-x);
+    line-height: 1.35;
+    background: var(--lp-frame);
+    text-align: left;
+}
+.personality-card[data-lp-code] > h3 + .hint,
+.lp-share-card[data-lp-code] > h3 + .hint {
+    margin: 0 calc(-1 * var(--lp-pad-x)) !important;
+    padding: 0 80px 16px var(--lp-pad-x);
+    line-height: 1.5;
+    background: var(--lp-frame);
+    border-bottom: 1px solid var(--lp-border);
+    text-align: left;
+    /* 避免「仅供娱 / 乐」孤字折行 */
+    overflow-wrap: normal;
+    word-break: keep-all;
+}
+
+/* 操作按钮单独居中 */
+.personality-card[data-lp-code] .personality-actions,
+.lp-share-card[data-lp-code] .personality-actions {
+    margin-left: auto;
+    margin-right: auto;
+    justify-content: center;
+}
+.personality-card[data-lp-code] .personality-name,
+.lp-share-card[data-lp-code] .personality-name {
+    margin-top: 18px;
+    margin-bottom: 2px;
+    padding-right: 8px;
+}
+.personality-card[data-lp-code] .personality-code,
+.lp-share-card[data-lp-code] .personality-code {
+    margin-bottom: 10px;
+}
+.personality-card[data-lp-code] .personality-sub,
+.lp-share-card[data-lp-code] .personality-sub {
+    margin-bottom: 18px;
+    line-height: 1.7;
+}
+.personality-card[data-lp-code] .personality-bars,
+.lp-share-card[data-lp-code] .personality-bars {
+    gap: 12px;
+    margin-bottom: 6px;
+}
+.personality-card[data-lp-code] > ul.hint,
+.lp-share-card[data-lp-code] > ul.hint {
+    margin-top: 6px;
+    margin-bottom: 10px;
+    line-height: 1.85;
+}
+.personality-card[data-lp-code] > p.hint,
+.lp-share-card[data-lp-code] > p.hint {
+    margin-top: 12px;
+    line-height: 1.7;
+}
+
+.personality-card[data-lp-code] > ul.hint,
+.lp-share-card[data-lp-code] > ul.hint,
+.personality-card[data-lp-code] ul.lp-body-block,
+.lp-share-card[data-lp-code] ul.lp-body-block {
+    padding-left: 1.15em;
+    list-style-position: outside;
+}
+
+.lp-share-frame[data-lp-code] {
+    background: var(--lp-frame);
+}
+
+.personality-card[data-lp-code] .personality-name,
+.lp-share-card[data-lp-code] .personality-name {
+    color: var(--lp-ink);
+}
+
+.personality-card[data-lp-code] .personality-code,
+.lp-share-card[data-lp-code] .personality-code {
+    color: var(--lp-1);
+}
+
+.personality-card[data-lp-code] .personality-bar-fill,
+.lp-share-card[data-lp-code] .personality-bar-fill {
+    background: var(--lp-bar);
+}
+
+.personality-card[data-lp-code] .lp-capture-brand,
+.lp-share-card[data-lp-code] .lp-capture-brand {
+    color: var(--lp-1) !important;
+}
+
+/* 装饰层强制 absolute（覆盖任何 relative 误伤） */
+.personality-card[data-lp-code] > .lp-emblem,
+.lp-share-card[data-lp-code] > .lp-emblem,
+.personality-card[data-lp-code] > .lp-watermark,
+.lp-share-card[data-lp-code] > .lp-watermark,
+.personality-card[data-lp-code] > .lp-corners,
+.lp-share-card[data-lp-code] > .lp-corners,
+.personality-card[data-lp-code] > .lp-grid,
+.lp-share-card[data-lp-code] > .lp-grid,
+.personality-card[data-lp-code] > .lp-stamp,
+.lp-share-card[data-lp-code] > .lp-stamp {
+    position: absolute;
+}
+
+/* 淡网格（避免 mask/color-mix，分享截图更稳） */
+.lp-grid {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background-image:
+        linear-gradient(rgba(15, 23, 42, 0.05) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(15, 23, 42, 0.05) 1px, transparent 1px);
+    background-size: 20px 20px;
+    background-position: right bottom;
+    opacity: 0.35;
+}
+
+/* 大号斜铺型代码水印 */
+.lp-watermark {
+    position: absolute;
+    right: -2%;
+    bottom: 6%;
+    z-index: 0;
+    pointer-events: none;
+    font-size: clamp(3.2em, 14vw, 4.6em);
+    font-weight: 800;
+    letter-spacing: 0.14em;
+    line-height: 1;
+    color: var(--lp-1);
+    opacity: 0.07;
+    transform: rotate(-18deg);
+    user-select: none;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+}
+
+/* 四角面板框（避开顶栏，从正文区起） */
+.lp-corners {
+    position: absolute;
+    top: 72px;
+    left: 11px;
+    right: 11px;
+    bottom: 11px;
+    z-index: 2;
+    pointer-events: none;
+}
+.lp-corners .c {
+    position: absolute;
+    width: 15px;
+    height: 15px;
+    border-color: var(--lp-1);
+    border-style: solid;
+    box-sizing: border-box;
+    opacity: 0.4;
+}
+.lp-corners .tl { top: 0; left: 0; border-width: 1.5px 0 0 1.5px; }
+.lp-corners .tr { top: 0; right: 0; border-width: 1.5px 1.5px 0 0; }
+.lp-corners .bl { bottom: 0; left: 0; border-width: 0 0 1.5px 1.5px; }
+.lp-corners .br { bottom: 0; right: 0; border-width: 0 1.5px 1.5px 0; }
+.lp-share-card .lp-corners {
+    top: 76px;
+    left: 14px;
+    right: 14px;
+    bottom: 14px;
+}
+.lp-share-card .lp-watermark { opacity: 0.085; bottom: 8%; }
+
+/* 型徽章：落在顶栏右侧，略提高存在感 */
+.lp-emblem {
+    position: absolute;
+    top: 10px;
+    right: 14px;
+    width: 56px;
+    height: 56px;
+    z-index: 3;
+    color: var(--lp-1, #6366f1);
+    opacity: 0.42;
+    pointer-events: none;
+}
+.lp-emblem svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+    filter: drop-shadow(0 2px 8px var(--lp-glow, rgba(99,102,241,0.2)));
+}
+.lp-emblem-ring {
+    position: absolute;
+    inset: -6px;
+    border-radius: 50%;
+    border: 1.5px dashed var(--lp-2, #06b6d4);
+    opacity: 0.4;
+    animation: lp-emblem-spin 28s linear infinite;
+}
+.lp-share-card .lp-emblem {
+    width: 58px;
+    height: 58px;
+    top: 12px;
+    right: 16px;
+    opacity: 0.45;
+}
+@keyframes lp-emblem-spin {
+    to { transform: rotate(360deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+    .lp-emblem-ring { animation: none; }
+}
+
+/* 左下角印章 */
+.lp-stamp {
+    position: absolute;
+    left: 14px;
+    bottom: 12px;
+    z-index: 2;
+    pointer-events: none;
+    font-size: 0.68em;
+    font-weight: 800;
+    letter-spacing: 0.18em;
+    color: var(--lp-1);
+    border: 1.5px solid var(--lp-1);
+    border-radius: 6px;
+    padding: 3px 7px 2px;
+    transform: rotate(-8deg);
+    opacity: 0.5;
+    background: rgba(255, 255, 255, 0.82);
+}
+.lp-share-card .lp-stamp {
+    bottom: 16px;
+    left: 18px;
+    opacity: 0.5;
+}
+.personality-card[data-lp-code] .lp-capture-brand,
+.lp-share-card[data-lp-code] .lp-capture-brand {
+    padding-bottom: 4px;
+}
+
+/* 顶条 accent（默认） */
+.personality-card[data-lp-code]::after,
+.lp-share-card[data-lp-code]::after {
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, var(--lp-1), var(--lp-2), var(--lp-3, var(--lp-2)));
+}
+
+/* —— 16 型 —— */
+
+/* 守护者 · 靛蓝→青 */
+.lp-theme-ESCP {
+    --lp-1: #4f46e5; --lp-2: #06b6d4; --lp-3: #818cf8;
+    --lp-ink: #1e3a5f;
+    --lp-card: linear-gradient(165deg, #ffffff 0%, #eef2ff 52%, #e0f2fe 100%);
+    --lp-frame: linear-gradient(160deg, #e0e7ff, #ecfeff 48%, #f0f9ff);
+    --lp-bar: linear-gradient(90deg, #38bdf8, #4f46e5);
+    --lp-border: rgba(79, 70, 229, 0.28);
+    --lp-glow: rgba(99, 102, 241, 0.16);
+}
+.lp-theme-ESCP::before {
+    background:
+        radial-gradient(ellipse 70% 55% at 100% -10%, rgba(99,102,241,0.28), transparent 55%),
+        radial-gradient(ellipse 45% 40% at 0% 110%, rgba(6,182,212,0.22), transparent 50%);
+}
+
+/* 开明领航 · 靛→紫 */
+.lp-theme-ESCA {
+    --lp-1: #6366f1; --lp-2: #8b5cf6; --lp-3: #a78bfa;
+    --lp-ink: #2e1065;
+    --lp-card: linear-gradient(155deg, #ffffff 0%, #f5f3ff 50%, #ede9fe 100%);
+    --lp-frame: linear-gradient(150deg, #e0e7ff, #f3e8ff 55%, #fae8ff);
+    --lp-bar: linear-gradient(90deg, #818cf8, #7c3aed);
+    --lp-border: rgba(124, 58, 237, 0.26);
+    --lp-glow: rgba(139, 92, 246, 0.16);
+}
+.lp-theme-ESCA::before {
+    background:
+        linear-gradient(125deg, transparent 40%, rgba(139,92,246,0.12) 70%, transparent 90%),
+        radial-gradient(circle at 90% 20%, rgba(99,102,241,0.25), transparent 40%);
+}
+.lp-theme-ESCA::after {
+    top: 0; left: 0; width: 5px; height: 100%; right: auto;
+    background: linear-gradient(180deg, var(--lp-1), var(--lp-2));
+}
+
+/* 阳光筑巢 · 琥珀→玫瑰 */
+.lp-theme-EFCP {
+    --lp-1: #f59e0b; --lp-2: #fb7185; --lp-3: #fbbf24;
+    --lp-ink: #7c2d12;
+    --lp-card: linear-gradient(165deg, #fffbeb 0%, #fff7ed 45%, #fff1f2 100%);
+    --lp-frame: linear-gradient(160deg, #fef3c7, #ffe4e6 50%, #ffedd5);
+    --lp-bar: linear-gradient(90deg, #fbbf24, #f43f5e);
+    --lp-border: rgba(245, 158, 11, 0.32);
+    --lp-glow: rgba(251, 113, 133, 0.14);
+}
+.lp-theme-EFCP::before {
+    background:
+        radial-gradient(circle at 15% 15%, rgba(251,191,36,0.35), transparent 42%),
+        radial-gradient(circle at 85% 80%, rgba(251,113,133,0.22), transparent 45%);
+}
+
+/* 浪漫牧者 · 粉→品红 */
+.lp-theme-EFCA {
+    --lp-1: #ec4899; --lp-2: #d946ef; --lp-3: #f472b6;
+    --lp-ink: #831843;
+    --lp-card: linear-gradient(160deg, #fff 0%, #fdf2f8 48%, #fae8ff 100%);
+    --lp-frame: linear-gradient(155deg, #fce7f3, #f5d0fe 55%, #ffe4e6);
+    --lp-bar: linear-gradient(90deg, #f472b6, #c026d3);
+    --lp-border: rgba(236, 72, 153, 0.3);
+    --lp-glow: rgba(217, 70, 239, 0.15);
+}
+.lp-theme-EFCA::before {
+    background:
+        radial-gradient(ellipse 90% 50% at 50% -20%, rgba(236,72,153,0.28), transparent 50%),
+        radial-gradient(circle at 100% 100%, rgba(217,70,239,0.18), transparent 40%);
+}
+.lp-theme-EFCA::after {
+    height: 5px;
+    background: linear-gradient(90deg, #f9a8d4, #e879f9, #f472b6);
+}
+
+/* 灯塔 · 天蓝→青 */
+.lp-theme-ESOP {
+    --lp-1: #0284c7; --lp-2: #06b6d4; --lp-3: #38bdf8;
+    --lp-ink: #0c4a6e;
+    --lp-card: linear-gradient(170deg, #ffffff 0%, #f0f9ff 50%, #ecfeff 100%);
+    --lp-frame: linear-gradient(165deg, #e0f2fe, #cffafe 50%, #f0f9ff);
+    --lp-bar: linear-gradient(90deg, #38bdf8, #0284c7);
+    --lp-border: rgba(2, 132, 199, 0.28);
+    --lp-glow: rgba(6, 182, 212, 0.15);
+}
+.lp-theme-ESOP::before {
+    background:
+        radial-gradient(circle at 50% 0%, rgba(56,189,248,0.32), transparent 48%),
+        radial-gradient(circle at 50% 100%, rgba(6,182,212,0.12), transparent 40%);
+}
+
+/* 自由先驱 · 青→翠绿 */
+.lp-theme-ESOA {
+    --lp-1: #0891b2; --lp-2: #14b8a6; --lp-3: #2dd4bf;
+    --lp-ink: #134e4a;
+    --lp-card: linear-gradient(160deg, #ffffff 0%, #ecfeff 45%, #f0fdfa 100%);
+    --lp-frame: linear-gradient(150deg, #cffafe, #ccfbf1 55%, #e0f2fe);
+    --lp-bar: linear-gradient(90deg, #22d3ee, #0d9488);
+    --lp-border: rgba(13, 148, 136, 0.28);
+    --lp-glow: rgba(20, 184, 166, 0.14);
+}
+.lp-theme-ESOA::before {
+    background:
+        linear-gradient(135deg, rgba(34,211,238,0.18) 0%, transparent 40%),
+        linear-gradient(315deg, rgba(45,212,191,0.2) 0%, transparent 45%);
+}
+.lp-theme-ESOA::after {
+    top: auto; bottom: 0; left: 0; right: 0; height: 4px;
+}
+
+/* 热心管家 · 橙→金 */
+.lp-theme-EFOP {
+    --lp-1: #ea580c; --lp-2: #f59e0b; --lp-3: #fb923c;
+    --lp-ink: #7c2d12;
+    --lp-card: linear-gradient(165deg, #fff7ed 0%, #ffffff 40%, #fffbeb 100%);
+    --lp-frame: linear-gradient(155deg, #ffedd5, #fef3c7 50%, #fff7ed);
+    --lp-bar: linear-gradient(90deg, #fdba74, #ea580c);
+    --lp-border: rgba(234, 88, 12, 0.28);
+    --lp-glow: rgba(245, 158, 11, 0.14);
+}
+.lp-theme-EFOP::before {
+    background:
+        radial-gradient(ellipse 60% 50% at 0% 50%, rgba(251,146,60,0.25), transparent 55%),
+        radial-gradient(ellipse 50% 40% at 100% 30%, rgba(251,191,36,0.2), transparent 50%);
+}
+.lp-theme-EFOP::after {
+    top: 0; left: 0; width: 5px; height: 100%; right: auto;
+    background: linear-gradient(180deg, #fb923c, #f59e0b);
+}
+
+/* 春风旅人 · 青绿→薄荷 */
+.lp-theme-EFOA {
+    --lp-1: #16a34a; --lp-2: #06b6d4; --lp-3: #4ade80;
+    --lp-ink: #14532d;
+    --lp-card: linear-gradient(155deg, #f0fdf4 0%, #ffffff 42%, #ecfeff 100%);
+    --lp-frame: linear-gradient(150deg, #dcfce7, #cffafe 55%, #f0fdf4);
+    --lp-bar: linear-gradient(90deg, #4ade80, #0891b2);
+    --lp-border: rgba(22, 163, 74, 0.26);
+    --lp-glow: rgba(74, 222, 128, 0.14);
+}
+.lp-theme-EFOA::before {
+    background:
+        radial-gradient(circle at 20% 80%, rgba(74,222,128,0.28), transparent 40%),
+        radial-gradient(circle at 80% 20%, rgba(34,211,238,0.22), transparent 42%);
+}
+
+/* 静谧港湾 · 雾蓝→薰衣草 */
+.lp-theme-ISCP {
+    --lp-1: #64748b; --lp-2: #818cf8; --lp-3: #94a3b8;
+    --lp-ink: #334155;
+    --lp-card: linear-gradient(170deg, #f8fafc 0%, #eef2ff 55%, #f1f5f9 100%);
+    --lp-frame: linear-gradient(165deg, #e2e8f0, #e0e7ff 50%, #f1f5f9);
+    --lp-bar: linear-gradient(90deg, #94a3b8, #6366f1);
+    --lp-border: rgba(100, 116, 139, 0.3);
+    --lp-glow: rgba(129, 140, 248, 0.12);
+}
+.lp-theme-ISCP::before {
+    background:
+        radial-gradient(ellipse 80% 60% at 50% 120%, rgba(129,140,248,0.2), transparent 55%),
+        radial-gradient(circle at 10% 10%, rgba(148,163,184,0.25), transparent 40%);
+}
+
+/* 内秀构建 · 紫→靛（柔） */
+.lp-theme-ISCA {
+    --lp-1: #7c3aed; --lp-2: #4f46e5; --lp-3: #a78bfa;
+    --lp-ink: #3b0764;
+    --lp-card: linear-gradient(160deg, #faf5ff 0%, #ffffff 45%, #eef2ff 100%);
+    --lp-frame: linear-gradient(155deg, #ede9fe, #e0e7ff 55%, #f5f3ff);
+    --lp-bar: linear-gradient(90deg, #c4b5fd, #4f46e5);
+    --lp-border: rgba(124, 58, 237, 0.24);
+    --lp-glow: rgba(124, 58, 237, 0.12);
+}
+.lp-theme-ISCA::before {
+    background:
+        repeating-linear-gradient(
+            -18deg,
+            transparent,
+            transparent 14px,
+            rgba(167,139,250,0.08) 14px,
+            rgba(167,139,250,0.08) 15px
+        ),
+        radial-gradient(circle at 90% 10%, rgba(124,58,237,0.16), transparent 45%);
+}
+.lp-theme-ISCA::after {
+    top: 0; left: 0; width: 5px; height: 100%; right: auto;
+    background: linear-gradient(180deg, #a78bfa, #4f46e5);
+}
+
+/* 温柔守望 · 玫瑰→蜜桃 */
+.lp-theme-IFCP {
+    --lp-1: #e11d48; --lp-2: #fb7185; --lp-3: #fda4af;
+    --lp-ink: #881337;
+    --lp-card: linear-gradient(165deg, #fff1f2 0%, #ffffff 48%, #fff7ed 100%);
+    --lp-frame: linear-gradient(160deg, #ffe4e6, #ffedd5 50%, #fff1f2);
+    --lp-bar: linear-gradient(90deg, #fda4af, #e11d48);
+    --lp-border: rgba(225, 29, 72, 0.24);
+    --lp-glow: rgba(251, 113, 133, 0.12);
+}
+.lp-theme-IFCP::before {
+    background:
+        radial-gradient(ellipse 70% 45% at 30% 0%, rgba(251,113,133,0.28), transparent 50%),
+        radial-gradient(circle at 100% 70%, rgba(253,186,116,0.2), transparent 40%);
+}
+
+/* 诗意栖居 · 丁香→粉 */
+.lp-theme-IFCA {
+    --lp-1: #a855f7; --lp-2: #ec4899; --lp-3: #c084fc;
+    --lp-ink: #581c87;
+    --lp-card: linear-gradient(155deg, #faf5ff 0%, #fdf2f8 50%, #ffffff 100%);
+    --lp-frame: linear-gradient(150deg, #f3e8ff, #fce7f3 55%, #fae8ff);
+    --lp-bar: linear-gradient(90deg, #e9d5ff, #db2777);
+    --lp-border: rgba(168, 85, 247, 0.26);
+    --lp-glow: rgba(236, 72, 153, 0.12);
+}
+.lp-theme-IFCA::before {
+    background:
+        radial-gradient(circle at 70% 30%, rgba(192,132,252,0.25), transparent 42%),
+        radial-gradient(circle at 20% 90%, rgba(244,114,182,0.2), transparent 40%);
+}
+.lp-theme-IFCA::after {
+    height: 5px;
+    border-radius: 0 0 2px 2px;
+    background: linear-gradient(90deg, #c084fc, #f472b6, #e879f9);
+}
+
+/* 沉思者 · 深蓝→石板 */
+.lp-theme-ISOP {
+    --lp-1: #1d4ed8; --lp-2: #475569; --lp-3: #60a5fa;
+    --lp-ink: #1e293b;
+    --lp-card: linear-gradient(170deg, #f8fafc 0%, #eff6ff 50%, #e2e8f0 100%);
+    --lp-frame: linear-gradient(165deg, #dbeafe, #e2e8f0 50%, #f1f5f9);
+    --lp-bar: linear-gradient(90deg, #93c5fd, #1e40af);
+    --lp-border: rgba(29, 78, 216, 0.26);
+    --lp-glow: rgba(30, 64, 175, 0.12);
+}
+.lp-theme-ISOP::before {
+    background:
+        linear-gradient(180deg, rgba(96,165,250,0.14), transparent 40%),
+        repeating-linear-gradient(
+            90deg,
+            transparent,
+            transparent 18px,
+            rgba(71,85,105,0.06) 18px,
+            rgba(71,85,105,0.06) 19px
+        );
+}
+.lp-theme-ISOP::after {
+    top: 0; left: 0; width: 5px; height: 100%; right: auto;
+    background: linear-gradient(180deg, #60a5fa, #334155);
+}
+
+/* 孤岛哲人 · 深青→靛 */
+.lp-theme-ISOA {
+    --lp-1: #0f766e; --lp-2: #4338ca; --lp-3: #2dd4bf;
+    --lp-ink: #134e4a;
+    --lp-card: linear-gradient(160deg, #f0fdfa 0%, #ffffff 45%, #eef2ff 100%);
+    --lp-frame: linear-gradient(155deg, #ccfbf1, #e0e7ff 55%, #f0fdfa);
+    --lp-bar: linear-gradient(90deg, #5eead4, #4338ca);
+    --lp-border: rgba(15, 118, 110, 0.28);
+    --lp-glow: rgba(67, 56, 202, 0.12);
+}
+.lp-theme-ISOA::before {
+    background:
+        radial-gradient(circle at 100% 0%, rgba(67,56,202,0.18), transparent 45%),
+        radial-gradient(circle at 0% 100%, rgba(45,212,191,0.22), transparent 45%);
+}
+
+/* 花园隐士 · 鼠尾草→薄荷 */
+.lp-theme-IFOP {
+    --lp-1: #65a30d; --lp-2: #84cc16; --lp-3: #a3e635;
+    --lp-ink: #365314;
+    --lp-card: linear-gradient(165deg, #f7fee7 0%, #ffffff 48%, #ecfccb 100%);
+    --lp-frame: linear-gradient(160deg, #ecfccb, #d9f99d 45%, #f0fdf4);
+    --lp-bar: linear-gradient(90deg, #bef264, #4d7c0f);
+    --lp-border: rgba(101, 163, 13, 0.28);
+    --lp-glow: rgba(132, 204, 22, 0.12);
+}
+.lp-theme-IFOP::before {
+    background:
+        radial-gradient(ellipse 50% 40% at 80% 20%, rgba(163,230,53,0.3), transparent 50%),
+        radial-gradient(ellipse 40% 35% at 15% 85%, rgba(132,204,22,0.18), transparent 45%);
+}
+.lp-theme-IFOP::after {
+    top: auto; bottom: 0; height: 4px;
+    background: linear-gradient(90deg, #a3e635, #65a30d, #84cc16);
+}
+
+/* 星尘游吟 · 夜靛→星粉（浅色科技感） */
+.lp-theme-IFOA {
+    --lp-1: #4338ca; --lp-2: #db2777; --lp-3: #818cf8;
+    --lp-ink: #312e81;
+    --lp-card: linear-gradient(155deg, #eef2ff 0%, #ffffff 40%, #fdf2f8 100%);
+    --lp-frame: linear-gradient(150deg, #e0e7ff, #fae8ff 50%, #ede9fe);
+    --lp-bar: linear-gradient(90deg, #a5b4fc, #db2777);
+    --lp-border: rgba(67, 56, 202, 0.28);
+    --lp-glow: rgba(219, 39, 119, 0.12);
+}
+.lp-theme-IFOA::before {
+    background:
+        radial-gradient(circle at 12% 18%, rgba(255,255,255,0.9) 0 1px, transparent 2px),
+        radial-gradient(circle at 28% 42%, rgba(255,255,255,0.75) 0 1px, transparent 2px),
+        radial-gradient(circle at 62% 22%, rgba(255,255,255,0.85) 0 1.5px, transparent 2.5px),
+        radial-gradient(circle at 78% 58%, rgba(255,255,255,0.7) 0 1px, transparent 2px),
+        radial-gradient(circle at 88% 30%, rgba(255,255,255,0.8) 0 1px, transparent 2px),
+        radial-gradient(ellipse 70% 50% at 100% 0%, rgba(129,140,248,0.28), transparent 50%),
+        radial-gradient(ellipse 50% 40% at 0% 100%, rgba(236,72,153,0.16), transparent 45%);
+}
+
+/* 预览画廊 */
+.lp-theme-gallery {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 18px;
+    margin: 20px 0 40px;
+}
+.lp-theme-gallery .personality-card {
+    margin: 0;
+    text-align: left;
+}
+.lp-theme-gallery .personality-name { font-size: 1.35em; }
