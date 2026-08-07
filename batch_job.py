@@ -180,6 +180,7 @@ def persist_user_matches(user, scored_pairs, mode, mail_cfg, weekly_new_limit=No
             user.answers, other.answers,
             score=score,
             seed=(user.id, other.id),
+            my_school=user.school, their_school=other.school,
         )
 
         existing = Match.query.filter(

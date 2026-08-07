@@ -706,7 +706,8 @@ def check_dealbreakers(answers1, answers2):
     return triggered
 
 
-def get_compatibility_insight(user_vec, match_vec, answers, match_answers, score=None, seed=None):
+def get_compatibility_insight(user_vec, match_vec, answers, match_answers, score=None, seed=None,
+                              my_school=None, their_school=None):
     """
     生成相处提示：共同点、差异、破冰口语。
     icebreakers 为纯字符串列表（校园口语，可直接发出）；seed 建议传双方 user id。
@@ -751,7 +752,10 @@ def get_compatibility_insight(user_vec, match_vec, answers, match_answers, score
 
     # 破冰：口语库按 seed 抽取；兴趣 tag 优先映射，否则通用库；不套题干人机句
     uniq_tags = list(dict.fromkeys(shared_tags))
-    icebreakers = pick_icebreakers(shared_tags=uniq_tags, seed=seed, n=3)
+    icebreakers = pick_icebreakers(
+        shared_tags=uniq_tags, seed=seed, n=3,
+        my_school=my_school, their_school=their_school,
+    )
 
     summary = (
         f"找到 {len(strengths)} 处相近、{len(differences)} 处差异。"

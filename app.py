@@ -1181,6 +1181,7 @@ def api_get_matches():
                 user.answers, other.answers,
                 score=m.score,
                 seed=(m.user1_id, m.user2_id),
+                my_school=user.school, their_school=other.school,
             )
             m.insight_json = json.dumps(insight, ensure_ascii=False)
             db.session.commit()
