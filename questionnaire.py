@@ -706,24 +706,21 @@ def check_dealbreakers(answers1, answers2):
     return triggered
 
 
-def get_compatibility_insight(user_vec, match_vec, answers, match_answers, score=None):
+def get_compatibility_insight(user_vec, match_vec, answers, match_answers, score=None, seed=None):
     """
-    生成相处提示：共同点、差异、军师支招（可复制开场白）。
-    icebreakers 为 [{tip, send}, ...]；tip=军师耳语，send=建议直接发出去的话。
+    生成相处提示：共同点、差异、破冰口语。
+    icebreakers 为纯字符串列表（校园口语，可直接发出）；seed 建议传双方 user id。
     """
+    from icebreakers import pick_icebreakers
+
     answers = _norm_answers(answers)
     match_answers = _norm_answers(match_answers)
     strengths = []
     differences = []
-    icebreakers = []
     shared_tags = []
 
-    # 敏感话题不做破冰素材（婚姻/孩子/出轨/吸烟/前任）
+    # 敏感话题不做共同点/差异素材（婚姻/孩子/出轨/吸烟/前任）
     ice_ban_qids = {5, 6, 8, 13, 24}
-
-    def _push_ice(text):
-        if len(icebreakers) < 3 and text not in icebreakers:
-            icebreakers.append(text)
 
     for q in QUESTIONS:
         qid = q["id"]
@@ -739,10 +736,6 @@ def get_compatibility_insight(user_vec, match_vec, answers, match_answers, score
                 lean = q.get("left", "左侧") if mid <= 3 else q.get("right", "右侧")
                 if qid not in ice_ban_qids:
                     strengths.append(f"在「{q['text']}」上很接近，都更偏向「{lean}」一侧")
-                    if diff == 0 and qid not in ice_ban_qids:
-                        _push_ice(
-                            f"你们对「{q['text']}」看法几乎一样——可以聊聊：平时遇到这种情况你会怎么做？"
-                        )
             elif diff >= 3 and qid not in ice_ban_qids:
                 differences.append(
                     f"「{q['text']}」差异较大（你偏「{q.get('left','一端')}」方向，对方偏「{q.get('right','另一端')}」方向）——见面时多问问对方真实习惯"
@@ -755,36 +748,25 @@ def get_compatibility_insight(user_vec, match_vec, answers, match_answers, score
                 shared_tags.extend(common[:3])
                 show = "、".join(common[:3])
                 strengths.append(f"「{q['text']}」都喜欢：{show}")
-                if len(icebreakers) < 5:
-                    tip = common[0]
-                    _push_ice(f"你们都喜欢「{tip}」——可以问问：最近有没有相关的安利/体验想分享？")
 
-    # 补足破冰到 3 条
-    for fb in [
-        "先从「最近校园里有什么想去但一个人懒得去的活动」聊起？",
-        "互相问问对方问卷里「标记为很重要」的那几题，为什么在意？",
-        "约一个低压力场景：咖啡/食堂/散步 30 分钟，不聊太深也没关系。",
-    ]:
-        if len(icebreakers) >= 3:
-            break
-        _push_ice(fb)
+    # 破冰：口语库按 seed 抽取；兴趣 tag 优先映射，否则通用库；不套题干人机句
+    uniq_tags = list(dict.fromkeys(shared_tags))
+    icebreakers = pick_icebreakers(shared_tags=uniq_tags, seed=seed, n=3)
 
-    pct = None  # 不对用户展示匹配度百分比
     summary = (
         f"找到 {len(strengths)} 处相近、{len(differences)} 处差异。"
         "把这次当作「系统给的开口理由」，轻松一点就好。"
     )
 
-    if shared_tags:
-        uniq = list(dict.fromkeys(shared_tags))[:4]
-        summary += f" 共同标签：{'、'.join(uniq)}。"
+    if uniq_tags:
+        summary += f" 共同标签：{'、'.join(uniq_tags[:4])}。"
 
     return {
         "summary": summary,
         "strengths": strengths[:6],
         "differences": differences[:4],
         "icebreakers": icebreakers[:3],
-        "shared_tags": list(dict.fromkeys(shared_tags))[:6],
+        "shared_tags": uniq_tags[:6],
         "total_strengths": len(strengths),
         "total_differences": len(differences),
         "score_pct": None,

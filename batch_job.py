@@ -179,6 +179,7 @@ def persist_user_matches(user, scored_pairs, mode, mail_cfg, weekly_new_limit=No
             user.feature_vector, other.feature_vector,
             user.answers, other.answers,
             score=score,
+            seed=(user.id, other.id),
         )
 
         existing = Match.query.filter(
@@ -328,6 +329,7 @@ def run_batch_school(school, mail_cfg, require_opt_in=False, exclude_ids=None):
         insight = get_compatibility_insight(
             a.feature_vector, b.feature_vector, a.answers, b.answers,
             score=score,
+            seed=(a.id, b.id),
         )
         m, is_new = _get_or_create_pair(a, b, score, insight, mode="batch")
         enforce_one_to_one_active(a, b, m)
@@ -417,6 +419,7 @@ def run_batch_cross(mail_cfg, require_opt_in=False, exclude_ids=None):
         insight = get_compatibility_insight(
             a.feature_vector, b.feature_vector, a.answers, b.answers,
             score=score,
+            seed=(a.id, b.id),
         )
         m, is_new = _get_or_create_pair(a, b, score, insight, mode="batch")
         enforce_one_to_one_active(a, b, m)

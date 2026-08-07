@@ -4,6 +4,18 @@ All notable changes to CampusMatch.
 
 ---
 
+## [1.9.29] — 2026-08-07
+
+### 问题（上次）
+- 破冰话题像人机：把问卷题干拼进文案，再套「平时遇到这种情况你会怎么做」等模板，不像同学微信里会发的话
+
+### 改动
+- **Added / 口语话题库**：新增 `icebreakers.py`（通用校园口语 + 兴趣 tag 映射），按 seed 稳定抽取 3 条可直接发出的破冰
+- **Improved / 匹配洞察**：`get_compatibility_insight` 改为抽库生成破冰，不再套题干人机句；支持 `seed`（双方 user id）
+- **Fixed / 旧模板回写**：打开匹配页时若破冰为空或命中旧人机特征，自动 regen 并回写 `insight_json`（`app.py`）；batch 写入同步传 `seed`（`batch_job.py`）
+
+---
+
 ## [1.9.28] — 2026-08-07
 
 ### 问题（上次）

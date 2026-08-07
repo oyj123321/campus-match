@@ -1171,14 +1171,16 @@ def api_get_matches():
     for m in records:
         other = m.user2 if m.user1_id == user.id else m.user1
         insight = json.loads(m.insight_json) if m.insight_json else {}
-        # 旧记录补全：icebreakers 为空时重新生成
+        # 空破冰或旧人机模板：重算一次并回写（仅 stale 时写，避免每请求都写）
+        from icebreakers import is_stale_icebreaker_list
         ice = insight.get("icebreakers") or []
-        needs_regen = not ice
+        needs_regen = is_stale_icebreaker_list(ice)
         if m.active and needs_regen:
             insight = get_compatibility_insight(
                 user.feature_vector, other.feature_vector,
                 user.answers, other.answers,
                 score=m.score,
+                seed=(m.user1_id, m.user2_id),
             )
             m.insight_json = json.dumps(insight, ensure_ascii=False)
             db.session.commit()
