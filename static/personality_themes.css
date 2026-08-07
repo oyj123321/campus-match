@@ -41,6 +41,64 @@
     z-index: 1;
 }
 
+/* 岛图主视觉：型名上方；加载成功后弱化/隐藏右上角线稿纹章 */
+.lp-island-wrap {
+    margin: 10px auto 8px;
+    width: min(100%, 220px);
+    max-width: 78%;
+    line-height: 0;
+    text-align: center;
+}
+.lp-island {
+    display: block;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 1;
+    object-fit: cover;
+    border-radius: 16px;
+    box-shadow:
+        0 2px 8px rgba(15, 23, 42, 0.05),
+        0 10px 22px rgba(15, 23, 42, 0.07);
+    background: transparent;
+}
+.personality-card.lp-has-island > .lp-emblem,
+.lp-share-card.lp-has-island > .lp-emblem,
+.personality-card.lp-island-pending > .lp-emblem,
+.lp-share-card.lp-island-pending > .lp-emblem {
+    display: none !important;
+}
+.personality-modal-panel .lp-island-wrap {
+    width: min(100%, 188px);
+    margin: 8px auto 6px;
+}
+/* 分享精简卡：岛图作主视觉，更大更满，弱化贴图式边框感 */
+.lp-share-card-slim .lp-island-wrap {
+    width: min(100%, 268px);
+    max-width: 82%;
+    margin: 4px auto 10px;
+    align-self: center;
+}
+.lp-share-card-slim .lp-island {
+    border-radius: 12px;
+    box-shadow: 0 6px 20px rgba(15, 23, 42, 0.08);
+    background: transparent;
+}
+.lp-share-card-slim.lp-has-island .lp-share-brandbar {
+    padding-right: 26px;
+}
+/* 分享精简卡：干净内卡，主题色留给外框色场 */
+.lp-share-card.lp-share-card-slim[data-lp-code] {
+    background: #ffffff !important;
+    --lp-card: #ffffff;
+    padding: 0 0 14px !important;
+}
+.lp-share-card-slim::before {
+    opacity: 0.35 !important;
+}
+.lp-share-card-slim::after {
+    height: 3px;
+}
+
 .personality-card[data-lp-code],
 .lp-share-card[data-lp-code] {
     --lp-pad-x: 36px; /* 正文左右留白，避免贴边 */
@@ -52,10 +110,6 @@
     /* 关键：用左右 padding 把整块文字从边缘推开（仍左对齐） */
     padding: 0 var(--lp-pad-x) 2.8em !important;
     text-align: left;
-}
-/* 精简分享卡自管内边距（顶栏/hero/底栏） */
-.lp-share-card.lp-share-card-slim[data-lp-code] {
-    padding: 0 0 14px !important;
 }
 
 /* 顶部标题区：透出卡片渐变（避免另铺 --lp-frame 造成色带） */
@@ -148,6 +202,7 @@
 
 .lp-share-frame[data-lp-code] {
     background: var(--lp-frame);
+    box-shadow: 0 10px 36px var(--lp-glow, rgba(15, 23, 42, 0.1));
 }
 
 .personality-card[data-lp-code] .personality-name,
@@ -315,19 +370,25 @@
 .lp-share-card-slim .lp-stamp {
     display: none !important;
 }
-.lp-share-card-slim .lp-watermark {
-    bottom: 22%;
-    opacity: 0.06;
+.lp-share-card-slim .lp-corners,
+.lp-share-card-slim .lp-grid {
+    display: none !important;
 }
-.lp-share-card-slim .lp-corners {
-    top: 68px;
+.lp-share-card-slim .lp-watermark {
+    right: auto;
+    left: 50%;
+    bottom: auto;
+    top: 42%;
+    transform: translate(-50%, -50%) rotate(-16deg);
+    font-size: clamp(2.6em, 12vw, 3.6em);
+    letter-spacing: 0.22em;
+    opacity: 0.055;
+    color: var(--lp-1, #64748b);
+    z-index: 0;
+    pointer-events: none;
 }
 .lp-share-card-slim .lp-emblem {
-    top: 10px;
-    right: 14px;
-    width: 48px;
-    height: 48px;
-    opacity: 0.38;
+    display: none !important;
 }
 .lp-share-card-slim .lp-share-brand-name {
     color: var(--lp-ink, #1e293b);
@@ -336,8 +397,19 @@
     color: var(--lp-ink, #1e293b);
 }
 .lp-share-card-slim .lp-share-brandbar {
-    border-bottom-color: var(--lp-border, rgba(15, 23, 42, 0.08));
-    padding-right: 72px; /* 给右上角纹章留位 */
+    border-bottom-color: var(--lp-border, rgba(15, 23, 42, 0.06));
+    padding-right: 26px;
+}
+.lp-share-card.lp-share-card-slim[data-lp-code] .personality-name {
+    margin-top: 0;
+    margin-bottom: 4px;
+    padding-right: 0;
+}
+.lp-share-card.lp-share-card-slim[data-lp-code] .personality-code {
+    margin-bottom: 10px;
+}
+.lp-share-card.lp-share-card-slim[data-lp-code] .personality-sub {
+    margin-bottom: 0;
 }
 .personality-card[data-lp-code] .lp-capture-brand,
 .lp-share-card[data-lp-code] .lp-capture-brand {

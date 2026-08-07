@@ -4,6 +4,25 @@ All notable changes to CampusMatch.
 
 ---
 
+## [1.9.26] — 2026-08-07
+
+### 问题（上次）
+- 分享卡海报感不足，视觉层次偏弱，不像可传播海报
+- 岛图式人格主视觉缺失或像贴图，扫读辨识弱
+- 分享卡偶发露出本机 / IP 地址，影响信任与扫码落地
+- 部分型弱项构图稀释（如 ESCP 盾牌等），与型气质不够贴
+- 16 型卡面文案仍偏说明书口吻，分享欲不足
+
+### 改动
+- **Improved / 分享卡海报感**：色场构图 + 大岛图主视觉，精简层次，更易扫读传播（`personality_share.js` / `style.css` / `personality_themes.css`）
+- **Added / 16 型岛图**：接入 `static/personality_islands/` 插画；有图时弱化纹章贴图式装饰
+- **Fixed / 去 IP**：分享可见域名与扫码落地统一正式站 `campusmatch.com.cn`，本机/IP 不入卡
+- **Improved / 弱项构图**：重画部分型主视觉（含 ESCP 盾牌等），强化型气质识别
+- **Improved / 文案语气**：`personality.py` + 四语 `love_personality_i18n.js` 口语化改写，更易分享；水印系别 i18n（`i18n.js`）
+- **Chore**：静态资源缓存 `?v=1953`（`base.html`）
+
+---
+
 ## [1.9.25] — 2026-08-07
 
 ### 问题（上次）

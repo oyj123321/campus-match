@@ -28,153 +28,154 @@
     };
 
     // code → { zh|tw|en|pt: { name, subtitle, traits[], strength, match_tip } }
+    // 语气对齐 personality.py：E 口语热、I 克制诗意；勿 16 型同一骨架
     var LP_TYPES = {
         ESCP: {
             zh: {
                 name: '守护者型',
-                subtitle: '靠近不是冲动，是愿意把在乎说清楚、放长久',
-                traits: ['喜欢用行动证明「我在」', '愿意走进关系，也渴望被认真接住', '宁可慢一点谈明白，也不想轻轻带过'],
-                strength: '把稳定变成可感知的安全感，让对方不必猜。',
-                match_tip: '会回应你的认真、也敢把喜欢说出口的人。'
+                subtitle: '喜欢就说清楚，然后用日子把你守住',
+                traits: ['心里有事会摊开讲，不爱让人猜', '日子有章法，承诺更不随便开出口', '想走进你，也想被你认真接住'],
+                strength: '把「我在」变成摸得到的安全感，对方不必猜。',
+                match_tip: '敢接住你认真、也会把喜欢说出口的人。'
             },
             tw: {
                 name: '守護者型',
-                subtitle: '靠近不是衝動，是願意把在乎說清楚、放長久',
-                traits: ['喜歡用行動證明「我在」', '願意走進關係，也渴望被認真接住', '寧可慢一點談明白，也不想輕輕帶過'],
-                strength: '把穩定變成可感知的安全感，讓對方不必猜。',
-                match_tip: '會回應你的認真、也敢把喜歡說出口的人。'
+                subtitle: '喜歡就說清楚，然後用日子把你守住',
+                traits: ['心裡有事會攤開講，不愛讓人猜', '日子有章法，承諾更不隨便開出口', '想走進你，也想被你認真接住'],
+                strength: '把「我在」變成摸得到的安全感，對方不必猜。',
+                match_tip: '敢接住你認真、也會把喜歡說出口的人。'
             },
             en: {
                 name: 'Guardian',
-                subtitle: 'Closeness isn’t impulse—it’s choosing to name care, and keep it',
-                traits: ['You prove “I’m here” through actions', 'You step into love—and hope to be met seriously', 'You’d rather talk it through slowly than brush it past'],
-                strength: 'You turn steadiness into felt safety—so they don’t have to guess.',
-                match_tip: 'Someone who answers your seriousness—and dares to say liking out loud.'
+                subtitle: 'If I like you, I say it—then I keep you with ordinary days',
+                traits: ['I put things on the table; I hate guessing games', 'Life has order; promises aren’t cheap', 'I want in—and I want to be met for real'],
+                strength: 'You make “I’m here” something they can feel—no guessing required.',
+                match_tip: 'Someone who can hold your seriousness—and say liking out loud too.'
             },
             pt: {
                 name: 'Guardião/ã',
-                subtitle: 'Aproximar não é impulso—é escolher nomear o cuidado e mantê-lo',
-                traits: ['Provas “estou aqui” com gestos', 'Entras na relação—e queres ser acolhido/a a sério', 'Preferes esclarecer com calma a passar por cima'],
-                strength: 'Transformas estabilidade em segurança sentida—sem adivinhações.',
-                match_tip: 'Alguém que responde à tua seriedade—e ousa dizer o gostar em voz alta.'
+                subtitle: 'Se gosto, digo—e depois guardo-te com os dias comuns',
+                traits: ['Pões as coisas na mesa; odeias adivinhações', 'A vida tem ordem; promessas não são baratas', 'Queres entrar—e ser acolhido/a a sério'],
+                strength: 'Tornas o «estou aqui» palpável—sem adivinhar.',
+                match_tip: 'Alguém que segura a tua seriedade—e também diz o gostar em voz alta.'
             }
         },
         ESCA: {
             zh: {
                 name: '开明领航型',
-                subtitle: '一边把关系经营清楚，一边邀请对方看见更远的风景',
-                traits: ['表达直接，不爱绕弯', '日子有节奏，却留得下意外', '对未来开放，也肯并肩商量'],
-                strength: '给方向，也给余地——让靠近变成一起长大。',
-                match_tip: '独立却肯同行的人：跟得上你，也不怕新的一页。'
+                subtitle: '路我帮你理清楚——风景嘛，咱们一起冲！',
+                traits: ['说话直接，绕弯子太累', '日子有节奏，却随时准备翻新页', '亲密要并肩商量，也要敢往前闯'],
+                strength: '给你方向，也给你余量：靠近变成一起长大。',
+                match_tip: '跟得上你、不怕开新局的人——独立，但肯并肩。'
             },
             tw: {
                 name: '開明領航型',
-                subtitle: '一邊把關係經營清楚，一邊邀請對方看見更遠的風景',
-                traits: ['表達直接，不愛繞彎', '日子有節奏，卻留得下意外', '對未來開放，也肯並肩商量'],
-                strength: '給方向，也給餘地——讓靠近變成一起長大。',
-                match_tip: '獨立卻肯同行的人：跟得上你，也不怕新的一頁。'
+                subtitle: '路我幫你理清楚——風景嘛，咱們一起衝！',
+                traits: ['說話直接，繞彎子太累', '日子有節奏，卻隨時準備翻新頁', '親密要並肩商量，也要敢往前闖'],
+                strength: '給你方向，也給你餘量：靠近變成一起長大。',
+                match_tip: '跟得上你、不怕開新局的人——獨立，但肯並肩。'
             },
             en: {
                 name: 'Open Navigator',
-                subtitle: 'You clear the path of a relationship—and invite someone farther out',
-                traits: ['Direct words, little circling', 'A paced life that still allows surprise', 'Open to the future, ready to plan side by side'],
-                strength: 'You offer direction and room—so closeness becomes growing together.',
-                match_tip: 'Someone independent who still walks with you—keeps pace, unafraid of a new page.'
+                subtitle: 'I’ll clear the path—scenery? Let’s go get it together!',
+                traits: ['Straight talk; circling is exhausting', 'A paced life that’s ready for a new page', 'Closeness means planning side by side—and daring the next turn'],
+                strength: 'You give direction and room: closeness becomes growing together.',
+                match_tip: 'Someone who keeps up and isn’t scared of a new chapter—independent, but willing to walk with you.'
             },
             pt: {
                 name: 'Navegador/a Aberto/a',
-                subtitle: 'Clarificas a relação—e convidas alguém a ver mais longe',
-                traits: ['Palavras diretas, pouco rodeio', 'Ritmo no dia a dia com espaço para o acaso', 'Aberto/a ao futuro, disposto/a a planear a par'],
-                strength: 'Dás direção e margem—para a proximidade ser crescer juntos.',
-                match_tip: 'Alguém independente que caminha contigo—acompanha o ritmo e não teme uma página nova.'
+                subtitle: 'Eu esclareço o caminho—a paisagem? Vamos buscá-la juntos!',
+                traits: ['Fala direta; rodeios cansam', 'Ritmo no dia a dia, sempre pronto/a a virar página', 'Intimidade é planear a par—e ousar a próxima curva'],
+                strength: 'Dás direção e margem: a proximidade vira crescer juntos.',
+                match_tip: 'Alguém que acompanha e não teme um capítulo novo—independente, mas disposto a caminhar contigo.'
             }
         },
         EFCP: {
             zh: {
                 name: '阳光筑巢型',
-                subtitle: '轻松地靠近，却把「以后」放在心上',
-                traits: ['情感外放，能把气氛焐热', '日常随性，讨厌被规矩拴住', '承诺这件事，你偏稳健'],
-                strength: '让相处像日光：暖、松，却看得见明天。',
-                match_tip: '能一起玩、也肯谈以后的人——别太闷，也别太飘。'
+                subtitle: '靠近可以很轻松——「以后」这件事，我可当真了！',
+                traits: ['一来就能把气氛焐热，情绪藏不住', '日常随性，最烦被规矩拴死', '玩归玩，说到承诺你偏稳'],
+                strength: '相处像晒太阳：暖、松，明天还看得见。',
+                match_tip: '能一起疯、也肯谈以后的人——别闷成石头，也别飘成风。'
             },
             tw: {
                 name: '陽光築巢型',
-                subtitle: '輕鬆地靠近，卻把「以後」放在心上',
-                traits: ['情感外放，能把氣氛焐熱', '日常隨性，討厭被規矩拴住', '承諾這件事，你偏穩健'],
-                strength: '讓相處像日光：暖、鬆，卻看得見明天。',
-                match_tip: '能一起玩、也肯談以後的人——別太悶，也別太飄。'
+                subtitle: '靠近可以很輕鬆——「以後」這件事，我可當真了！',
+                traits: ['一來就能把氣氛焐熱，情緒藏不住', '日常隨性，最煩被規矩拴死', '玩歸玩，說到承諾你偏穩'],
+                strength: '相處像曬太陽：暖、鬆，明天還看得見。',
+                match_tip: '能一起瘋、也肯談以後的人——別悶成石頭，也別飄成風。'
             },
             en: {
                 name: 'Sunny Nest-builder',
-                subtitle: 'You come close lightly—yet keep “later” in your heart',
-                traits: ['Emotionally open; you warm a room', 'Casual days; hate being tied by rules', 'Steady when it comes to commitment'],
-                strength: 'Love like daylight: warm, easy—and tomorrow is still in view.',
-                match_tip: 'Someone fun who will also talk about later—not too dull, not too flaky.'
+                subtitle: 'Coming close can be easy—but “later”? I’m dead serious about that!',
+                traits: ['You warm a room fast; feelings don’t stay hidden', 'Casual days; hate being rule-tied', 'Play hard—commitment, though, you keep steady'],
+                strength: 'Love like sunbathing: warm, loose—and tomorrow’s still in view.',
+                match_tip: 'Someone who can goof off with you and still talk about later—not a stone, not a breeze.'
             },
             pt: {
                 name: 'Construtor/a Solar',
-                subtitle: 'Aproximas-te com leveza—e guardas o «depois» no coração',
-                traits: ['Emocionalmente aberto/a; aqueces o ambiente', 'Dia a dia descontraído; detestas regras que prendem', 'Estável quanto ao compromisso'],
-                strength: 'Convívio como luz do dia: quente, leve—e o amanhã ainda se vê.',
-                match_tip: 'Alguém divertido que também fala do depois—nem demasiado sério, nem volátil.'
+                subtitle: 'Aproximar pode ser leve—mas o «depois»? Nisso sou a sério!',
+                traits: ['Aqueces o ambiente depressa; emoção não se esconde', 'Dia a dia solto; detestas regras que prendem', 'Brincar vale—no compromisso, és estável'],
+                strength: 'Convívio como sol: quente, folgado—e o amanhã ainda se vê.',
+                match_tip: 'Alguém que brinca contigo e ainda fala do depois—nem pedra, nem vento.'
             }
         },
         EFCA: {
             zh: {
                 name: '浪漫牧者型',
-                subtitle: '热烈可以自由，喜欢值得被过成一段路',
-                traits: ['表达热烈，藏不住喜欢', '生活灵活，讨厌一成不变', '亲密与出走，可以同时发生'],
-                strength: '把平凡日子点燃成记得住的瞬间。',
-                match_tip: '同样敢靠近、敢尝试的人——别用管束浇灭火花。'
+                subtitle: '喜欢你就藏不住！别走远——这颗心是热的，也想跟你到处晃',
+                traits: ['感情来了嘴比脑子快半拍', '日子要活，一成不变会闷出火星', '想黏着你，也想拉着你去试新的'],
+                strength: '把平淡日子点成记得住的火花。',
+                match_tip: '同样敢靠近、敢试的人——别用管束把火花浇灭。'
             },
             tw: {
                 name: '浪漫牧者型',
-                subtitle: '熱烈可以自由，喜歡值得被過成一段路',
-                traits: ['表達熱烈，藏不住喜歡', '生活靈活，討厭一成不變', '親密與出走，可以同時發生'],
-                strength: '把平凡日子點燃成記得住的瞬間。',
-                match_tip: '同樣敢靠近、敢嘗試的人——別用管束澆滅火花。'
+                subtitle: '喜歡你就藏不住！別走遠——這顆心是熱的，也想跟你到處晃',
+                traits: ['感情來了嘴比腦子快半拍', '日子要活，一成不變會悶出火星', '想黏著你，也想拉著你去試新的'],
+                strength: '把平淡日子點成記得住的火花。',
+                match_tip: '同樣敢靠近、敢試的人——別用管束把火花澆滅。'
             },
             en: {
                 name: 'Romantic Shepherd',
-                subtitle: 'Passion can stay free—liking someone deserves to become a stretch of road',
-                traits: ['Warm expression; hard to hide liking', 'Flexible days; dislike sameness', 'Closeness and getting out can happen together'],
-                strength: 'You light ordinary days into moments worth keeping.',
-                match_tip: 'Someone equally brave to come close and try—don’t smother the spark with control.'
+                subtitle: 'If I like you, it shows! Don’t drift—this heart’s warm, and it wants to wander with you',
+                traits: ['When feelings hit, mouth outruns brain', 'Days need life; sameness sparks cabin fever', 'Want to stick close—and drag you into something new'],
+                strength: 'You turn plain days into sparks worth keeping.',
+                match_tip: 'Someone equally brave to come close and try—don’t drown the spark in control.'
             },
             pt: {
                 name: 'Pastor/a Romântico/a',
-                subtitle: 'A intensidade pode ser livre—gostar merece virar um troço de estrada',
-                traits: ['Expressão quente; o gostar não se esconde', 'Dias flexíveis; detestas a monotonia', 'Intimidade e sair pelo mundo podem coexistir'],
-                strength: 'Acendes o quotidiano em momentos que ficam.',
-                match_tip: 'Alguém igualmente corajoso a aproximar-se e tentar—não apagues a chama com controlo.'
+                subtitle: 'Se gosto, não escondo! Não te afastes—este coração é quente e quer vaguear contigo',
+                traits: ['Quando a emoção chega, a boca vai à frente da cabeça', 'Os dias precisam de vida; a monotonia faz faísca', 'Queres colar—e puxar para algo novo'],
+                strength: 'Acendes o quotidiano em faíscas que ficam.',
+                match_tip: 'Alguém igualmente corajoso a aproximar-se e tentar—não afogues a faísca com controlo.'
             }
         },
         ESOP: {
             zh: {
                 name: '灯塔型',
-                subtitle: '愿意照亮你，也守着自己的岸',
-                traits: ['表达清晰，少猜忌', '生活有序，心里有谱', '亲近里仍要边界与呼吸'],
-                strength: '靠谱而不吞没——靠近有光，分开也不慌。',
+                subtitle: '我可以照亮你，也请让我守好自己的岸',
+                traits: ['话讲清楚，少让人猜忌', '生活有谱，心里有地图', '亲近可以，边界和呼吸也要'],
+                strength: '靠谱却不吞没——靠近有光，分开也不慌。',
                 match_tip: '尊重你节奏的人：认真靠近，也能安静各自站立。'
             },
             tw: {
                 name: '燈塔型',
-                subtitle: '願意照亮你，也守著自己的岸',
-                traits: ['表達清晰，少猜忌', '生活有序，心裡有譜', '親近裡仍要邊界與呼吸'],
-                strength: '靠譜而不吞沒——靠近有光，分開也不慌。',
+                subtitle: '我可以照亮你，也請讓我守好自己的岸',
+                traits: ['話講清楚，少讓人猜忌', '生活有譜，心裡有地圖', '親近可以，邊界和呼吸也要'],
+                strength: '靠譜卻不吞沒——靠近有光，分開也不慌。',
                 match_tip: '尊重你節奏的人：認真靠近，也能安靜各自站立。'
             },
             en: {
                 name: 'Lighthouse',
-                subtitle: 'Willing to cast light—while keeping your own shore',
-                traits: ['Clear words, little suspicion', 'Ordered days, an inner map', 'Even in closeness you need edge and breath'],
+                subtitle: 'I can cast light for you—please let me keep my own shore too',
+                traits: ['Clear words; less suspicion', 'Ordered days, an inner map', 'Closeness is fine—edge and breath still matter'],
                 strength: 'Reliable without swallowing anyone—close with light, apart without panic.',
                 match_tip: 'Someone who respects your pace: present when near, calm standing alone.'
             },
             pt: {
                 name: 'Farol',
-                subtitle: 'Disposto/a a iluminar—e a guardar a tua própria margem',
-                traits: ['Palavras claras, pouca suspeita', 'Dias ordenados, mapa interior', 'Na proximidade ainda precisas de limite e ar'],
+                subtitle: 'Posso iluminar-te—e peço que me deixes guardar a minha margem',
+                traits: ['Palavras claras; menos suspeita', 'Dias ordenados, mapa interior', 'Proximidade ok—limite e ar ainda importam'],
                 strength: 'Confiável sem absorver—perto com luz, longe sem pânico.',
                 match_tip: 'Alguém que respeita o teu ritmo: presente ao perto, calmo sozinho.'
             }
@@ -182,90 +183,90 @@
         ESOA: {
             zh: {
                 name: '自由先驱型',
-                subtitle: '热烈地喜欢，也热烈地做完整的自己',
-                traits: ['情感外放，带动场', '秩序感在，却拒绝被绑死', '独立开放，并肩比占有更吸引你'],
-                strength: '把热情变成同行，而不是吞并。',
-                match_tip: '同样完整的人——一起走，而不是互相消融。'
+                subtitle: '喜欢你，热烈；做自己，也热烈——少一边都不行！',
+                traits: ['一进场就能带起气场', '有秩序感，但绝不要被绑死', '并肩比占有更让你心动'],
+                strength: '把热情变成同行，不是吞并。',
+                match_tip: '同样完整的人——一起走，别互相化掉。'
             },
             tw: {
                 name: '自由先驅型',
-                subtitle: '熱烈地喜歡，也熱烈地做完整的自己',
-                traits: ['情感外放，帶動場', '秩序感在，卻拒絕被綁死', '獨立開放，並肩比佔有更吸引你'],
-                strength: '把熱情變成同行，而不是吞併。',
-                match_tip: '同樣完整的人——一起走，而不是互相消融。'
+                subtitle: '喜歡你，熱烈；做自己，也熱烈——少一邊都不行！',
+                traits: ['一進場就能帶起氣場', '有秩序感，但絕不要被綁死', '並肩比佔有更讓你心動'],
+                strength: '把熱情變成同行，不是吞併。',
+                match_tip: '同樣完整的人——一起走，別互相化掉。'
             },
             en: {
                 name: 'Free Pioneer',
-                subtitle: 'You like fiercely—and stay fiercely whole',
-                traits: ['Open emotion; you lift a room', 'Some order—yet refuse to be tied down', 'Independent and open; walking beside beats owning'],
-                strength: 'You turn heat into companionship, not absorption.',
-                match_tip: 'Someone equally whole—walk together, don’t dissolve into each other.'
+                subtitle: 'Liking you: full heat. Being myself: full heat—drop either and it breaks!',
+                traits: ['You lift a room the second you walk in', 'Some order—zero interest in being tied down', 'Side-by-side thrills you more than owning'],
+                strength: 'You turn heat into walking together, not swallowing whole.',
+                match_tip: 'Someone equally whole—walk together; don’t melt into each other.'
             },
             pt: {
                 name: 'Pioneiro/a Livre',
-                subtitle: 'Gostas com intensidade—e permaneces inteiro/a',
-                traits: ['Emoção aberta; elevas o ambiente', 'Há ordem—mas recusas amarras', 'Independente e aberto/a; lado a lado vale mais do que possuir'],
-                strength: 'Transformas calor em companhia, não em absorção.',
-                match_tip: 'Alguém igualmente inteiro—caminhem juntos, sem se dissolver.'
+                subtitle: 'Gostar de ti: a fundo. Ser eu: a fundo—falta um lado e parte!',
+                traits: ['Elevas o ambiente ao entrar', 'Há ordem—zero interesse em amarras', 'Lado a lado excita-te mais do que possuir'],
+                strength: 'Transformas calor em caminhar juntos, não em absorver.',
+                match_tip: 'Alguém igualmente inteiro—caminhem; não se dissolvam.'
             }
         },
         EFOP: {
             zh: {
                 name: '热心管家型',
-                subtitle: '对在乎的人很热络，也留得下自己的空',
-                traits: ['表达外放，热情来得快', '日常不拘小节', '亲近里仍保有独立', '大事上偏稳，不轻易甩手'],
-                strength: '热情可感，却不黏到窒息。',
+                subtitle: '在乎你的时候会很热络——但请给我留一块自己的空！',
+                traits: ['热情来得快，关心说得出、做得动', '日常不拘小节，讨厌被管太细', '亲近可以，独立也得在', '大事上偏稳，不轻易甩手'],
+                strength: '热情摸得到，却不会黏到喘不过气。',
                 match_tip: '懂你热一阵、也要自己空间的人。'
             },
             tw: {
                 name: '熱心管家型',
-                subtitle: '對在乎的人很熱絡，也留得下自己的空',
-                traits: ['表達外放，熱情來得快', '日常不拘小節', '親近裡仍保有獨立', '大事上偏穩，不輕易甩手'],
-                strength: '熱情可感，卻不黏到窒息。',
+                subtitle: '在乎你的時候會很熱絡——但請給我留一塊自己的空！',
+                traits: ['熱情來得快，關心說得出、做得動', '日常不拘小節，討厭被管太細', '親近可以，獨立也得在', '大事上偏穩，不輕易甩手'],
+                strength: '熱情摸得到，卻不會黏到喘不過氣。',
                 match_tip: '懂你熱一陣、也要自己空間的人。'
             },
             en: {
                 name: 'Warm Host',
-                subtitle: 'Warm with who you care for—and still leave yourself room',
-                traits: ['Open expression; warmth arrives fast', 'Casual about small stuff', 'Close, yet keep independence', 'Steady on big things; don’t walk away lightly'],
-                strength: 'Warmth you can feel—without smothering.',
-                match_tip: 'Someone who gets your “close for a while, then need space” rhythm.'
+                subtitle: 'When I care, I’m all in warm—just leave me a patch of my own space!',
+                traits: ['Warmth arrives fast; care shows in words and deeds', 'Casual about small stuff; hate micromanagement', 'Close is fine—independence stays', 'Steady on big things; don’t bail lightly'],
+                strength: 'Warmth you can touch—without smothering the air out of anyone.',
+                match_tip: 'Someone who gets “hot for a stretch, then I need room.”'
             },
             pt: {
                 name: 'Anfitrião/ã Afetuoso/a',
-                subtitle: 'Caloroso/a com quem te importa—e ainda deixas espaço para ti',
-                traits: ['Expressão aberta; o calor chega depressa', 'Pouco formal no quotidiano', 'Próximo/a, mas independente', 'Estável no importante; não desistes de ânimo leve'],
-                strength: 'Calor que se sente—sem sufocar.',
-                match_tip: 'Alguém que entende o teu «perto um tempo, depois espaço».'
+                subtitle: 'Quando me importo, fico bem quente—mas deixa-me um pedaço de espaço meu!',
+                traits: ['O calor chega depressa; o cuidado sai em palavras e gestos', 'Pouco formal no miúdo; detestas microgestão', 'Perto ok—independência fica', 'Estável no importante; não desistes de ânimo leve'],
+                strength: 'Calor que se toca—sem sufocar o ar de ninguém.',
+                match_tip: 'Alguém que percebe o «quente um tempo, depois preciso de espaço».'
             }
         },
         EFOA: {
             zh: {
                 name: '春风旅人型',
-                subtitle: '喜欢燃到哪儿，脚步就跟到哪儿',
-                traits: ['表达热烈', '随性自由', '独立自主', '开放冒险，怕被拴住'],
-                strength: '把关系变成共同的出走与呼吸。',
-                match_tip: '爱玩、不爱束缚的人——并肩，而不是互相拴。'
+                subtitle: '喜欢燃到哪儿，脚步就跟到哪儿——别拴我，来并肩啊！',
+                traits: ['心里一热就说出口', '随性自由，日程表别太硬', '独立得很，并肩比占有更香', '爱冒险，最怕被拴成宠物'],
+                strength: '让关系变成共同出走，也共同呼吸。',
+                match_tip: '爱玩、不爱笼子的人——并肩走，别互相拴。'
             },
             tw: {
                 name: '春風旅人型',
-                subtitle: '喜歡燃到哪兒，腳步就跟到哪兒',
-                traits: ['表達熱烈', '隨性自由', '獨立自主', '開放冒險，怕被拴住'],
-                strength: '把關係變成共同的出走與呼吸。',
-                match_tip: '愛玩、不愛束縛的人——並肩，而不是互相拴。'
+                subtitle: '喜歡燃到哪兒，腳步就跟到哪兒——別拴我，來並肩啊！',
+                traits: ['心裡一熱就說出口', '隨性自由，日程表別太硬', '獨立得很，並肩比佔有更香', '愛冒險，最怕被拴成寵物'],
+                strength: '讓關係變成共同出走，也共同呼吸。',
+                match_tip: '愛玩、不愛籠子的人——並肩走，別互相拴。'
             },
             en: {
                 name: 'Spring Traveler',
-                subtitle: 'Wherever liking lights up, your feet follow',
-                traits: ['Passionate expression', 'Easy freedom', 'Independence', 'Open to adventure; hate being leashed'],
-                strength: 'You turn a bond into shared leaving and breathing room.',
-                match_tip: 'Someone playful who hates cages—side by side, not tied together.'
+                subtitle: 'Wherever liking lights up, my feet follow—don’t leash me; walk beside me!',
+                traits: ['Heat hits the chest, words come out', 'Easy freedom; rigid schedules kill the vibe', 'Very independent; side-by-side beats owning', 'Adventure-hungry; hate being kept like a pet'],
+                strength: 'You turn a bond into shared leaving—and shared breathing room.',
+                match_tip: 'Someone playful who hates cages—walk beside, don’t tie each other down.'
             },
             pt: {
                 name: 'Viajante da Primavera',
-                subtitle: 'Onde o gostar acende, os pés seguem',
-                traits: ['Expressão apaixonada', 'Liberdade descontraída', 'Independência', 'Aberto/a à aventura; detestas amarras'],
-                strength: 'Transformas a ligação em partida partilhada e respiração.',
+                subtitle: 'Onde o gostar acende, os pés seguem—não me amanilhes; vem a par!',
+                traits: ['O peito aquece e a boca fala', 'Liberdade solta; agenda rígida mata o ritmo', 'Muito independente; lado a lado > possuir', 'Ama aventura; odeia ser tratado/a como animal de estimação'],
+                strength: 'Transformas a ligação em partida partilhada—e ar partilhado.',
                 match_tip: 'Alguém brincalhão que odeia gaiolas—lado a lado, sem se amarrar.'
             }
         },
@@ -273,58 +274,58 @@
             zh: {
                 name: '静谧港湾型',
                 subtitle: '话不多，却想把安稳悄悄递到你手里',
-                traits: ['情感含蓄，慢热却真', '生活有序，心里沉', '渴望深度靠近', '态度稳健，不爱闹'],
+                traits: ['慢热，开口少，心意真', '日子沉、有序，不爱起哄', '渴望深度靠近，而非热闹凑合', '态度稳健，宁可静也不闹'],
                 strength: '用安静的陪伴让人落地。',
-                match_tip: '有耐心读你沉默、也敢邀你聊聊的人。'
+                match_tip: '有耐心读你沉默、也敢轻轻邀你聊聊的人。'
             },
             tw: {
                 name: '靜謐港灣型',
                 subtitle: '話不多，卻想把安穩悄悄遞到你手裡',
-                traits: ['情感含蓄，慢熱卻真', '生活有序，心裡沉', '渴望深度靠近', '態度穩健，不愛鬧'],
+                traits: ['慢熱，開口少，心意真', '日子沉、有序，不愛起哄', '渴望深度靠近，而非熱鬧湊合', '態度穩健，寧可靜也不鬧'],
                 strength: '用安靜的陪伴讓人落地。',
-                match_tip: '有耐心讀你沉默、也敢邀你聊聊的人。'
+                match_tip: '有耐心讀你沉默、也敢輕輕邀你聊聊的人。'
             },
             en: {
                 name: 'Quiet Harbor',
                 subtitle: 'Few words—yet you want to place steadiness quietly in someone’s hands',
-                traits: ['Reserved; slow to warm, sincere', 'Ordered days, a settled heart', 'Crave deep closeness', 'Steady; dislike drama'],
+                traits: ['Slow to warm; sparse speech; real intent', 'Settled, ordered days; dislike hype', 'Crave deep closeness, not noisy almost-love', 'Steady; rather quiet than dramatic'],
                 strength: 'Quiet presence that helps people land.',
-                match_tip: 'Someone patient with your silence—and brave enough to invite a real talk.'
+                match_tip: 'Someone patient with your silence—and soft enough to invite a real talk.'
             },
             pt: {
                 name: 'Porto Sereno',
                 subtitle: 'Poucas palavras—mas queres pôr sossego, em silêncio, nas mãos de alguém',
-                traits: ['Reservado/a; aquece lento, sincero/a', 'Dias ordenados, coração assente', 'Desejas proximidade profunda', 'Estável; detestas drama'],
+                traits: ['Aquece lento; fala pouco; intenção verdadeira', 'Dias assentes e ordenados; detestas alarido', 'Desejas proximidade profunda, não quase-amor barulhento', 'Estável; preferes silêncio a drama'],
                 strength: 'Presença quieta que faz aterrar.',
-                match_tip: 'Alguém paciente com o teu silêncio—e corajoso a convidar uma conversa real.'
+                match_tip: 'Alguém paciente com o teu silêncio—e suave a convidar uma conversa real.'
             }
         },
         ISCA: {
             zh: {
                 name: '内秀构建型',
-                subtitle: '内心认真，向外慢慢打开世界',
-                traits: ['含蓄但句句真心', '做事有章法', '重视亲密，也肯一起长大', '对变化开放，不慌'],
+                subtitle: '心里认真搭着，世界才一点点向外打开',
+                traits: ['含蓄，但每句都落得住', '做事有章法，关系也想盖得牢', '重视亲密，也肯一起慢慢长大', '对变化开放，却不慌不抢'],
                 strength: '把关系盖成可以长期住的地方。',
-                match_tip: '愿慢慢走进你，也带你看见新风景的人。'
+                match_tip: '愿慢慢走进你，也愿意带你看见新风景的人。'
             },
             tw: {
                 name: '內秀構建型',
-                subtitle: '內心認真，向外慢慢打開世界',
-                traits: ['含蓄但句句真心', '做事有章法', '重視親密，也肯一起長大', '對變化開放，不慌'],
+                subtitle: '心裡認真搭著，世界才一點點向外打開',
+                traits: ['含蓄，但每句都落得住', '做事有章法，關係也想蓋得牢', '重視親密，也肯一起慢慢長大', '對變化開放，卻不慌不搶'],
                 strength: '把關係蓋成可以長期住的地方。',
-                match_tip: '願慢慢走進你，也帶你看見新風景的人。'
+                match_tip: '願慢慢走進你，也願意帶你看見新風景的人。'
             },
             en: {
                 name: 'Quiet Builder',
-                subtitle: 'Serious inside—opening the world outward, slowly',
-                traits: ['Reserved, every line sincere', 'Method in how you move', 'Value intimacy; willing to grow together', 'Open to change without panic'],
+                subtitle: 'You build carefully inside—then the world opens, inch by inch',
+                traits: ['Reserved, but every line lands', 'Method in what you do; you want the bond built solid', 'Value intimacy; willing to grow slowly together', 'Open to change—without rush or panic'],
                 strength: 'You build a bond like a place meant to be lived in.',
-                match_tip: 'Someone who enters slowly—and also shows you new views.'
+                match_tip: 'Someone who enters slowly—and will show you new views too.'
             },
             pt: {
                 name: 'Construtor/a Discreto/a',
-                subtitle: 'Sério/a por dentro—abrindo o mundo para fora, aos poucos',
-                traits: ['Reservado/a, cada frase sincera', 'Método no que fazes', 'Valorizas intimidade; queres crescer a par', 'Aberto/a à mudança sem pânico'],
+                subtitle: 'Constróis a sério por dentro—e o mundo abre-se, centímetro a centímetro',
+                traits: ['Reservado/a, mas cada frase pousa', 'Método no que fazes; queres a ligação bem feita', 'Valorizas intimidade; queres crescer a par, sem pressa', 'Aberto/a à mudança—sem corrida nem pânico'],
                 strength: 'Constróis a ligação como um sítio para habitar.',
                 match_tip: 'Alguém que entra com calma—e também te mostra novas vistas.'
             }
@@ -332,29 +333,29 @@
         IFCP: {
             zh: {
                 name: '温柔守望型',
-                subtitle: '柔软随性，却把承诺藏在心里最稳的地方',
-                traits: ['细腻内敛，感受很深', '生活松弛，不赶场', '渴望被靠近、被确认', '大事上偏保守，怕伤人'],
+                subtitle: '柔软随性，承诺却藏在心里最稳的一格',
+                traits: ['细腻内敛，感受比话多', '生活松着走，不赶场', '渴望被靠近、被确认', '大事上偏保守，怕伤到人'],
                 strength: '用柔软接住情绪，让对方敢卸下防备。',
                 match_tip: '稳定且会主动确认关系的人——别让你一直猜。'
             },
             tw: {
                 name: '溫柔守望型',
-                subtitle: '柔軟隨性，卻把承諾藏在心裡最穩的地方',
-                traits: ['細膩內斂，感受很深', '生活鬆弛，不趕場', '渴望被靠近、被確認', '大事上偏保守，怕傷人'],
+                subtitle: '柔軟隨性，承諾卻藏在心裡最穩的一格',
+                traits: ['細膩內斂，感受比話多', '生活鬆著走，不趕場', '渴望被靠近、被確認', '大事上偏保守，怕傷到人'],
                 strength: '用柔軟接住情緒，讓對方敢卸下防備。',
                 match_tip: '穩定且會主動確認關係的人——別讓你一直猜。'
             },
             en: {
                 name: 'Gentle Watcher',
-                subtitle: 'Soft and easy—yet commitment sits in the steadiest place in you',
-                traits: ['Subtle, deep feeler', 'Relaxed days; no rush', 'Want to be approached and named', 'Cautious on big stakes; hate wounding'],
+                subtitle: 'Soft and easy—yet commitment sits in the steadiest drawer of your heart',
+                traits: ['Subtle; you feel more than you say', 'Relaxed days; no rush', 'Want to be approached and named', 'Cautious on big stakes; hate wounding anyone'],
                 strength: 'You catch feelings softly—so someone can drop their armor.',
                 match_tip: 'Someone steady who confirms the bond—so you don’t guess forever.'
             },
             pt: {
                 name: 'Vigia Gentil',
-                subtitle: 'Suave e solto/a—mas o compromisso mora no sítio mais firme em ti',
-                traits: ['Sutil, sente fundo', 'Dias relaxados; sem pressa', 'Queres ser aproximado/a e nomeado/a', 'Cauteloso/a no importante; odeias ferir'],
+                subtitle: 'Suave e solto/a—mas o compromisso mora na gaveta mais firme do coração',
+                traits: ['Sutil; sentes mais do que falas', 'Dias relaxados; sem pressa', 'Queres ser aproximado/a e nomeado/a', 'Cauteloso/a no importante; odeias ferir'],
                 strength: 'Acolhes emoções com suavidade—para o outro baixar a guarda.',
                 match_tip: 'Alguém estável que confirma a ligação—para não adivinhares sempre.'
             }
@@ -363,28 +364,28 @@
             zh: {
                 name: '诗意栖居型',
                 subtitle: '安静地感受，开放地生活；苦过之后，仍信余韵',
-                traits: ['内敛细腻，捕捉微小温度', '随性，不爱非黑即白', '重视亲密氛围', '心态开放，留得下转弯'],
+                traits: ['内敛细腻，捕捉微小温度', '随性，不爱非黑即白', '重视亲密氛围多过表象热闹', '心态开放，留得下转弯'],
                 strength: '把日常过出可回味的层次。',
                 match_tip: '懂氛围、不催促的人——一起慢慢展开。'
             },
             tw: {
                 name: '詩意棲居型',
                 subtitle: '安靜地感受，開放地生活；苦過之後，仍信餘韻',
-                traits: ['內斂細膩，捕捉微小溫度', '隨性，不愛非黑即白', '重視親密氛圍', '心態開放，留得下轉彎'],
+                traits: ['內斂細膩，捕捉微小溫度', '隨性，不愛非黑即白', '重視親密氛圍多過表象熱鬧', '心態開放，留得下轉彎'],
                 strength: '把日常過出可回味的層次。',
                 match_tip: '懂氛圍、不催促的人——一起慢慢展開。'
             },
             en: {
                 name: 'Poetic Dweller',
                 subtitle: 'Feel quietly, live openly; after bitter seasons, still trust the aftertaste',
-                traits: ['Reserved and fine; catch small warmth', 'Easygoing; dislike black-and-white', 'Care about intimate atmosphere', 'Open enough to allow a turn'],
+                traits: ['Reserved and fine; catch small warmth', 'Easygoing; dislike black-and-white', 'Care about intimate atmosphere more than loud show', 'Open enough to allow a turn'],
                 strength: 'You give ordinary days layers worth tasting again.',
                 match_tip: 'Someone who gets the vibe and never rushes—unfolding together, slowly.'
             },
             pt: {
                 name: 'Habitante Poético/a',
                 subtitle: 'Sentes em silêncio, vives em aberto; depois do amargo, ainda crês no residual',
-                traits: ['Reservado/a e fino/a; captas calor miúdo', 'Descontraído/a; detestas preto e branco', 'Valorizas a atmosfera íntima', 'Aberto/a o bastante para uma curva'],
+                traits: ['Reservado/a e fino/a; captas calor miúdo', 'Descontraído/a; detestas preto e branco', 'Valorizas a atmosfera íntima mais do que o espetáculo', 'Aberto/a o bastante para uma curva'],
                 strength: 'Dás ao quotidiano camadas que se saboreiam outra vez.',
                 match_tip: 'Alguém que percebe o ambiente e não pressiona—desenrolar juntos, sem pressa.'
             }
@@ -393,28 +394,28 @@
             zh: {
                 name: '沉思者型',
                 subtitle: '先想清楚，再决定要不要把心递出去',
-                traits: ['情感内敛，厌恶轻飘', '生活有序', '边界清晰', '态度稳健，宁可慢不可悔'],
-                strength: '清醒地靠近，减少冲动的伤。',
+                traits: ['情感内敛，厌恶轻飘的喜欢', '生活有序，心思也要排齐', '边界清晰，靠近需要理由', '宁可慢，不可悔'],
+                strength: '清醒地靠近，少一些冲动留下的伤。',
                 match_tip: '尊重你思考时间、不逼表态的人。'
             },
             tw: {
                 name: '沉思者型',
                 subtitle: '先想清楚，再決定要不要把心遞出去',
-                traits: ['情感內斂，厭惡輕飄', '生活有序', '邊界清晰', '態度穩健，寧可慢不可悔'],
-                strength: '清醒地靠近，減少衝動的傷。',
+                traits: ['情感內斂，厭惡輕飄的喜歡', '生活有序，心思也要排齊', '邊界清晰，靠近需要理由', '寧可慢，不可悔'],
+                strength: '清醒地靠近，少一些衝動留下的傷。',
                 match_tip: '尊重你思考時間、不逼表態的人。'
             },
             en: {
                 name: 'Contemplative',
                 subtitle: 'Think it clear before you hand your heart across',
-                traits: ['Reserved; dislike weightless feelings', 'Ordered life', 'Clear boundaries', 'Steady; rather slow than sorry'],
-                strength: 'You come close awake—fewer wounds from impulse.',
+                traits: ['Reserved; dislike weightless liking', 'Ordered life; thoughts want lining up too', 'Clear boundaries; closeness needs a reason', 'Rather slow than sorry'],
+                strength: 'You come close awake—fewer wounds left by impulse.',
                 match_tip: 'Someone who respects thinking time and won’t force a label.'
             },
             pt: {
                 name: 'Contemplativo/a',
                 subtitle: 'Pensas bem antes de passar o coração',
-                traits: ['Reservado/a; detestas leveza vazia', 'Vida ordenada', 'Limites claros', 'Estável; preferes lento a arrependido'],
+                traits: ['Reservado/a; detestas gostar leve demais', 'Vida ordenada; a mente também quer alinhar', 'Limites claros; aproximar precisa de razão', 'Preferes lento a arrependido'],
                 strength: 'Aproximas-te acordado/a—menos feridas por impulso.',
                 match_tip: 'Alguém que respeita o tempo de pensar e não força uma definição.'
             }
@@ -422,29 +423,29 @@
         ISOA: {
             zh: {
                 name: '孤岛哲人型',
-                subtitle: '独立是底色；开放，是你选择后的邀请',
-                traits: ['含蓄，话少但重', '有秩序的自我世界', '很需要自主', '对人生持开放，却不随便交付'],
+                subtitle: '独立是底色；开放，是你选过之后的邀请',
+                traits: ['话少，落下来却重', '守着有秩序的自我世界', '自主感很强，容不下被填满', '对人生开放，对交付仍谨慎'],
                 strength: '自我完整，不靠关系填空——靠近才更真。',
                 match_tip: '同样完整、能并肩谈世界的人。'
             },
             tw: {
                 name: '孤島哲人型',
-                subtitle: '獨立是底色；開放，是你選擇後的邀請',
-                traits: ['含蓄，話少但重', '有秩序的自我世界', '很需要自主', '對人生持開放，卻不隨便交付'],
+                subtitle: '獨立是底色；開放，是你選過之後的邀請',
+                traits: ['話少，落下來卻重', '守著有秩序的自我世界', '自主感很強，容不下被填滿', '對人生開放，對交付仍謹慎'],
                 strength: '自我完整，不靠關係填空——靠近才更真。',
                 match_tip: '同樣完整、能並肩談世界的人。'
             },
             en: {
                 name: 'Island Sage',
-                subtitle: 'Independence is the base coat; openness is an invitation you choose',
-                traits: ['Reserved; few words, heavy ones', 'An ordered inner world', 'Strong need for autonomy', 'Open to life—yet careful what you hand over'],
+                subtitle: 'Independence is the base coat; openness is an invitation after you choose',
+                traits: ['Few words—heavy when they land', 'You keep an ordered inner world', 'Autonomy runs deep; hate being filled in', 'Open to life—still careful what you hand over'],
                 strength: 'Whole in yourself—not filling voids with romance; closeness gets truer.',
                 match_tip: 'Someone equally whole—who can talk about the world beside you.'
             },
             pt: {
                 name: 'Sábio/a da Ilha',
-                subtitle: 'A independência é a base; a abertura é um convite que escolhes',
-                traits: ['Reservado/a; poucas palavras, pesadas', 'Mundo interior ordenado', 'Forte necessidade de autonomia', 'Aberto/a à vida—mas cuidadoso/a no que entregas'],
+                subtitle: 'A independência é a base; a abertura é um convite depois de escolheres',
+                traits: ['Poucas palavras—pesadas quando caem', 'Guardas um mundo interior ordenado', 'Autonomia forte; não queres ser preenchido/a', 'Aberto/a à vida—ainda cuidadoso/a no que entregas'],
                 strength: 'Inteiro/a em ti—não enchendo o vazio com romance; a proximidade fica mais verdadeira.',
                 match_tip: 'Alguém igualmente inteiro—com quem falar do mundo lado a lado.'
             }
@@ -453,28 +454,28 @@
             zh: {
                 name: '花园隐士型',
                 subtitle: '守着自己的小世界，也守着一份不吵闹的踏实',
-                traits: ['内敛，不抢声量', '随性，按自己的节奏呼吸', '独立，却并非冷漠', '稳健，珍惜真正被接住的瞬间'],
+                traits: ['不抢声量，也不急着被看见', '随性呼吸，按自己的节奏活', '独立，却并非冷漠', '稳健，珍惜真正被接住的瞬间'],
                 strength: '不打扰别人，也不愿被廉价黏合。',
                 match_tip: '轻声靠近、愿认真谈谈的人——不侵入，也不假装看不见你。'
             },
             tw: {
                 name: '花園隱士型',
                 subtitle: '守著自己的小世界，也守著一份不吵鬧的踏實',
-                traits: ['內斂，不搶聲量', '隨性，按自己的節奏呼吸', '獨立，卻並非冷漠', '穩健，珍惜真正被接住的瞬間'],
+                traits: ['不搶聲量，也不急著被看見', '隨性呼吸，按自己的節奏活', '獨立，卻並非冷漠', '穩健，珍惜真正被接住的瞬間'],
                 strength: '不打擾別人，也不願被廉價黏合。',
                 match_tip: '輕聲靠近、願認真談談的人——不侵入，也不假裝看不見你。'
             },
             en: {
                 name: 'Garden Hermit',
                 subtitle: 'You keep a small world—and a quiet kind of steadiness',
-                traits: ['Reserved; don’t fight for volume', 'Easygoing; breathe at your own pace', 'Independent, not cold', 'Steady; treasure moments of being truly met'],
+                traits: ['Don’t fight for volume; not eager to be seen', 'Breathe easy; live at your own pace', 'Independent, not cold', 'Steady; treasure moments of being truly met'],
                 strength: 'You don’t crowd others—and refuse cheap glue.',
                 match_tip: 'Someone who approaches softly and will talk for real—won’t invade, won’t pretend not to see you.'
             },
             pt: {
                 name: 'Eremita do Jardim',
                 subtitle: 'Guardas o teu pequeno mundo—e uma firmeza sem barulho',
-                traits: ['Reservado/a; não disputas volume', 'Descontraído/a; respiras ao teu ritmo', 'Independente, não frio/a', 'Estável; valorizas o instante de seres realmente acolhido/a'],
+                traits: ['Não disputas volume; não tens pressa de ser visto/a', 'Respiras solto; vives ao teu ritmo', 'Independente, não frio/a', 'Estável; valorizas o instante de seres realmente acolhido/a'],
                 strength: 'Não invades os outros—e recusas cola barata.',
                 match_tip: 'Alguém que se aproxima em voz baixa e fala a sério—não invade, não finge não te ver.'
             }
@@ -483,28 +484,28 @@
             zh: {
                 name: '星尘游吟型',
                 subtitle: '安静自由，心里装着远方；也等一个愿并肩的灵魂',
-                traits: ['情感内敛，长于感受', '生活随性，走走停停', '独立完整', '开放冒险，却怕一厢情愿的重量'],
+                traits: ['感受深，开口却不急', '走走停停，生活随性', '独立完整，不靠黏连证明存在', '开放冒险，却怕一厢情愿的重量'],
                 strength: '给关系留下想象与呼吸，也留下可以说清楚的缝隙。',
                 match_tip: '不强迫黏连、愿一起出走、也敢把心里话说开的人。'
             },
             tw: {
                 name: '星塵遊吟型',
                 subtitle: '安靜自由，心裡裝著遠方；也等一個願並肩的靈魂',
-                traits: ['情感內斂，長於感受', '生活隨性，走走停停', '獨立完整', '開放冒險，卻怕一廂情願的重量'],
+                traits: ['感受深，開口卻不急', '走走停停，生活隨性', '獨立完整，不靠黏連證明存在', '開放冒險，卻怕一廂情願的重量'],
                 strength: '給關係留下想像與呼吸，也留下可以說清楚的縫隙。',
                 match_tip: '不強迫黏連、願一起出走、也敢把心裡話說開的人。'
             },
             en: {
                 name: 'Stardust Bard',
                 subtitle: 'Quiet and free, far places in your chest—also waiting for a soul who’d walk beside',
-                traits: ['Reserved; strong at feeling', 'Easy life; stop and go', 'Independent and whole', 'Open to adventure—wary of one-sided weight'],
+                traits: ['Feel deep; no rush to speak', 'Stop and go; easy life', 'Independent and whole—clinginess isn’t proof you exist', 'Open to adventure—wary of one-sided weight'],
                 strength: 'You leave imagination and breath in love—and a gap where words can land.',
                 match_tip: 'Someone who won’t force clinginess, will wander with you—and dares to open what’s inside.'
             },
             pt: {
                 name: 'Bardo/a do Pó Estelar',
                 subtitle: 'Quieto/a e livre, com o longe no peito—também à espera de uma alma que caminhe a par',
-                traits: ['Reservado/a; forte a sentir', 'Vida solta; para e segue', 'Independente e inteiro/a', 'Aberto/a à aventura—cauteloso/a com peso unilateral'],
+                traits: ['Sentes fundo; sem pressa de falar', 'Para e segue; vida solta', 'Independente e inteiro/a—apego não prova que existes', 'Aberto/a à aventura—cauteloso/a com peso unilateral'],
                 strength: 'Deixas imaginação e ar na relação—e uma fenda onde as palavras pousam.',
                 match_tip: 'Alguém que não força apego, sai contigo—e ousa abrir o que vai por dentro.'
             }
@@ -670,7 +671,9 @@
     window.lovePersonalityShareText = function (m) {
         var base = String(window.CM_PUBLIC_URL || '').trim()
             || ((typeof location !== 'undefined' && location.origin) ? location.origin : '');
-        if (!base || /localhost|127\.0\.0\.1/i.test(base)) {
+        /* 文案里的链接也不要带本机/裸 IP */
+        if (!base || /localhost|127\.0\.0\.1/i.test(base)
+            || /\b\d{1,3}(?:\.\d{1,3}){3}\b/.test(base)) {
             base = 'https://campusmatch.com.cn';
         }
         var url = base.replace(/\/$/, '') + '/?from=lp_share';

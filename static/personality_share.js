@@ -16,22 +16,46 @@
         return String(code || '').toUpperCase().replace(/[^A-Z]/g, '').slice(0, 4);
     }
 
-    /** 分享落地页：优先 PUBLIC_URL；本机地址则用正式域名，保证扫码可用 */
+    var CM_SHARE_HOST = 'campusmatch.com.cn';
+    var CM_SHARE_ORIGIN = 'https://campusmatch.com.cn';
+
+    /** 本机 / 裸 IP：可见文案与扫码落地都改用正式域名，避免卡片露出 IP */
+    function isDevOrIpOrigin(url) {
+        var s = String(url || '');
+        if (!s) return true;
+        if (/localhost|127\.0\.0\.1/i.test(s)) return true;
+        try {
+            var host = String(new URL(s).hostname || '');
+            if (/^\d{1,3}(?:\.\d{1,3}){3}$/.test(host)) return true;
+            if (/^\[?[0-9a-f:]+\]?$/i.test(host) && host.indexOf(':') >= 0) return true;
+        } catch (e) {
+            if (/\b\d{1,3}(?:\.\d{1,3}){3}\b/.test(s)) return true;
+        }
+        return false;
+    }
+
+    /** 分享落地页：可用 PUBLIC_URL；本机/IP 则回落正式域名 */
     function shareLandingUrl() {
         var base = String(window.CM_PUBLIC_URL || '').trim()
             || ((typeof location !== 'undefined' && location.origin) ? location.origin : '');
-        if (!base || /localhost|127\.0\.0\.1/i.test(base)) {
-            base = 'https://campusmatch.com.cn';
+        if (isDevOrIpOrigin(base)) {
+            base = CM_SHARE_ORIGIN;
         }
         return base.replace(/\/$/, '') + '/?from=lp_share';
     }
 
-    function displayHost(url) {
-        try {
-            return String(new URL(url).host || 'campusmatch.com.cn');
-        } catch (e) {
-            return 'campusmatch.com.cn';
-        }
+    /** 卡片可见域名：永远正式站名，不跟 CM_PUBLIC_URL / location 的 IP */
+    function displayHost() {
+        return CM_SHARE_HOST;
+    }
+
+    /** E/I 系别水印文案（极淡，不抢型名） */
+    function shareSeriesWatermark(code) {
+        var c = normalizeLpCode(code);
+        var letter = c.charAt(0);
+        if (letter === 'E') return t('lp.wmExtra');
+        if (letter === 'I') return t('lp.wmIntro');
+        return t('lp.wmLove');
     }
 
     function blobToDataUrl(blob) {
@@ -128,7 +152,80 @@
         }
     };
 
-    /** 给人格卡套上 16 型主题（配色 + 徽章/水印等装饰） */
+    /** 16 型岛图 URL（文件名大写四字母） */
+    window.lovePersonalityIslandUrl = function (code) {
+        var c = normalizeLpCode(code);
+        return c.length === 4 ? ('/static/personality_islands/' + c + '.png') : '';
+    };
+
+    /**
+     * 在结果卡 / 分享卡上挂岛图作主视觉；缺图则隐藏并回退纹章。
+     * 插入点：`.personality-name` 前，或分享卡 `.lp-share-hero` 顶部。
+     */
+    window.ensureLovePersonalityIsland = function (el, code) {
+        if (!el) return null;
+        var c = normalizeLpCode(code);
+        var wrap = el.querySelector('.lp-island-wrap');
+        if (c.length !== 4) {
+            if (wrap && wrap.parentNode) wrap.parentNode.removeChild(wrap);
+            el.classList.remove('lp-has-island', 'lp-island-pending');
+            return null;
+        }
+
+        var nameEl = el.querySelector('.personality-name');
+        var hero = el.querySelector('.lp-share-hero');
+        var parent = (nameEl && nameEl.parentNode)
+            || hero
+            || el.querySelector('.lp-modal-scroll')
+            || el;
+        var before = nameEl || (hero ? hero.firstChild : null);
+
+        if (!wrap) {
+            wrap = document.createElement('div');
+            wrap.className = 'lp-island-wrap';
+            wrap.setAttribute('aria-hidden', 'true');
+            wrap.hidden = true;
+            var img = document.createElement('img');
+            img.className = 'lp-island';
+            img.alt = '';
+            img.decoding = 'async';
+            img.loading = 'eager';
+            wrap.appendChild(img);
+        }
+        if (wrap.parentNode !== parent) {
+            if (before && before.parentNode === parent) parent.insertBefore(wrap, before);
+            else parent.insertBefore(wrap, parent.firstChild);
+        } else if (before && wrap.nextSibling !== before && before.parentNode === parent) {
+            parent.insertBefore(wrap, before);
+        }
+
+        var imgEl = wrap.querySelector('.lp-island');
+        if (!imgEl) return wrap;
+        var url = window.lovePersonalityIslandUrl(c);
+        var applyOk = function () {
+            wrap.hidden = false;
+            el.classList.remove('lp-island-pending');
+            el.classList.add('lp-has-island');
+        };
+        var applyFail = function () {
+            wrap.hidden = true;
+            el.classList.remove('lp-has-island', 'lp-island-pending');
+        };
+        imgEl.onload = applyOk;
+        imgEl.onerror = applyFail;
+        imgEl.alt = c;
+        if (imgEl.getAttribute('src') === url && imgEl.complete && imgEl.naturalWidth > 0) {
+            applyOk();
+        } else {
+            wrap.hidden = true;
+            el.classList.remove('lp-has-island');
+            el.classList.add('lp-island-pending');
+            imgEl.src = url;
+        }
+        return wrap;
+    };
+
+    /** 给人格卡套上 16 型主题（配色 + 岛图主视觉 + 徽章/水印等装饰） */
     window.applyLovePersonalityTheme = function (el, code) {
         if (!el) return;
         var c = normalizeLpCode(code);
@@ -137,8 +234,12 @@
             if (typeof window.ensureLovePersonalityEmblem === 'function') {
                 window.ensureLovePersonalityEmblem(el, c);
             }
-        } else if (typeof window.ensureLovePersonalityEmblem === 'function') {
-            window.ensureLovePersonalityEmblem(el, '');
+            window.ensureLovePersonalityIsland(el, c);
+        } else {
+            if (typeof window.ensureLovePersonalityEmblem === 'function') {
+                window.ensureLovePersonalityEmblem(el, '');
+            }
+            window.ensureLovePersonalityIsland(el, '');
         }
     };
 
@@ -317,12 +418,13 @@
     }
 
     /**
-     * 构建精简分享卡（不克隆 App 内冗长解读）：
-     * 顶栏背书 → 型名/code/一句副标题 → 底栏 CTA+二维码 → 角上免责
+     * 构建精简分享卡（海报感）：
+     * 色场外框 → 顶栏背书 → 大岛图+型名/code/金句 → 底栏 CTA+域名+二维码
      */
     async function buildSlimShareStage(personality, themeCode) {
         var landing = shareLandingUrl();
         var qrData = await loadQrDataUrl(landing);
+        var hostLabel = displayHost();
         var p = personality || {};
         var name = p.name || p.label || '—';
         var code = normalizeLpCode(p.code || p.type) || String(p.code || p.type || '—');
@@ -341,7 +443,6 @@
 
         if (themeCode && themeCode.length === 4) {
             window.applyLovePersonalityColors(frame, themeCode);
-            window.applyLovePersonalityTheme(card, themeCode);
         }
 
         var brand = document.createElement('div');
@@ -349,8 +450,6 @@
         brand.innerHTML =
             '<div class="lp-share-brand-name">CampusMatch</div>'
             + '<div class="lp-share-brand-meta">'
-            +   '<span class="lp-share-brand-url">campusmatch.com.cn</span>'
-            +   '<span class="lp-share-brand-sep" aria-hidden="true">·</span>'
             +   '<span class="lp-share-brand-tag">' + t('lp.brandTag') + '</span>'
             + '</div>';
 
@@ -364,7 +463,29 @@
         codeEl.textContent = code;
         var subEl = document.createElement('p');
         subEl.className = 'personality-sub';
-        subEl.textContent = subtitle;
+        if (subtitle) {
+            /* 半句主题色强调：前半淡说明，后半（或整句较短时）用 accent */
+            var mid = Math.max(1, Math.floor(subtitle.length * 0.45));
+            var cut = subtitle.indexOf('，', mid);
+            if (cut < 0) cut = subtitle.indexOf(',', mid);
+            if (cut < 0) cut = subtitle.indexOf(' ', mid);
+            if (cut > 0 && cut < subtitle.length - 2) {
+                var soft = document.createElement('span');
+                soft.className = 'lp-share-sub-soft';
+                soft.textContent = subtitle.slice(0, cut + 1);
+                var accent = document.createElement('span');
+                accent.className = 'lp-share-sub-accent';
+                accent.textContent = subtitle.slice(cut + 1).trim();
+                subEl.appendChild(soft);
+                if (accent.textContent) {
+                    subEl.appendChild(document.createTextNode(' '));
+                    subEl.appendChild(accent);
+                }
+            } else {
+                subEl.classList.add('lp-share-sub-soft');
+                subEl.textContent = subtitle;
+            }
+        }
         hero.appendChild(nameEl);
         hero.appendChild(codeEl);
         if (subtitle) hero.appendChild(subEl);
@@ -378,7 +499,7 @@
         cta.textContent = t('lp.shareCta');
         var host = document.createElement('p');
         host.className = 'lp-share-cta-host';
-        host.textContent = displayHost(landing);
+        host.textContent = hostLabel;
         ctaWrap.appendChild(cta);
         ctaWrap.appendChild(host);
 
@@ -393,7 +514,7 @@
         } else {
             var qrFallback = document.createElement('div');
             qrFallback.className = 'lp-share-qr-fallback';
-            qrFallback.textContent = displayHost(landing);
+            qrFallback.textContent = hostLabel;
             qrWrap.appendChild(qrFallback);
         }
 
@@ -409,10 +530,23 @@
         card.appendChild(foot);
         card.appendChild(disc);
 
+        /* 结构就绪后再挂主题/岛图，保证插在 .personality-name 前 */
+        if (themeCode && themeCode.length === 4) {
+            window.applyLovePersonalityTheme(card, themeCode);
+            /* 海报感：系别大字水印，弱化报表角标 */
+            var wm = card.querySelector('.lp-watermark');
+            if (wm) wm.textContent = shareSeriesWatermark(themeCode);
+            card.querySelectorAll('.lp-corners, .lp-grid').forEach(function (n) {
+                if (n.parentNode) n.parentNode.removeChild(n);
+            });
+        }
+
         frame.appendChild(card);
         stage.appendChild(frame);
         document.body.appendChild(stage);
 
+        var islandImg = card.querySelector('.lp-island');
+        if (islandImg) await waitImg(islandImg);
         var img = card.querySelector('.lp-share-qr-img');
         if (img) await waitImg(img);
         return stage;
@@ -441,6 +575,7 @@
 
         var mask = showCaptureMask();
         var stage = await buildSlimShareStage(p, themeCode);
+        var captureTarget = stage.querySelector('.lp-share-frame') || stage;
         var y = window.scrollY || window.pageYOffset || 0;
         // iOS：离屏/负坐标会出空白；先滚到顶再截视口内节点
         window.scrollTo(0, 0);
@@ -454,15 +589,15 @@
             ? Math.min(2, window.devicePixelRatio || 2)
             : Math.min(2.2, (window.devicePixelRatio || 2) * 1.1);
         var opts = {
-            backgroundColor: '#ffffff',
+            backgroundColor: null,
             scale: scale,
             useCORS: true,
             allowTaint: true,
             logging: false,
             scrollX: 0,
             scrollY: 0,
-            windowWidth: Math.max(stage.offsetWidth, 320),
-            windowHeight: Math.max(stage.offsetHeight, 200),
+            windowWidth: Math.max(captureTarget.offsetWidth, 320),
+            windowHeight: Math.max(captureTarget.offsetHeight, 200),
             x: 0,
             y: 0,
             ignoreElements: function (el) {
@@ -481,7 +616,7 @@
         };
         try {
             try {
-                return await html2canvas(stage, opts);
+                return await html2canvas(captureTarget, opts);
             } catch (err1) {
                 console.warn('themed capture failed, retry simplified', err1);
                 // 降级：去掉装饰层再截，避免冷门 CSS 拖垮 html2canvas
@@ -490,7 +625,7 @@
                         if (n.parentNode) n.parentNode.removeChild(n);
                     });
                 await new Promise(function (r) { setTimeout(r, 40); });
-                return await html2canvas(stage, opts);
+                return await html2canvas(captureTarget, opts);
             }
         } finally {
             if (stage && stage.parentNode) stage.parentNode.removeChild(stage);
