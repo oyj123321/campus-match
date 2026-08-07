@@ -4,6 +4,17 @@ All notable changes to CampusMatch.
 
 ---
 
+## [1.9.27] — 2026-08-07
+
+### 问题（上次）
+- 分享卡 / 结果卡上的四字母 personality code 字号与字重偏弱，视觉冲击不足，难与人格名形成层级对比
+
+### 改动
+- **Improved / 放大 code**：结果卡与分享卡（含 slim）上 `.personality-code` 加大字号、提高字重并略增字距，分享 slim 卡取消半透明（`static/style.css`）
+- **Chore**：样式缓存 bust `?v=1954`（`templates/base.html`）
+
+---
+
 ## [1.9.26] — 2026-08-07
 
 ### 问题（上次）
