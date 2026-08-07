@@ -4,6 +4,22 @@ All notable changes to CampusMatch.
 
 ---
 
+## [1.9.28] — 2026-08-07
+
+### 问题（上次）
+- 分享卡主题色冲击不足，内卡偏白，型气质难一眼辨认
+- 色场外框偏厚/不自然，易成「彩框套白卡」
+- 岛图像贴图，与卡面衔接弱；排版松、暖光不足
+
+### 改动
+- **Improved / 主题色洗底**：内卡用 `--lp-card` 洗底，叠加 `.lp-share-wash` 轻染；去掉厚彩框垫边（`personality_share.js` / `style.css` / `personality_themes.css`）
+- **Improved / 岛图出血**：`.lp-share-visual` 全宽贴顶，放大裁掉 PNG 奶油留白；品牌条半透明叠在插画上
+- **Improved / 弱化外框**：外框透明托影，去掉顶条/侧条彩框感；各型 `--lp-frame` / `--lp-card` 略提饱和
+- **Improved / 排版与暖高光**：文字区收紧；金句半句强调与型名暖高光打磨
+- **Chore**：静态资源缓存 bust `?v=1958`（`templates/base.html`）
+
+---
+
 ## [1.9.27] — 2026-08-07
 
 ### 问题（上次）

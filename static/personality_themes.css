@@ -71,32 +71,51 @@
     width: min(100%, 188px);
     margin: 8px auto 6px;
 }
-/* 分享精简卡：岛图作主视觉，更大更满，弱化贴图式边框感 */
-.lp-share-card-slim .lp-island-wrap {
-    width: min(100%, 268px);
-    max-width: 82%;
-    margin: 4px auto 10px;
-    align-self: center;
+/* App 内结果卡：岛图略放大，色感与分享卡对齐 */
+.personality-card[data-lp-code]:not(.personality-modal-panel) .lp-island-wrap {
+    width: min(100%, 248px);
+    max-width: 86%;
+    margin: 8px auto 10px;
 }
-.lp-share-card-slim .lp-island {
-    border-radius: 12px;
-    box-shadow: 0 6px 20px rgba(15, 23, 42, 0.08);
+/* 分享精简卡：岛图出血全宽，再放大一点裁掉 PNG 奶油留白 */
+.lp-share-card-slim .lp-share-visual {
+    /* 透出内卡洗底，避免再垫一层高饱和 --lp-frame 彩带 */
+    background: transparent;
+}
+.lp-share-card-slim .lp-share-visual .lp-island-wrap {
+    width: 100%;
+    max-width: 100%;
+    margin: 0;
+    overflow: hidden;
+    line-height: 0;
+}
+.lp-share-card-slim .lp-share-visual .lp-island {
+    width: 100%;
+    aspect-ratio: 1.05 / 1;
+    object-fit: cover;
+    object-position: center 40%;
+    border-radius: 0;
+    /* 再放大裁掉 PNG 奶油留白，让主体更贴型名 */
+    transform: scale(1.36);
+    transform-origin: center 42%;
+    box-shadow: none;
     background: transparent;
 }
 .lp-share-card-slim.lp-has-island .lp-share-brandbar {
-    padding-right: 26px;
+    padding-right: 22px;
 }
-/* 分享精简卡：干净内卡，主题色留给外框色场 */
+/* 分享精简卡：内卡用型主题色洗底，白区留给插画+文字核心 */
 .lp-share-card.lp-share-card-slim[data-lp-code] {
-    background: #ffffff !important;
-    --lp-card: #ffffff;
-    padding: 0 0 14px !important;
+    background: var(--lp-card) !important;
+    padding: 0 0 10px !important;
+    border-color: transparent !important;
 }
 .lp-share-card-slim::before {
-    opacity: 0.35 !important;
+    opacity: 0.55 !important;
 }
+/* 去掉顶条/侧条彩框感，靠洗底即可 */
 .lp-share-card-slim::after {
-    height: 3px;
+    display: none !important;
 }
 
 .personality-card[data-lp-code],
@@ -200,9 +219,11 @@
     opacity: 0.88;
 }
 
+/* 外框：透明托洗底，不再用 --lp-card / --lp-frame 垫出彩框环 */
 .lp-share-frame[data-lp-code] {
-    background: var(--lp-frame);
-    box-shadow: 0 10px 36px var(--lp-glow, rgba(15, 23, 42, 0.1));
+    background: transparent;
+    box-shadow:
+        0 10px 32px var(--lp-glow, rgba(15, 23, 42, 0.14));
 }
 
 .personality-card[data-lp-code] .personality-name,
@@ -378,11 +399,11 @@
     right: auto;
     left: 50%;
     bottom: auto;
-    top: 42%;
+    top: 58%;
     transform: translate(-50%, -50%) rotate(-16deg);
     font-size: clamp(2.6em, 12vw, 3.6em);
     letter-spacing: 0.22em;
-    opacity: 0.055;
+    opacity: 0.05;
     color: var(--lp-1, #64748b);
     z-index: 0;
     pointer-events: none;
@@ -397,16 +418,16 @@
     color: var(--lp-ink, #1e293b);
 }
 .lp-share-card-slim .lp-share-brandbar {
-    border-bottom-color: var(--lp-border, rgba(15, 23, 42, 0.06));
-    padding-right: 26px;
+    border-bottom: none;
+    padding-right: 22px;
 }
 .lp-share-card.lp-share-card-slim[data-lp-code] .personality-name {
     margin-top: 0;
-    margin-bottom: 4px;
+    margin-bottom: 2px;
     padding-right: 0;
 }
 .lp-share-card.lp-share-card-slim[data-lp-code] .personality-code {
-    margin-bottom: 10px;
+    margin-bottom: 5px;
 }
 .lp-share-card.lp-share-card-slim[data-lp-code] .personality-sub {
     margin-bottom: 0;
@@ -476,8 +497,8 @@
 .lp-theme-ESCP {
     --lp-1: #4f46e5; --lp-2: #06b6d4; --lp-3: #818cf8;
     --lp-ink: #1e3a5f;
-    --lp-card: linear-gradient(165deg, #ffffff 0%, #eef2ff 52%, #e0f2fe 100%);
-    --lp-frame: linear-gradient(160deg, #e0e7ff, #ecfeff 48%, #f0f9ff);
+    --lp-card: linear-gradient(165deg, #eef2ff 0%, #f8fafc 45%, #e0f2fe 100%);
+    --lp-frame: linear-gradient(160deg, #c7d2fe, #a5f3fc 48%, #dbeafe);
     --lp-bar: linear-gradient(90deg, #38bdf8, #4f46e5);
     --lp-border: rgba(79, 70, 229, 0.28);
     --lp-glow: rgba(99, 102, 241, 0.16);
@@ -493,7 +514,7 @@
     --lp-1: #6366f1; --lp-2: #8b5cf6; --lp-3: #a78bfa;
     --lp-ink: #2e1065;
     --lp-card: linear-gradient(155deg, #ffffff 0%, #f5f3ff 50%, #ede9fe 100%);
-    --lp-frame: linear-gradient(150deg, #e0e7ff, #f3e8ff 55%, #fae8ff);
+    --lp-frame: linear-gradient(150deg, #c7d2fe, #e9d5ff 55%, #f5d0fe);
     --lp-bar: linear-gradient(90deg, #818cf8, #7c3aed);
     --lp-border: rgba(124, 58, 237, 0.26);
     --lp-glow: rgba(139, 92, 246, 0.16);
@@ -513,7 +534,7 @@
     --lp-1: #f59e0b; --lp-2: #fb7185; --lp-3: #fbbf24;
     --lp-ink: #7c2d12;
     --lp-card: linear-gradient(165deg, #fffbeb 0%, #fff7ed 45%, #fff1f2 100%);
-    --lp-frame: linear-gradient(160deg, #fef3c7, #ffe4e6 50%, #ffedd5);
+    --lp-frame: linear-gradient(160deg, #fde68a, #fecdd3 50%, #fed7aa);
     --lp-bar: linear-gradient(90deg, #fbbf24, #f43f5e);
     --lp-border: rgba(245, 158, 11, 0.32);
     --lp-glow: rgba(251, 113, 133, 0.14);
@@ -529,7 +550,7 @@
     --lp-1: #ec4899; --lp-2: #d946ef; --lp-3: #f472b6;
     --lp-ink: #831843;
     --lp-card: linear-gradient(160deg, #fff 0%, #fdf2f8 48%, #fae8ff 100%);
-    --lp-frame: linear-gradient(155deg, #fce7f3, #f5d0fe 55%, #ffe4e6);
+    --lp-frame: linear-gradient(155deg, #fbcfe8, #e9d5ff 55%, #fecdd3);
     --lp-bar: linear-gradient(90deg, #f472b6, #c026d3);
     --lp-border: rgba(236, 72, 153, 0.3);
     --lp-glow: rgba(217, 70, 239, 0.15);
@@ -549,7 +570,7 @@
     --lp-1: #0284c7; --lp-2: #06b6d4; --lp-3: #38bdf8;
     --lp-ink: #0c4a6e;
     --lp-card: linear-gradient(170deg, #ffffff 0%, #f0f9ff 50%, #ecfeff 100%);
-    --lp-frame: linear-gradient(165deg, #e0f2fe, #cffafe 50%, #f0f9ff);
+    --lp-frame: linear-gradient(165deg, #bae6fd, #a5f3fc 50%, #e0f2fe);
     --lp-bar: linear-gradient(90deg, #38bdf8, #0284c7);
     --lp-border: rgba(2, 132, 199, 0.28);
     --lp-glow: rgba(6, 182, 212, 0.15);
@@ -565,7 +586,7 @@
     --lp-1: #0891b2; --lp-2: #14b8a6; --lp-3: #2dd4bf;
     --lp-ink: #134e4a;
     --lp-card: linear-gradient(160deg, #ffffff 0%, #ecfeff 45%, #f0fdfa 100%);
-    --lp-frame: linear-gradient(150deg, #cffafe, #ccfbf1 55%, #e0f2fe);
+    --lp-frame: linear-gradient(150deg, #99f6e4, #a5f3fc 55%, #bae6fd);
     --lp-bar: linear-gradient(90deg, #22d3ee, #0d9488);
     --lp-border: rgba(13, 148, 136, 0.28);
     --lp-glow: rgba(20, 184, 166, 0.14);
@@ -584,7 +605,7 @@
     --lp-1: #ea580c; --lp-2: #f59e0b; --lp-3: #fb923c;
     --lp-ink: #7c2d12;
     --lp-card: linear-gradient(165deg, #fff7ed 0%, #ffffff 40%, #fffbeb 100%);
-    --lp-frame: linear-gradient(155deg, #ffedd5, #fef3c7 50%, #fff7ed);
+    --lp-frame: linear-gradient(155deg, #fdba74, #fde68a 50%, #ffedd5);
     --lp-bar: linear-gradient(90deg, #fdba74, #ea580c);
     --lp-border: rgba(234, 88, 12, 0.28);
     --lp-glow: rgba(245, 158, 11, 0.14);
@@ -604,7 +625,7 @@
     --lp-1: #16a34a; --lp-2: #06b6d4; --lp-3: #4ade80;
     --lp-ink: #14532d;
     --lp-card: linear-gradient(155deg, #f0fdf4 0%, #ffffff 42%, #ecfeff 100%);
-    --lp-frame: linear-gradient(150deg, #dcfce7, #cffafe 55%, #f0fdf4);
+    --lp-frame: linear-gradient(150deg, #86efac, #a5f3fc 55%, #bbf7d0);
     --lp-bar: linear-gradient(90deg, #4ade80, #0891b2);
     --lp-border: rgba(22, 163, 74, 0.26);
     --lp-glow: rgba(74, 222, 128, 0.14);
@@ -620,7 +641,7 @@
     --lp-1: #64748b; --lp-2: #818cf8; --lp-3: #94a3b8;
     --lp-ink: #334155;
     --lp-card: linear-gradient(170deg, #f8fafc 0%, #eef2ff 55%, #f1f5f9 100%);
-    --lp-frame: linear-gradient(165deg, #e2e8f0, #e0e7ff 50%, #f1f5f9);
+    --lp-frame: linear-gradient(165deg, #cbd5e1, #c7d2fe 50%, #e2e8f0);
     --lp-bar: linear-gradient(90deg, #94a3b8, #6366f1);
     --lp-border: rgba(100, 116, 139, 0.3);
     --lp-glow: rgba(129, 140, 248, 0.12);
@@ -636,7 +657,7 @@
     --lp-1: #7c3aed; --lp-2: #4f46e5; --lp-3: #a78bfa;
     --lp-ink: #3b0764;
     --lp-card: linear-gradient(160deg, #faf5ff 0%, #ffffff 45%, #eef2ff 100%);
-    --lp-frame: linear-gradient(155deg, #ede9fe, #e0e7ff 55%, #f5f3ff);
+    --lp-frame: linear-gradient(155deg, #ddd6fe, #c7d2fe 55%, #e9d5ff);
     --lp-bar: linear-gradient(90deg, #c4b5fd, #4f46e5);
     --lp-border: rgba(124, 58, 237, 0.24);
     --lp-glow: rgba(124, 58, 237, 0.12);
@@ -662,7 +683,7 @@
     --lp-1: #e11d48; --lp-2: #fb7185; --lp-3: #fda4af;
     --lp-ink: #881337;
     --lp-card: linear-gradient(165deg, #fff1f2 0%, #ffffff 48%, #fff7ed 100%);
-    --lp-frame: linear-gradient(160deg, #ffe4e6, #ffedd5 50%, #fff1f2);
+    --lp-frame: linear-gradient(160deg, #fecdd3, #fed7aa 50%, #ffe4e6);
     --lp-bar: linear-gradient(90deg, #fda4af, #e11d48);
     --lp-border: rgba(225, 29, 72, 0.24);
     --lp-glow: rgba(251, 113, 133, 0.12);
@@ -678,7 +699,7 @@
     --lp-1: #a855f7; --lp-2: #ec4899; --lp-3: #c084fc;
     --lp-ink: #581c87;
     --lp-card: linear-gradient(155deg, #faf5ff 0%, #fdf2f8 50%, #ffffff 100%);
-    --lp-frame: linear-gradient(150deg, #f3e8ff, #fce7f3 55%, #fae8ff);
+    --lp-frame: linear-gradient(150deg, #e9d5ff, #fbcfe8 55%, #f5d0fe);
     --lp-bar: linear-gradient(90deg, #e9d5ff, #db2777);
     --lp-border: rgba(168, 85, 247, 0.26);
     --lp-glow: rgba(236, 72, 153, 0.12);
@@ -699,7 +720,7 @@
     --lp-1: #1d4ed8; --lp-2: #475569; --lp-3: #60a5fa;
     --lp-ink: #1e293b;
     --lp-card: linear-gradient(170deg, #f8fafc 0%, #eff6ff 50%, #e2e8f0 100%);
-    --lp-frame: linear-gradient(165deg, #dbeafe, #e2e8f0 50%, #f1f5f9);
+    --lp-frame: linear-gradient(165deg, #bfdbfe, #cbd5e1 50%, #e2e8f0);
     --lp-bar: linear-gradient(90deg, #93c5fd, #1e40af);
     --lp-border: rgba(29, 78, 216, 0.26);
     --lp-glow: rgba(30, 64, 175, 0.12);
@@ -725,7 +746,7 @@
     --lp-1: #0f766e; --lp-2: #4338ca; --lp-3: #2dd4bf;
     --lp-ink: #134e4a;
     --lp-card: linear-gradient(160deg, #f0fdfa 0%, #ffffff 45%, #eef2ff 100%);
-    --lp-frame: linear-gradient(155deg, #ccfbf1, #e0e7ff 55%, #f0fdfa);
+    --lp-frame: linear-gradient(155deg, #99f6e4, #c7d2fe 55%, #a5f3fc);
     --lp-bar: linear-gradient(90deg, #5eead4, #4338ca);
     --lp-border: rgba(15, 118, 110, 0.28);
     --lp-glow: rgba(67, 56, 202, 0.12);
@@ -740,8 +761,8 @@
 .lp-theme-IFOP {
     --lp-1: #65a30d; --lp-2: #84cc16; --lp-3: #a3e635;
     --lp-ink: #365314;
-    --lp-card: linear-gradient(165deg, #f7fee7 0%, #ffffff 48%, #ecfccb 100%);
-    --lp-frame: linear-gradient(160deg, #ecfccb, #d9f99d 45%, #f0fdf4);
+    --lp-card: linear-gradient(165deg, #ecfccb 0%, #f7fee7 48%, #d9f99d 100%);
+    --lp-frame: linear-gradient(160deg, #d9f99d, #a3e635 45%, #bbf7d0);
     --lp-bar: linear-gradient(90deg, #bef264, #4d7c0f);
     --lp-border: rgba(101, 163, 13, 0.28);
     --lp-glow: rgba(132, 204, 22, 0.12);
@@ -761,7 +782,7 @@
     --lp-1: #4338ca; --lp-2: #db2777; --lp-3: #818cf8;
     --lp-ink: #312e81;
     --lp-card: linear-gradient(155deg, #eef2ff 0%, #ffffff 40%, #fdf2f8 100%);
-    --lp-frame: linear-gradient(150deg, #e0e7ff, #fae8ff 50%, #ede9fe);
+    --lp-frame: linear-gradient(150deg, #c7d2fe, #f9a8d4 50%, #ddd6fe);
     --lp-bar: linear-gradient(90deg, #a5b4fc, #db2777);
     --lp-border: rgba(67, 56, 202, 0.28);
     --lp-glow: rgba(219, 39, 119, 0.12);

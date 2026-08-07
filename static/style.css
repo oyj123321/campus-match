@@ -817,10 +817,38 @@ textarea.open-letter:focus {
     letter-spacing: 0.02em;
 }
 .lp-share-frame {
-    padding: 22px 18px;
-    border-radius: 28px;
-    background: linear-gradient(165deg, #e8f0ff 0%, #fdf2f8 48%, #fff7ed 100%);
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    /* 无外圈垫边：洗底交给内卡，避免「彩框套白卡」 */
+    padding: 0;
+    border-radius: 18px;
+    background: transparent;
     box-sizing: border-box;
+}
+/* 洗底叠在整卡表面轻染（无色环）；不用 mix-blend，截图更稳 */
+.lp-share-wash {
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    z-index: 2;
+    opacity: 0.1;
+    background:
+        radial-gradient(ellipse 55% 42% at 88% 12%, rgba(251, 191, 36, 0.55), transparent 62%),
+        radial-gradient(ellipse 85% 65% at 12% 8%, var(--lp-1, #6366f1), transparent 58%),
+        radial-gradient(ellipse 75% 55% at 92% 92%, var(--lp-2, #06b6d4), transparent 52%),
+        linear-gradient(160deg, var(--lp-1, #6366f1), var(--lp-3, var(--lp-2, #818cf8)));
+}
+.lp-share-frame > .lp-share-card {
+    position: relative;
+    z-index: 1;
+}
+/* 精简卡：与外框同圆角，边线透明 */
+.lp-share-frame > .lp-share-card-slim {
+    border-radius: 18px;
+    border-color: transparent !important;
+    box-shadow: none !important;
 }
 .lp-share-card {
     background: linear-gradient(165deg, #ffffff 0%, #f3f8ff 55%, #eef6ff 100%);
@@ -834,12 +862,14 @@ textarea.open-letter:focus {
     color: #273349;
     box-sizing: border-box;
 }
-/* 精简分享卡：色场外框 + 干净内卡 + 大插画设定卡 */
+/* 精简分享卡：主题色洗底内卡 + 出血插画 + 文字核心区 */
 .lp-share-card-slim {
-    padding: 0 0 16px !important;
-    min-height: 460px;
+    position: relative;
+    padding: 0 0 10px !important;
+    min-height: 456px;
     display: flex;
     flex-direction: column;
+    overflow: hidden;
     background: #ffffff !important;
     border-color: rgba(15, 23, 42, 0.06) !important;
     box-shadow:
@@ -848,9 +878,25 @@ textarea.open-letter:focus {
 }
 .lp-share-brandbar {
     margin: 0;
-    padding: 14px 26px 10px;
-    border-bottom: 1px solid rgba(15, 23, 42, 0.06);
+    padding: 12px 22px 8px;
+    border-bottom: none;
     text-align: left;
+}
+/* 精简卡：品牌条浮在岛图上方，让插画顶满卡片上沿 */
+.lp-share-card-slim .lp-share-brandbar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 3;
+    padding: 12px 22px 36px;
+    background: linear-gradient(
+        180deg,
+        rgba(255, 255, 255, 0.82) 0%,
+        rgba(255, 255, 255, 0.4) 55%,
+        transparent 100%
+    );
+    box-sizing: border-box;
 }
 .lp-share-brand-name {
     font-size: 0.82em;
@@ -871,33 +917,59 @@ textarea.open-letter:focus {
     align-items: center;
 }
 .lp-share-brand-sep { opacity: 0.55; }
+/* 岛图出血带：全宽顶满上半，圆角贴色带 */
+.lp-share-visual {
+    position: relative;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    line-height: 0;
+    overflow: hidden;
+    flex: 0 0 auto;
+    background: transparent;
+}
 .lp-share-hero {
     flex: 1 1 auto;
-    padding: 18px 24px 14px;
+    padding: 12px 22px 10px;
     display: flex;
     flex-direction: column;
     justify-content: flex-start;
     align-items: center;
     text-align: center;
 }
+.lp-share-card-slim .lp-share-hero {
+    /* 型名贴插画下沿；文字区微白底仍透主题洗底 */
+    padding: 0 22px 6px;
+    margin-top: -12px;
+    background: linear-gradient(
+        180deg,
+        rgba(255, 255, 255, 0.28) 0%,
+        rgba(255, 255, 255, 0.7) 100%
+    );
+}
 .lp-share-card-slim .personality-name {
-    font-size: 2.15em;
+    font-size: 2.12em;
     font-weight: 900;
-    margin: 0 0 4px;
+    margin: 0 0 2px;
     letter-spacing: 0.01em;
-    line-height: 1.2;
+    line-height: 1.15;
+    /* 轻暖高光：型名带主题色微光，避免整张只有冷色 */
+    color: var(--lp-ink, #1e293b);
+    text-shadow:
+        0 0 22px var(--lp-glow, rgba(251, 191, 36, 0.18)),
+        0 1px 0 rgba(255, 248, 235, 0.55);
 }
 .lp-share-card-slim .personality-code {
-    font-size: 1.32em;
+    font-size: 1.28em;
     font-weight: 800;
-    letter-spacing: 0.36em;
-    margin: 0 0 12px;
+    letter-spacing: 0.34em;
+    margin: 0 0 5px;
     opacity: 1;
 }
 .lp-share-card-slim .personality-sub {
-    font-size: 0.92em;
+    font-size: 0.9em;
     font-weight: 400;
-    line-height: 1.55;
+    line-height: 1.5;
     color: #64748b;
     margin: 0;
     font-style: normal;
@@ -908,15 +980,17 @@ textarea.open-letter:focus {
     font-weight: 400;
 }
 .lp-share-card-slim .lp-share-sub-accent {
-    color: var(--lp-1, #4f46e5);
+    /* 金句半句：更亮的主题高光（偏 --lp-3 / 暖光晕） */
+    color: var(--lp-3, var(--lp-1, #4f46e5));
     font-weight: 600;
+    text-shadow: 0 0 18px rgba(251, 191, 36, 0.28);
 }
 .lp-share-foot {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 14px;
-    padding: 0 20px 4px 24px;
+    gap: 12px;
+    padding: 0 20px 2px 24px;
     margin-top: auto;
 }
 .lp-share-cta {
@@ -968,11 +1042,11 @@ textarea.open-letter:focus {
     padding: 4px;
 }
 .lp-share-disc {
-    margin: 6px 24px 0;
+    margin: 4px 24px 0;
     font-size: 0.62em;
     color: #c0c8d4;
     letter-spacing: 0.02em;
-    line-height: 1.4;
+    line-height: 1.35;
     text-align: left;
 }
 /* App 内：次级解读默认折叠 */

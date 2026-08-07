@@ -160,7 +160,8 @@
 
     /**
      * 在结果卡 / 分享卡上挂岛图作主视觉；缺图则隐藏并回退纹章。
-     * 插入点：`.personality-name` 前，或分享卡 `.lp-share-hero` 顶部。
+     * 插入点：分享卡 `.lp-share-visual`（出血主视觉）优先；
+     * 否则 `.personality-name` 前 / `.lp-share-hero` 顶部。
      */
     window.ensureLovePersonalityIsland = function (el, code) {
         if (!el) return null;
@@ -172,13 +173,15 @@
             return null;
         }
 
+        var visual = el.querySelector('.lp-share-visual');
         var nameEl = el.querySelector('.personality-name');
         var hero = el.querySelector('.lp-share-hero');
-        var parent = (nameEl && nameEl.parentNode)
+        var parent = visual
+            || (nameEl && nameEl.parentNode)
             || hero
             || el.querySelector('.lp-modal-scroll')
             || el;
-        var before = nameEl || (hero ? hero.firstChild : null);
+        var before = visual ? null : (nameEl || (hero ? hero.firstChild : null));
 
         if (!wrap) {
             wrap = document.createElement('div');
@@ -192,7 +195,9 @@
             img.loading = 'eager';
             wrap.appendChild(img);
         }
-        if (wrap.parentNode !== parent) {
+        if (visual) {
+            if (wrap.parentNode !== visual) visual.appendChild(wrap);
+        } else if (wrap.parentNode !== parent) {
             if (before && before.parentNode === parent) parent.insertBefore(wrap, before);
             else parent.insertBefore(wrap, parent.firstChild);
         } else if (before && wrap.nextSibling !== before && before.parentNode === parent) {
@@ -418,8 +423,8 @@
     }
 
     /**
-     * 构建精简分享卡（海报感）：
-     * 色场外框 → 顶栏背书 → 大岛图+型名/code/金句 → 底栏 CTA+域名+二维码
+     * 构建精简分享卡（海报感 / 打磨试版）：
+     * 洗底外框（无厚彩框）→ 顶栏 → 出血岛图 → 型名/code/金句（半句高光）→ 底栏 CTA+域名+二维码
      */
     async function buildSlimShareStage(personality, themeCode) {
         var landing = shareLandingUrl();
@@ -438,6 +443,11 @@
         var frame = document.createElement('div');
         frame.className = 'lp-share-frame';
 
+        /* 主题色洗底层：用 --lp-1/--lp-2 全色 + opacity，避开 color-mix（截图更稳） */
+        var wash = document.createElement('div');
+        wash.className = 'lp-share-wash';
+        wash.setAttribute('aria-hidden', 'true');
+
         var card = document.createElement('div');
         card.className = 'lp-share-card lp-share-card-slim';
 
@@ -453,6 +463,10 @@
             +   '<span class="lp-share-brand-tag">' + t('lp.brandTag') + '</span>'
             + '</div>';
 
+        /* 岛图出血区：全宽贴顶，主题色带托底 */
+        var visual = document.createElement('div');
+        visual.className = 'lp-share-visual';
+
         var hero = document.createElement('div');
         hero.className = 'lp-share-hero';
         var nameEl = document.createElement('p');
@@ -464,11 +478,22 @@
         var subEl = document.createElement('p');
         subEl.className = 'personality-sub';
         if (subtitle) {
-            /* 半句主题色强调：前半淡说明，后半（或整句较短时）用 accent */
-            var mid = Math.max(1, Math.floor(subtitle.length * 0.45));
-            var cut = subtitle.indexOf('，', mid);
-            if (cut < 0) cut = subtitle.indexOf(',', mid);
-            if (cut < 0) cut = subtitle.indexOf(' ', mid);
+            /* 半句主题色强调：优先按逗号/破折号切开；偏前的逗号也可用（金句常前短后长） */
+            var cut = -1;
+            var markers = ['，', ',', '——', '—', '；', ';'];
+            var mi, pos, best = -1;
+            for (mi = 0; mi < markers.length; mi++) {
+                pos = subtitle.indexOf(markers[mi]);
+                if (pos > 1 && pos < subtitle.length - 2) {
+                    best = pos + markers[mi].length - 1;
+                    break;
+                }
+            }
+            cut = best;
+            if (cut < 0) {
+                var mid = Math.max(1, Math.floor(subtitle.length * 0.45));
+                cut = subtitle.indexOf(' ', mid);
+            }
             if (cut > 0 && cut < subtitle.length - 2) {
                 var soft = document.createElement('span');
                 soft.className = 'lp-share-sub-soft';
@@ -482,7 +507,7 @@
                     subEl.appendChild(accent);
                 }
             } else {
-                subEl.classList.add('lp-share-sub-soft');
+                subEl.classList.add('lp-share-sub-accent');
                 subEl.textContent = subtitle;
             }
         }
@@ -526,11 +551,15 @@
         disc.textContent = t('lp.shareDisc');
 
         card.appendChild(brand);
+        card.appendChild(visual);
         card.appendChild(hero);
         card.appendChild(foot);
         card.appendChild(disc);
 
-        /* 结构就绪后再挂主题/岛图，保证插在 .personality-name 前 */
+        frame.appendChild(wash);
+        frame.appendChild(card);
+
+        /* 结构就绪后再挂主题/岛图（岛图进 .lp-share-visual） */
         if (themeCode && themeCode.length === 4) {
             window.applyLovePersonalityTheme(card, themeCode);
             /* 海报感：系别大字水印，弱化报表角标 */
@@ -541,7 +570,6 @@
             });
         }
 
-        frame.appendChild(card);
         stage.appendChild(frame);
         document.body.appendChild(stage);
 
