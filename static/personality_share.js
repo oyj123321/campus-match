@@ -1,4 +1,4 @@
-/* 恋爱人格卡片：视口内渲染圆角卡 → 截图 → 桌面复制图 / 手机预览长按保存 */
+/* 恋爱人格卡片：精简分享卡 → 截图 → 桌面复制图 / 手机预览长按保存 */
 (function () {
     'use strict';
 
@@ -14,6 +14,102 @@
 
     function normalizeLpCode(code) {
         return String(code || '').toUpperCase().replace(/[^A-Z]/g, '').slice(0, 4);
+    }
+
+    /** 分享落地页：优先 PUBLIC_URL；本机地址则用正式域名，保证扫码可用 */
+    function shareLandingUrl() {
+        var base = String(window.CM_PUBLIC_URL || '').trim()
+            || ((typeof location !== 'undefined' && location.origin) ? location.origin : '');
+        if (!base || /localhost|127\.0\.0\.1/i.test(base)) {
+            base = 'https://campusmatch.com.cn';
+        }
+        return base.replace(/\/$/, '') + '/?from=lp_share';
+    }
+
+    function displayHost(url) {
+        try {
+            return String(new URL(url).host || 'campusmatch.com.cn');
+        } catch (e) {
+            return 'campusmatch.com.cn';
+        }
+    }
+
+    function blobToDataUrl(blob) {
+        return new Promise(function (resolve, reject) {
+            var reader = new FileReader();
+            reader.onload = function () { resolve(reader.result); };
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+        });
+    }
+
+    /** 本地生成二维码 data URL（优先）；失败再试外部 API */
+    async function loadQrDataUrl(targetUrl) {
+        try {
+            if (typeof qrcode === 'function') {
+                var qr = qrcode(0, 'M');
+                qr.addData(targetUrl);
+                qr.make();
+                var cell = 4;
+                var count = qr.getModuleCount();
+                var size = count * cell;
+                var canvas = document.createElement('canvas');
+                canvas.width = size;
+                canvas.height = size;
+                var ctx = canvas.getContext('2d');
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(0, 0, size, size);
+                ctx.fillStyle = '#0f172a';
+                for (var r = 0; r < count; r++) {
+                    for (var c = 0; c < count; c++) {
+                        if (qr.isDark(r, c)) {
+                            ctx.fillRect(c * cell, r * cell, cell, cell);
+                        }
+                    }
+                }
+                return canvas.toDataURL('image/png');
+            }
+        } catch (errLocal) {
+            console.warn('local QR failed', errLocal);
+        }
+        var api = 'https://api.qrserver.com/v1/create-qr-code/?size=160x160&margin=6&data='
+            + encodeURIComponent(targetUrl);
+        try {
+            var res = await fetch(api);
+            if (!res.ok) throw new Error('qr http ' + res.status);
+            var blob = await res.blob();
+            return await blobToDataUrl(blob);
+        } catch (err) {
+            console.warn('QR fetch failed', err);
+            return '';
+        }
+    }
+
+    function waitImg(img) {
+        return new Promise(function (resolve) {
+            if (!img || !img.src) return resolve();
+            if (img.complete && img.naturalWidth > 0) return resolve();
+            var done = function () {
+                img.removeEventListener('load', done);
+                img.removeEventListener('error', done);
+                resolve();
+            };
+            img.addEventListener('load', done);
+            img.addEventListener('error', done);
+            setTimeout(done, 2500);
+        });
+    }
+
+    function readPersonalityFromCard(cardEl) {
+        if (!cardEl) return {};
+        var nameEl = cardEl.querySelector('.personality-name');
+        var codeEl = cardEl.querySelector('.personality-code');
+        var subEl = cardEl.querySelector('.personality-sub');
+        return {
+            name: nameEl ? (nameEl.textContent || '').trim() : '',
+            code: codeEl ? (codeEl.textContent || '').trim() : '',
+            subtitle: subEl ? (subEl.textContent || '').trim() : ''
+        };
     }
 
     /** 只套配色/class（外框用）；不挂徽章，避免 frame+card 双重装饰重叠 */
@@ -220,7 +316,18 @@
         }
     }
 
-    function buildShareStage(cardEl) {
+    /**
+     * 构建精简分享卡（不克隆 App 内冗长解读）：
+     * 顶栏背书 → 型名/code/一句副标题 → 底栏 CTA+二维码 → 角上免责
+     */
+    async function buildSlimShareStage(personality, themeCode) {
+        var landing = shareLandingUrl();
+        var qrData = await loadQrDataUrl(landing);
+        var p = personality || {};
+        var name = p.name || p.label || '—';
+        var code = normalizeLpCode(p.code || p.type) || String(p.code || p.type || '—');
+        var subtitle = p.subtitle || p.summary || '';
+
         var stage = document.createElement('div');
         stage.id = 'lp-share-stage';
         stage.className = 'lp-share-stage lp-share-stage-live';
@@ -230,60 +337,84 @@
         frame.className = 'lp-share-frame';
 
         var card = document.createElement('div');
-        card.className = 'lp-share-card';
+        card.className = 'lp-share-card lp-share-card-slim';
 
-        var themeCode = cardEl.getAttribute('data-lp-code')
-            || normalizeLpCode(cardEl.dataset && cardEl.dataset.lpCode);
         if (themeCode && themeCode.length === 4) {
-            // 外框只铺渐变底；徽章/印章/水印只挂在内卡，防止重叠
             window.applyLovePersonalityColors(frame, themeCode);
             window.applyLovePersonalityTheme(card, themeCode);
         }
 
-        function appendClone(node) {
-            if (!node || !node.cloneNode) return;
-            if (node.classList && (
-                node.classList.contains('personality-actions')
-                || node.classList.contains('lp-no-capture')
-                || node.classList.contains('lp-emblem')
-                || node.classList.contains('lp-stamp')
-                || node.classList.contains('lp-watermark')
-                || node.classList.contains('lp-corners')
-                || node.classList.contains('lp-grid')
-                || node.classList.contains('lp-modal-scroll')
-            )) return;
-            var clone = node.cloneNode(true);
-            if (clone.classList && clone.classList.contains('lp-capture-brand')) {
-                clone.style.display = 'block';
-            }
-            card.appendChild(clone);
+        var brand = document.createElement('div');
+        brand.className = 'lp-share-brandbar';
+        brand.innerHTML =
+            '<div class="lp-share-brand-name">CampusMatch</div>'
+            + '<div class="lp-share-brand-meta">'
+            +   '<span class="lp-share-brand-url">campusmatch.com.cn</span>'
+            +   '<span class="lp-share-brand-sep" aria-hidden="true">·</span>'
+            +   '<span class="lp-share-brand-tag">' + t('lp.brandTag') + '</span>'
+            + '</div>';
+
+        var hero = document.createElement('div');
+        hero.className = 'lp-share-hero';
+        var nameEl = document.createElement('p');
+        nameEl.className = 'personality-name';
+        nameEl.textContent = name;
+        var codeEl = document.createElement('p');
+        codeEl.className = 'personality-code';
+        codeEl.textContent = code;
+        var subEl = document.createElement('p');
+        subEl.className = 'personality-sub';
+        subEl.textContent = subtitle;
+        hero.appendChild(nameEl);
+        hero.appendChild(codeEl);
+        if (subtitle) hero.appendChild(subEl);
+
+        var foot = document.createElement('div');
+        foot.className = 'lp-share-foot';
+        var ctaWrap = document.createElement('div');
+        ctaWrap.className = 'lp-share-cta';
+        var cta = document.createElement('p');
+        cta.className = 'lp-share-cta-text';
+        cta.textContent = t('lp.shareCta');
+        var host = document.createElement('p');
+        host.className = 'lp-share-cta-host';
+        host.textContent = displayHost(landing);
+        ctaWrap.appendChild(cta);
+        ctaWrap.appendChild(host);
+
+        var qrWrap = document.createElement('div');
+        qrWrap.className = 'lp-share-qr';
+        if (qrData) {
+            var qrImg = document.createElement('img');
+            qrImg.className = 'lp-share-qr-img';
+            qrImg.alt = 'QR';
+            qrImg.src = qrData;
+            qrWrap.appendChild(qrImg);
+        } else {
+            var qrFallback = document.createElement('div');
+            qrFallback.className = 'lp-share-qr-fallback';
+            qrFallback.textContent = displayHost(landing);
+            qrWrap.appendChild(qrFallback);
         }
 
-        var kids = cardEl.children;
-        for (var i = 0; i < kids.length; i++) {
-            var node = kids[i];
-            // 弹窗内容包在 .lp-modal-scroll 里：摊平其子节点，保证分享卡结构一致
-            if (node.classList && node.classList.contains('lp-modal-scroll')) {
-                var inner = node.children;
-                for (var j = 0; j < inner.length; j++) {
-                    appendClone(inner[j]);
-                }
-                continue;
-            }
-            appendClone(node);
-        }
-        /* 徽章由 applyLovePersonalityTheme 重新挂上，避免重复 */
+        foot.appendChild(ctaWrap);
+        foot.appendChild(qrWrap);
 
-        if (!card.querySelector('.lp-capture-brand')) {
-            var brand = document.createElement('p');
-            brand.className = 'lp-capture-brand';
-            brand.textContent = 'CampusMatch · campusmatch.com.cn';
-            card.appendChild(brand);
-        }
+        var disc = document.createElement('p');
+        disc.className = 'lp-share-disc';
+        disc.textContent = t('lp.shareDisc');
+
+        card.appendChild(brand);
+        card.appendChild(hero);
+        card.appendChild(foot);
+        card.appendChild(disc);
 
         frame.appendChild(card);
         stage.appendChild(frame);
         document.body.appendChild(stage);
+
+        var img = card.querySelector('.lp-share-qr-img');
+        if (img) await waitImg(img);
         return stage;
     }
 
@@ -296,12 +427,20 @@
         return mask;
     }
 
-    async function captureCard(cardEl) {
+    async function captureCard(cardEl, personality) {
         if (typeof html2canvas !== 'function') {
             throw new Error('html2canvas missing');
         }
+        var fromDom = readPersonalityFromCard(cardEl);
+        var p = Object.assign({}, fromDom, personality || {});
+        var themeCode = normalizeLpCode(
+            (personality && (personality.code || personality.type))
+            || (cardEl && cardEl.getAttribute('data-lp-code'))
+            || p.code
+        );
+
         var mask = showCaptureMask();
-        var stage = buildShareStage(cardEl);
+        var stage = await buildSlimShareStage(p, themeCode);
         var y = window.scrollY || window.pageYOffset || 0;
         // iOS：离屏/负坐标会出空白；先滚到顶再截视口内节点
         window.scrollTo(0, 0);
@@ -372,7 +511,7 @@
             btn.textContent = t('lp.sharing');
         }
         try {
-            var canvas = await captureCard(cardEl);
+            var canvas = await captureCard(cardEl, personality);
             if (!canvas || canvas.width < 8 || canvas.height < 8) {
                 throw new Error('empty canvas');
             }

@@ -58,6 +58,7 @@ def inject_globals():
         "contact_email": CONTACT_EMAIL,
         "site_announcement": (SITE_ANNOUNCEMENT or "").strip(),
         "login_once_per_day": LOGIN_ONCE_PER_DAY,
+        "public_url": PUBLIC_URL,
     }
 
 

@@ -13,20 +13,29 @@
 
     <div id="mbti-box" class="card personality-card" style="margin-top:14px;display:none;">
         <h3 style="margin-bottom:4px;" data-i18n="lp.title">你的恋爱人格</h3>
-        <p class="hint" data-i18n="lp.sub">根据问卷生成，可截图分享 · 仅供娱乐</p>
+        <p class="hint lp-hero-sub" data-i18n="lp.sub">根据问卷生成，可截图分享 · 仅供娱乐</p>
         <p class="personality-name"><span id="mbti-label">—</span></p>
         <p class="personality-code" id="mbti-type">—</p>
         <p class="personality-sub" id="mbti-summary"></p>
-        <div id="mbti-bars" class="personality-bars"></div>
-        <p class="hint lp-body-block" style="margin:12px 0 4px;font-weight:600;" data-i18n="lp.traits">核心特质</p>
-        <ul id="mbti-hits" class="hint lp-body-block" style="margin:0;line-height:1.7;"></ul>
-        <p class="hint lp-body-block" style="margin:12px 0 4px;"><span data-i18n="lp.strength">关系优势：</span><span id="mbti-love"></span></p>
-        <p class="hint lp-body-block" style="margin:6px 0 0;"><span data-i18n="lp.match">你可能适合：</span><span id="mbti-compat"></span></p>
+        <details class="lp-detail-expand hint lp-no-capture">
+            <summary data-i18n="lp.detailMore">展开四维与解读</summary>
+            <div id="mbti-bars" class="personality-bars"></div>
+            <details class="lp-letter-guide hint">
+                <summary data-i18n="lp.lettersTitle">🔤 四字母怎么读</summary>
+                <p class="lp-letter-guide-hint" data-i18n="lp.lettersHint">四字母按上述四维各取一极拼成。</p>
+                <ul class="lp-letter-guide-list"></ul>
+            </details>
+            <p class="lp-section-title" data-i18n="lp.traits">✨ 核心特质</p>
+            <ul id="mbti-hits" class="lp-section-body lp-body-block"></ul>
+            <p class="lp-section-title" data-i18n="lp.strength">👍🏻 关系优势</p>
+            <p class="lp-section-body" id="mbti-love"></p>
+            <p class="lp-section-title" data-i18n="lp.match">😌 你可能适合</p>
+            <p class="lp-section-body" id="mbti-compat"></p>
+        </details>
         <div class="personality-actions" style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;justify-content:center;">
             <button type="button" class="btn btn-secondary" onclick="sharePersonality()" data-i18n="lp.share">分享报告</button>
         </div>
-        <p id="mbti-disc" class="hint lp-body-block" style="margin-top:12px;font-size:0.82em;"></p>
-        <p class="lp-capture-brand hint" style="display:none;margin-top:10px;font-size:0.8em;">CampusMatch · campusmatch.com.cn</p>
+        <p id="mbti-disc" class="hint lp-disc-corner lp-no-capture"></p>
     </div>
 
     <div id="pool-box" class="card box-dim" style="margin-top:14px;text-align:left;">
@@ -434,19 +443,11 @@ var lastPersonality = null;
 function renderPersonalityBars(dims) {
     var box = document.getElementById('mbti-bars');
     if (!box) return;
+    if (typeof renderLovePersonalityBars === 'function') {
+        renderLovePersonalityBars(box, dims);
+        return;
+    }
     box.innerHTML = '';
-    if (!dims) return;
-    ['expression', 'rhythm', 'boundary', 'risk'].forEach(function (key) {
-        var d = dims[key];
-        if (!d) return;
-        var pct = Math.max(0, Math.min(100, d.score || 0));
-        var row = document.createElement('div');
-        row.className = 'personality-bar-row';
-        row.innerHTML = '<span class="personality-bar-label">' + esc(d.label || key) + '</span>'
-            + '<div class="personality-bar-track"><div class="personality-bar-fill" style="width:' + pct + '%"></div></div>'
-            + '<span class="personality-bar-pole">' + esc(d.pole || '') + '</span>';
-        box.appendChild(row);
-    });
 }
 
 async function loadMbti() {
@@ -470,6 +471,9 @@ async function loadMbti() {
     document.getElementById('mbti-love').textContent = m.strength || m.love || '';
     document.getElementById('mbti-compat').textContent = m.match_tip || '—';
     renderPersonalityBars(m.dimensions);
+    if (typeof fillLovePersonalityLetterGuide === 'function') {
+        fillLovePersonalityLetterGuide(document.querySelector('#mbti-box .lp-letter-guide'));
+    }
     var hits = document.getElementById('mbti-hits');
     hits.innerHTML = '';
     (m.traits || m.hits || []).forEach(function (line) {
@@ -477,7 +481,7 @@ async function loadMbti() {
         li.textContent = line;
         hits.appendChild(li);
     });
-    document.getElementById('mbti-disc').textContent = m.disclaimer || t('lp.disc');
+    document.getElementById('mbti-disc').textContent = t('lp.shareDisc');
 }
 
 async function sharePersonality() {

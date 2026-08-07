@@ -53,6 +53,10 @@
     padding: 0 var(--lp-pad-x) 2.8em !important;
     text-align: left;
 }
+/* 精简分享卡自管内边距（顶栏/hero/底栏） */
+.lp-share-card.lp-share-card-slim[data-lp-code] {
+    padding: 0 0 14px !important;
+}
 
 /* 顶部标题区：透出卡片渐变（避免另铺 --lp-frame 造成色带） */
 .personality-card[data-lp-code] > h3,
@@ -68,14 +72,19 @@
 .personality-card[data-lp-code] .lp-modal-scroll > h3 + .hint,
 .lp-share-card[data-lp-code] > h3 + .hint {
     margin: 0 calc(-1 * var(--lp-pad-x)) !important;
-    padding: 0 80px 16px var(--lp-pad-x);
-    line-height: 1.5;
+    padding: 0 80px 12px var(--lp-pad-x);
+    line-height: 1.4;
     background: transparent;
     border-bottom: 1px solid var(--lp-border);
     text-align: left;
     /* 避免「仅供娱 / 乐」孤字折行 */
     overflow-wrap: normal;
     word-break: keep-all;
+}
+/* App 内顶栏提示再弱化（分享卡顶栏不走此类） */
+.personality-card[data-lp-code] > h3 + .lp-hero-sub,
+.personality-card[data-lp-code] .lp-modal-scroll > h3 + .lp-hero-sub {
+    padding-bottom: 10px;
 }
 
 /* 操作按钮单独居中 */
@@ -123,6 +132,18 @@
 .lp-share-card[data-lp-code] ul.lp-body-block {
     padding-left: 1.15em;
     list-style-position: outside;
+}
+
+/* App 内展开区：分区标题与正文层级（分享精简卡不含这些区块） */
+.personality-card[data-lp-code] .lp-section-title {
+    color: var(--lp-ink, #334155);
+}
+.personality-card[data-lp-code] .lp-section-body {
+    color: #64748b;
+}
+.personality-card[data-lp-code] .lp-letter-guide summary {
+    color: var(--lp-ink, #475569);
+    opacity: 0.88;
 }
 
 .lp-share-frame[data-lp-code] {
@@ -290,6 +311,34 @@
     left: 18px;
     opacity: 0.5;
 }
+/* 精简分享卡：印章易与底栏 CTA/二维码打架，隐藏 */
+.lp-share-card-slim .lp-stamp {
+    display: none !important;
+}
+.lp-share-card-slim .lp-watermark {
+    bottom: 22%;
+    opacity: 0.06;
+}
+.lp-share-card-slim .lp-corners {
+    top: 68px;
+}
+.lp-share-card-slim .lp-emblem {
+    top: 10px;
+    right: 14px;
+    width: 48px;
+    height: 48px;
+    opacity: 0.38;
+}
+.lp-share-card-slim .lp-share-brand-name {
+    color: var(--lp-ink, #1e293b);
+}
+.lp-share-card-slim .lp-share-cta-text {
+    color: var(--lp-ink, #1e293b);
+}
+.lp-share-card-slim .lp-share-brandbar {
+    border-bottom-color: var(--lp-border, rgba(15, 23, 42, 0.08));
+    padding-right: 72px; /* 给右上角纹章留位 */
+}
 .personality-card[data-lp-code] .lp-capture-brand,
 .lp-share-card[data-lp-code] .lp-capture-brand {
     padding-bottom: 4px;
@@ -301,6 +350,9 @@
     flex-direction: column;
     overflow: hidden !important; /* 外层不滚，内层滚 */
     max-height: min(92vh, 780px);
+    /* 左右留白交给 .lp-modal-scroll，避免滚动条嵌在内容区内侧、切纹章 */
+    padding-left: 0 !important;
+    padding-right: 0 !important;
     padding-bottom: 0 !important;
 }
 .personality-modal-panel .lp-modal-scroll {
@@ -310,7 +362,13 @@
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
     overscroll-behavior: contain;
-    padding: 0 0 12px;
+    /* 滚动条贴弹窗右缘；正文仍保留 --lp-pad-x */
+    padding: 0 var(--lp-pad-x, 36px) 12px;
+    scrollbar-gutter: stable;
+}
+.personality-modal-panel > .lp-emblem {
+    /* 略内收，避开贴边滚动条 */
+    right: 20px;
 }
 .personality-modal-panel .lp-stamp,
 .personality-modal-panel .lp-watermark,
@@ -321,7 +379,8 @@
     flex: 0 0 auto;
     position: relative;
     z-index: 6;
-    margin: 0 calc(-1 * var(--lp-pad-x, 36px));
+    /* 面板已无左右 padding，底栏直接全宽 */
+    margin: 0;
     padding: 12px var(--lp-pad-x, 36px) 16px;
     border-top: 1px solid var(--lp-border, rgba(99, 102, 241, 0.16));
     /* 透出卡片主题渐变，避免底栏白块切断背景 */

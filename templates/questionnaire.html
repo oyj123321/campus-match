@@ -95,17 +95,26 @@
     <div class="card personality-card personality-modal-panel" role="dialog" aria-labelledby="lp-modal-title">
         <div class="lp-modal-scroll">
             <h3 id="lp-modal-title" data-i18n="lp.title">你的恋爱人格</h3>
-            <p class="hint" data-i18n="lp.sub">根据问卷生成，可截图分享 · 仅供娱乐</p>
+            <p class="hint lp-hero-sub" data-i18n="lp.sub">根据问卷生成，可截图分享 · 仅供娱乐</p>
             <p class="personality-name" id="lp-modal-name">—</p>
             <p class="personality-code" id="lp-modal-code">—</p>
             <p class="personality-sub" id="lp-modal-subtitle"></p>
-            <div id="lp-modal-bars" class="personality-bars"></div>
-            <p class="hint lp-body-block" style="margin:12px 0 4px;font-weight:600;" data-i18n="lp.traits">核心特质</p>
-            <ul id="lp-modal-traits" class="hint lp-body-block" style="margin:0;line-height:1.7;"></ul>
-            <p class="hint lp-body-block" style="margin:12px 0 4px;"><span data-i18n="lp.strength">关系优势：</span><span id="lp-modal-strength"></span></p>
-            <p class="hint lp-body-block" style="margin:6px 0 12px;"><span data-i18n="lp.match">你可能适合：</span><span id="lp-modal-match"></span></p>
-            <p class="hint lp-body-block" style="margin-top:12px;font-size:0.82em;" data-i18n="lp.disc">本结果仅供娱乐与破冰参考。</p>
-            <p class="lp-capture-brand hint" style="display:none;margin-top:10px;font-size:0.8em;">CampusMatch · campusmatch.com.cn</p>
+            <details class="lp-detail-expand hint lp-no-capture">
+                <summary data-i18n="lp.detailMore">展开四维与解读</summary>
+                <div id="lp-modal-bars" class="personality-bars"></div>
+                <details class="lp-letter-guide hint">
+                    <summary data-i18n="lp.lettersTitle">🔤 四字母怎么读</summary>
+                    <p class="lp-letter-guide-hint" data-i18n="lp.lettersHint">四字母按上述四维各取一极拼成。</p>
+                    <ul class="lp-letter-guide-list"></ul>
+                </details>
+                <p class="lp-section-title" data-i18n="lp.traits">✨ 核心特质</p>
+                <ul id="lp-modal-traits" class="lp-section-body lp-body-block"></ul>
+                <p class="lp-section-title" data-i18n="lp.strength">👍🏻 关系优势</p>
+                <p class="lp-section-body" id="lp-modal-strength"></p>
+                <p class="lp-section-title" data-i18n="lp.match">😌 你可能适合</p>
+                <p class="lp-section-body" id="lp-modal-match"></p>
+            </details>
+            <p class="hint lp-disc-corner lp-no-capture" data-i18n="lp.shareDisc">问卷规则生成 · 仅供娱乐</p>
         </div>
         <div class="personality-actions" style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;">
             <a class="btn btn-primary" href="/matches" data-i18n="lp.goMatches">进入匹配页</a>
@@ -502,19 +511,12 @@ function showPersonalityModal(raw) {
     document.getElementById('lp-modal-strength').textContent = p.strength || '';
     document.getElementById('lp-modal-match').textContent = p.match_tip || '';
     var bars = document.getElementById('lp-modal-bars');
-    bars.innerHTML = '';
-    var dims = p.dimensions || {};
-    ['expression', 'rhythm', 'boundary', 'risk'].forEach(function (key) {
-        var d = dims[key];
-        if (!d) return;
-        var pct = Math.max(0, Math.min(100, d.score || 0));
-        var row = document.createElement('div');
-        row.className = 'personality-bar-row';
-        row.innerHTML = '<span class="personality-bar-label">' + esc(d.label || key) + '</span>'
-            + '<div class="personality-bar-track"><div class="personality-bar-fill" style="width:' + pct + '%"></div></div>'
-            + '<span class="personality-bar-pole">' + esc(d.pole || '') + '</span>';
-        bars.appendChild(row);
-    });
+    if (typeof renderLovePersonalityBars === 'function') {
+        renderLovePersonalityBars(bars, p.dimensions || {});
+    }
+    if (typeof fillLovePersonalityLetterGuide === 'function') {
+        fillLovePersonalityLetterGuide(document.querySelector('#personality-modal .lp-letter-guide'));
+    }
     var ul = document.getElementById('lp-modal-traits');
     ul.innerHTML = '';
     (p.traits || []).forEach(function (line) {

@@ -517,6 +517,115 @@
         return map[lang] || map.zh || null;
     }
 
+    function dimText(meta, key) {
+        if (!meta || !meta[key]) return '';
+        return meta[key][window.CM_LANG] || meta[key].zh || '';
+    }
+
+    /** 轴两端：左=low（低分极），右=high（高分极），与 score 填充方向一致 */
+    var LP_AXIS = {
+        expression: ['I', 'E'],
+        rhythm: ['F', 'S'],
+        boundary: ['O', 'C'],
+        risk: ['A', 'P']
+    };
+
+    function escLp(s) {
+        return String(s == null ? '' : s)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
+    }
+
+    /** 某维两端文案：{ low:{letter,label}, high:{letter,label} } */
+    window.lovePersonalityDimPoles = function (key) {
+        var meta = LP_DIMS[key];
+        var pair = LP_AXIS[key];
+        if (!meta || !pair) return null;
+        return {
+            low: { letter: pair[0], label: dimText(meta, pair[0]) },
+            high: { letter: pair[1], label: dimText(meta, pair[1]) }
+        };
+    };
+
+    /** 四字母图例行：维名 + 两极（含字母） */
+    window.lovePersonalityLetterLines = function () {
+        var lang = window.CM_LANG || 'zh';
+        var sep = (lang === 'en' || lang === 'pt') ? ': ' : '：';
+        var order = [
+            ['expression', 'E', 'I'],
+            ['rhythm', 'S', 'F'],
+            ['boundary', 'C', 'O'],
+            ['risk', 'P', 'A']
+        ];
+        return order.map(function (item) {
+            var meta = LP_DIMS[item[0]];
+            var label = dimText(meta, 'label');
+            var a = item[1] + ' ' + dimText(meta, item[1]);
+            var b = item[2] + ' ' + dimText(meta, item[2]);
+            return label + sep + a + ' / ' + b;
+        });
+    };
+
+    /** 结果卡维度条：两端极点 + 中间进度（score 朝 high） */
+    window.renderLovePersonalityBars = function (container, dims) {
+        if (!container) return;
+        container.innerHTML = '';
+        if (!dims) return;
+        ['expression', 'rhythm', 'boundary', 'risk'].forEach(function (key) {
+            var d = dims[key];
+            if (!d) return;
+            var poles = window.lovePersonalityDimPoles(key);
+            if (!poles) return;
+            var pct = Math.max(0, Math.min(100, d.score || 0));
+            var label = d.label || dimText(LP_DIMS[key], 'label') || key;
+            var letter = d.letter || '';
+            var lowActive = letter === poles.low.letter;
+            var highActive = letter === poles.high.letter;
+            var lowTxt = poles.low.letter + ' · ' + poles.low.label;
+            var highTxt = poles.high.letter + ' · ' + poles.high.label;
+            var row = document.createElement('div');
+            row.className = 'personality-bar-row';
+            row.innerHTML =
+                '<span class="personality-bar-label">' + escLp(label) + '</span>'
+                + '<div class="personality-bar-axis">'
+                + '<span class="personality-bar-pole personality-bar-low'
+                + (lowActive ? ' is-active' : '') + '">' + escLp(lowTxt) + '</span>'
+                + '<div class="personality-bar-track" role="meter" aria-valuenow="' + pct
+                + '" aria-valuemin="0" aria-valuemax="100" aria-label="'
+                + escLp(label + ': ' + lowTxt + ' — ' + highTxt) + '">'
+                + '<div class="personality-bar-fill" style="width:' + pct + '%"></div>'
+                + '</div>'
+                + '<span class="personality-bar-pole personality-bar-high'
+                + (highActive ? ' is-active' : '') + '">' + escLp(highTxt) + '</span>'
+                + '</div>';
+            container.appendChild(row);
+        });
+    };
+
+    /** 填充结果卡上的「四字母怎么读」折叠说明 */
+    window.fillLovePersonalityLetterGuide = function (root) {
+        if (!root) return;
+        var summary = root.querySelector('summary');
+        var hint = root.querySelector('.lp-letter-guide-hint');
+        var list = root.querySelector('.lp-letter-guide-list');
+        if (summary && typeof window.t === 'function') {
+            summary.textContent = window.t('lp.lettersTitle');
+        }
+        if (hint && typeof window.t === 'function') {
+            hint.textContent = window.t('lp.lettersHint');
+        }
+        if (list) {
+            list.innerHTML = '';
+            window.lovePersonalityLetterLines().forEach(function (line) {
+                var li = document.createElement('li');
+                li.textContent = line;
+                list.appendChild(li);
+            });
+        }
+    };
+
     window.localizeLovePersonality = function (p) {
         if (!p) return p;
         var code = p.code || p.type;
@@ -559,7 +668,12 @@
     };
 
     window.lovePersonalityShareText = function (m) {
-        var url = (typeof location !== 'undefined' && location.origin) ? location.origin : 'https://campusmatch.com.cn';
+        var base = String(window.CM_PUBLIC_URL || '').trim()
+            || ((typeof location !== 'undefined' && location.origin) ? location.origin : '');
+        if (!base || /localhost|127\.0\.0\.1/i.test(base)) {
+            base = 'https://campusmatch.com.cn';
+        }
+        var url = base.replace(/\/$/, '') + '/?from=lp_share';
         if (typeof window.tf === 'function') {
             return window.tf('lp.shareBody', {
                 name: m.name || '',

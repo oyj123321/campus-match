@@ -668,36 +668,60 @@ textarea.open-letter:focus {
     border: 1px solid rgba(37, 99, 235, 0.12);
 }
 .personality-name {
-    font-size: 1.6em;
+    font-size: 1.85em;
     font-weight: 800;
     margin: 12px 0 2px;
     letter-spacing: 0.02em;
     color: #1e3a5f;
+    line-height: 1.25;
 }
 .personality-code {
-    font-size: 0.95em;
-    font-weight: 600;
-    letter-spacing: 0.18em;
+    font-size: 1.15em;
+    font-weight: 700;
+    letter-spacing: 0.2em;
     color: #2563eb;
     margin: 0 0 8px;
 }
 .personality-sub {
-    font-size: 1.02em;
+    font-size: 0.92em;
+    font-weight: 400;
     line-height: 1.65;
-    color: #334155;
+    color: #64748b;
     margin: 0 0 14px;
     font-style: italic;
 }
-.personality-bars { display: flex; flex-direction: column; gap: 8px; }
+.personality-bars { display: flex; flex-direction: column; gap: 10px; }
 .personality-bar-row {
-    display: grid;
-    grid-template-columns: 4.5em 1fr 4.5em;
-    gap: 8px;
-    align-items: center;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
     font-size: 0.85em;
 }
-.personality-bar-label { color: #64748b; }
-.personality-bar-pole { color: #475569; text-align: right; font-size: 0.9em; }
+.personality-bar-label { color: #64748b; font-weight: 600; }
+.personality-bar-axis {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(3.2em, 1.5fr) minmax(0, 1fr);
+    gap: 6px;
+    align-items: center;
+}
+.personality-bar-pole {
+    color: #94a3b8;
+    font-size: 0.88em;
+    line-height: 1.25;
+}
+.personality-bar-low { text-align: left; }
+.personality-bar-high { text-align: right; }
+/* 弹窗内双极条：右极标签与滚动条留一点气口 */
+.personality-modal-panel .personality-bars {
+    padding-right: 2px;
+}
+.personality-modal-panel .personality-bar-pole {
+    overflow-wrap: anywhere;
+}
+.personality-bar-pole.is-active {
+    color: #334155;
+    font-weight: 700;
+}
 .personality-bar-track {
     height: 8px;
     border-radius: 99px;
@@ -709,6 +733,37 @@ textarea.open-letter:focus {
     border-radius: 99px;
     background: linear-gradient(90deg, #38bdf8, #2563eb);
 }
+.lp-letter-guide {
+    margin: 10px 0 2px;
+    text-align: left;
+    color: #64748b;
+}
+.lp-letter-guide summary {
+    cursor: pointer;
+    font-weight: 700;
+    font-size: 0.95em;
+    color: #475569;
+    user-select: none;
+}
+.lp-letter-guide[open] summary {
+    margin-bottom: 4px;
+}
+.lp-letter-guide-hint {
+    margin: 4px 0 2px;
+    font-size: 0.86em;
+    font-weight: 400;
+    line-height: 1.5;
+    color: #94a3b8;
+}
+.lp-letter-guide-list {
+    margin: 4px 0 0;
+    padding-left: 1.15em;
+    font-size: 0.86em;
+    font-weight: 400;
+    line-height: 1.65;
+    color: #64748b;
+}
+.lp-letter-guide-list li { margin: 0; }
 .personality-modal {
     position: fixed;
     inset: 0;
@@ -779,6 +834,192 @@ textarea.open-letter:focus {
     color: #273349;
     box-sizing: border-box;
 }
+/* 精简分享卡：顶栏背书 + 型名/code/一句 + 底栏 CTA/二维码 */
+.lp-share-card-slim {
+    padding: 0 0 18px !important;
+    min-height: 420px;
+    display: flex;
+    flex-direction: column;
+}
+.lp-share-brandbar {
+    margin: 0;
+    padding: 16px 28px 12px;
+    border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+    text-align: left;
+}
+.lp-share-brand-name {
+    font-size: 0.92em;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    color: #1e293b;
+    line-height: 1.3;
+}
+.lp-share-brand-meta {
+    margin-top: 3px;
+    font-size: 0.72em;
+    color: #94a3b8;
+    letter-spacing: 0.02em;
+    line-height: 1.4;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 6px;
+    align-items: center;
+}
+.lp-share-brand-sep { opacity: 0.55; }
+.lp-share-hero {
+    flex: 1 1 auto;
+    padding: 28px 28px 20px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    text-align: left;
+}
+.lp-share-card-slim .personality-name {
+    font-size: 2em;
+    font-weight: 800;
+    margin: 0 0 6px;
+    letter-spacing: 0.02em;
+    line-height: 1.25;
+}
+.lp-share-card-slim .personality-code {
+    font-size: 1.15em;
+    font-weight: 800;
+    letter-spacing: 0.28em;
+    margin: 0 0 14px;
+}
+.lp-share-card-slim .personality-sub {
+    font-size: 1.02em;
+    line-height: 1.65;
+    color: #475569;
+    margin: 0;
+    font-style: italic;
+    max-width: 92%;
+}
+.lp-share-foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 0 22px 6px 28px;
+    margin-top: auto;
+}
+.lp-share-cta {
+    flex: 1 1 auto;
+    min-width: 0;
+    text-align: left;
+}
+.lp-share-cta-text {
+    margin: 0;
+    font-size: 0.95em;
+    font-weight: 700;
+    color: #1e293b;
+    line-height: 1.4;
+}
+.lp-share-cta-host {
+    margin: 4px 0 0;
+    font-size: 0.72em;
+    color: #94a3b8;
+    letter-spacing: 0.02em;
+}
+.lp-share-qr {
+    flex: 0 0 auto;
+    width: 88px;
+    height: 88px;
+    padding: 5px;
+    background: #fff;
+    border: 1px solid rgba(15, 23, 42, 0.1);
+    border-radius: 10px;
+    box-sizing: border-box;
+}
+.lp-share-qr-img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+.lp-share-qr-fallback {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    font-size: 0.58em;
+    color: #64748b;
+    word-break: break-all;
+    line-height: 1.3;
+    padding: 4px;
+}
+.lp-share-disc {
+    margin: 8px 28px 0;
+    font-size: 0.68em;
+    color: #b0bac8;
+    letter-spacing: 0.02em;
+    line-height: 1.4;
+    text-align: left;
+}
+/* App 内：次级解读默认折叠 */
+.lp-detail-expand {
+    margin: 14px 0 4px;
+    text-align: left;
+}
+.lp-detail-expand > summary {
+    cursor: pointer;
+    font-weight: 600;
+    color: #64748b;
+    font-size: 0.9em;
+    list-style: none;
+}
+.lp-detail-expand > summary::-webkit-details-marker { display: none; }
+.lp-detail-expand > summary::before {
+    content: '▸ ';
+    color: #94a3b8;
+}
+.lp-detail-expand[open] > summary::before { content: '▾ '; }
+.lp-detail-expand[open] > summary { margin-bottom: 10px; }
+
+/* 分区标题（核心特质 / 关系优势 / 适合的人）同一层级 */
+.lp-section-title {
+    margin: 14px 0 5px;
+    font-size: 0.95em;
+    font-weight: 700;
+    line-height: 1.4;
+    color: #334155;
+    letter-spacing: 0.01em;
+}
+.lp-section-title:first-of-type,
+.lp-letter-guide + .lp-section-title {
+    margin-top: 12px;
+}
+/* 分区正文轻于标题 */
+.lp-section-body {
+    margin: 0 0 2px;
+    font-size: 0.86em;
+    font-weight: 400;
+    line-height: 1.7;
+    color: #64748b;
+}
+ul.lp-section-body {
+    padding-left: 1.15em;
+    list-style-position: outside;
+}
+ul.lp-section-body li { margin: 0; }
+
+/* 提示 / 免责：角落小字弱化（仅 App 内，分享卡另有 .lp-share-disc） */
+.lp-disc-corner {
+    margin-top: 12px !important;
+    font-size: 0.68em !important;
+    font-weight: 400 !important;
+    color: #b0bac8 !important;
+    line-height: 1.35;
+    letter-spacing: 0.01em;
+}
+.lp-hero-sub {
+    font-size: 0.72em !important;
+    font-weight: 400 !important;
+    color: #b0bac8 !important;
+    line-height: 1.4;
+}
 .lp-share-card h3 {
     font-size: 1.15em;
     font-weight: 800;
@@ -810,16 +1051,31 @@ textarea.open-letter:focus {
     margin: 0 0 16px;
     font-style: italic;
 }
-.lp-share-card .personality-bars { display: flex; flex-direction: column; gap: 10px; }
+.lp-share-card .personality-bars { display: flex; flex-direction: column; gap: 12px; }
 .lp-share-card .personality-bar-row {
-    display: grid;
-    grid-template-columns: 4.5em 1fr 4.5em;
-    gap: 8px;
-    align-items: center;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
     font-size: 0.85em;
 }
-.lp-share-card .personality-bar-label { color: #64748b; }
-.lp-share-card .personality-bar-pole { color: #475569; text-align: right; font-size: 0.9em; }
+.lp-share-card .personality-bar-label { color: #64748b; font-weight: 600; }
+.lp-share-card .personality-bar-axis {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(3.2em, 1.5fr) minmax(0, 1fr);
+    gap: 6px;
+    align-items: center;
+}
+.lp-share-card .personality-bar-pole {
+    color: #94a3b8;
+    font-size: 0.88em;
+    line-height: 1.25;
+}
+.lp-share-card .personality-bar-low { text-align: left; }
+.lp-share-card .personality-bar-high { text-align: right; }
+.lp-share-card .personality-bar-pole.is-active {
+    color: #334155;
+    font-weight: 700;
+}
 .lp-share-card .personality-bar-track {
     height: 9px;
     border-radius: 99px;
