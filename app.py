@@ -90,6 +90,16 @@ def notify_no_match(user, reason=None):
     return bool(ok), info
 
 
+def touch_instant_match_cooldown(user):
+    """提前揭晓一旦进入匹配尝试（无论成败）都写入冷却时间戳。
+
+    成功路径还会由 persist_user_matches 再次刷新；失败路径靠此处挡住
+    12h 内反复点击刷「暂未配对」邮件。不消耗本周新建匹配额度。
+    """
+    user.last_matched_at = datetime.utcnow()
+    db.session.commit()
+
+
 # ---- Helpers ----
 
 def get_school_from_email(email):
@@ -988,6 +998,9 @@ def api_match():
             "error": f"本周新建匹配已达上限（{MATCH_WEEKLY_NEW_LIMIT} 个）。可查看历史结果，或等下周 / {quota['next_batch_label']} 批量匹配。",
             "quota": quota,
         }), 429
+
+    # 通过冷却/周额度检查后立即落库冷却：失败也算一次尝试，防刷「暂未配对」邮件
+    touch_instant_match_cooldown(user)
 
     if MATCH_DELAY_SECONDS > 0:
         time.sleep(MATCH_DELAY_SECONDS)

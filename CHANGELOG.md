@@ -4,6 +4,16 @@ All notable changes to CampusMatch.
 
 ---
 
+## [1.9.32] — 2026-08-09
+
+### 问题（上次）
+- 提前揭晓未匹配时可无限点击并刷「暂未配对」邮件
+
+### 改动
+- **Fixed / 提前揭晓冷却**：任意提前揭晓尝试（含失败）写入 `last_matched_at` 冷却；12h 内接口硬挡；成功仍扣周额度（`app.py` `touch_instant_match_cooldown`）
+
+---
+
 ## [1.9.31] — 2026-08-07
 
 ### 问题（上次）
