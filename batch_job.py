@@ -144,10 +144,12 @@ def _get_or_create_pair(user_a, user_b, score, insight, mode="batch"):
     return m, True
 
 
-def persist_user_matches(user, scored_pairs, mode, mail_cfg, weekly_new_limit=None):
+def persist_user_matches(user, scored_pairs, mode, mail_cfg, weekly_new_limit=None, max_save=None):
     """
     将 [(other, score), ...] 落库并通知。
     weekly_new_limit: 本周新建匹配上限（发起方与被配方都计）；None 表示不限制。
+    max_save: 最多成功落库条数（one_to_one 传 1）；None 表示不额外截断。
+    硬性底线冲突会 skip 并继续试下一个候选。
     返回结果摘要 dict。
     """
     saved = []
@@ -159,8 +161,11 @@ def persist_user_matches(user, scored_pairs, mode, mail_cfg, weekly_new_limit=No
     skipped_low_score = 0
 
     new_this_week = count_new_matches_this_week(user.id) if weekly_new_limit is not None else 0
+    save_limit = None if max_save is None else max(1, int(max_save))
 
     for other, score in scored_pairs:
+        if save_limit is not None and len(saved) >= save_limit:
+            break
         if score < MATCH_MIN_SCORE:
             skipped_low_score += 1
             continue

@@ -36,11 +36,42 @@ def orientation_compatible(user_a, user_b):
     return user_a.accepts_gender(user_b.gender) and user_b.accepts_gender(user_a.gender)
 
 
+def _dealbreaker_conflict(user_a, user_b):
+    """硬性底线冲突（延迟导入避免循环依赖）。"""
+    from questionnaire import check_dealbreakers
+    a = getattr(user_a, "answers", None) or {}
+    b = getattr(user_b, "answers", None) or {}
+    return bool(check_dealbreakers(a, b))
+
+
+def pick_without_dealbreaker(user, scored_pairs, max_n=1):
+    """
+    从高分到低分跳过硬性底线冲突，取前 max_n 个可配。
+
+    scored_pairs: [(other, score), ...]（建议已按分降序）
+    Returns:
+        (kept, dealbreaker_skipped)
+        kept: [(other, score), ...]
+    """
+    kept = []
+    skipped = 0
+    limit = None if max_n is None else max(1, int(max_n))
+    for other, score in scored_pairs:
+        if _dealbreaker_conflict(user, other):
+            skipped += 1
+            continue
+        kept.append((other, score))
+        if limit is not None and len(kept) >= limit:
+            break
+    return kept, skipped
+
+
 def real_time_match(user, candidates, top_n=5, min_score=0.15):
     """
     实时匹配：余弦相似度 Top-N。
 
     user/candidates 必须有 .feature_vector 属性（list of float）
+    不在此过滤硬性底线：由调用方按序跳过，避免 Top-1 冲突就放弃更低分可配人选。
 
     Returns:
         [(candidate_user, score), ...] 按分数降序
@@ -196,6 +227,8 @@ def batch_match_school(users, filter_same_gender=True):
                 for j in range(m):
                     if not orientation_compatible(group_a[i], group_b[j]):
                         continue
+                    if _dealbreaker_conflict(group_a[i], group_b[j]):
+                        continue  # 一票否决：保持 0，不当作可配边
                     score_matrix[i][j] = cosine_similarity(
                         group_a[i].feature_vector, group_b[j].feature_vector
                     )
@@ -217,6 +250,8 @@ def greedy_match_all(users, min_score=0.15, require_orientation=True):
         if not u1.feature_vector or not u2.feature_vector:
             continue
         if require_orientation and not orientation_compatible(u1, u2):
+            continue
+        if _dealbreaker_conflict(u1, u2):
             continue
         sim = cosine_similarity(u1.feature_vector, u2.feature_vector)
         if sim >= min_score:

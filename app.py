@@ -1050,9 +1050,16 @@ def api_match():
             for a, b, s in results
             if (a.id == user.id or b.id == user.id) and s >= MATCH_MIN_SCORE
         ]
+        max_save = 1
     else:
-        # one_to_one：只取 1 人；top_n：可多人（调试）
-        top_n = 1 if mode != "top_n" else max(1, MATCH_TOP_N)
+        # 过门槛的候选按分降序全部交给 persist；硬性底线冲突时跳过并试下一个。
+        # one_to_one：最终只落库 1 人；top_n：可多人（调试）。
+        if mode == "top_n":
+            top_n = max(1, MATCH_TOP_N)
+            max_save = top_n
+        else:
+            top_n = max(len(candidates), 1)
+            max_save = 1
         my_matches = real_time_match(
             user, candidates, top_n=top_n, min_score=MATCH_MIN_SCORE
         )
@@ -1079,21 +1086,34 @@ def api_match():
     summary = persist_user_matches(
         user, my_matches, mode, get_mail_config(),
         weekly_new_limit=MATCH_WEEKLY_NEW_LIMIT,
+        max_save=max_save,
     )
     saved = summary["saved"]
 
     if not saved:
-        parts = []
-        if summary.get("partner_quota_skipped"):
-            parts.append("对方本周已有配对")
-        if summary.get("low_score_skipped"):
-            parts.append("相似度未达内部门槛")
-        if summary.get("dealbreaker_skipped"):
-            parts.append("硬性底线冲突")
-        if summary.get("quota_skipped"):
-            parts.append("你的本周额度已用完")
-        reason = "；".join(parts) if parts else "暂无合适人选"
-        msg = f"未能完成配对：{reason}。"
+        db_only = (
+            summary.get("dealbreaker_skipped")
+            and not summary.get("partner_quota_skipped")
+            and not summary.get("low_score_skipped")
+            and not summary.get("quota_skipped")
+        )
+        if db_only:
+            msg = (
+                "未能完成配对：当前过门槛的候选人均与你存在硬性底线冲突，"
+                "未强行配对。可完善问卷或下周再试。"
+            )
+        else:
+            parts = []
+            if summary.get("partner_quota_skipped"):
+                parts.append("对方本周已有配对")
+            if summary.get("low_score_skipped"):
+                parts.append("相似度未达内部门槛")
+            if summary.get("dealbreaker_skipped"):
+                parts.append("部分人选硬性底线冲突")
+            if summary.get("quota_skipped"):
+                parts.append("你的本周额度已用完")
+            reason = "；".join(parts) if parts else "暂无合适人选"
+            msg = f"未能完成配对：{reason}。"
         mail_ok, mail_info = notify_no_match(user, reason=msg)
         return jsonify({
             "ok": True,

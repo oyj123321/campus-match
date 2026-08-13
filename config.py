@@ -89,10 +89,10 @@ SCHOOL_DOMAINS = {
 }
 
 # 匹配配置
-# one_to_one（默认）：点「开始匹配」只配对 1 人（当前池子里得分最高且双向取向兼容）
+# one_to_one（默认）：按分降序试候选，跳过硬性底线后只落库 1 人
 # top_n：旧行为，一次返回多人（调试用，设 MATCH_MODE=top_n）
 MATCH_MODE = os.environ.get("MATCH_MODE", "one_to_one")  # one_to_one | top_n | batch
-MATCH_TOP_N = int(os.environ.get("MATCH_TOP_N", "1"))  # top_n 模式返回人数；one_to_one 强制为 1
+MATCH_TOP_N = int(os.environ.get("MATCH_TOP_N", "1"))  # top_n 模式返回人数；one_to_one 最终仍只配 1 人
 MATCH_MIN_SCORE = float(os.environ.get("MATCH_MIN_SCORE", "0.15"))  # 契合度门槛，默认 15%（不对用户展示分数）
 BATCH_MATCH_DAY = int(os.environ.get("BATCH_MATCH_DAY", "1"))   # 0=周一 … 1=周二
 BATCH_MATCH_HOUR = int(os.environ.get("BATCH_MATCH_HOUR", "21"))  # 晚 9 点

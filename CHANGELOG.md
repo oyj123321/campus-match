@@ -4,6 +4,18 @@ All notable changes to CampusMatch.
 
 ---
 
+## [1.9.33] — 2026-08-13
+
+### 问题（上次）
+- `one_to_one` 只试 Top-1：与最高分候选人硬性底线冲突即整单失败，可配的第二名及以后不试（孙夕蘅 case）
+
+### 改动
+- **Fixed / 按分跳过 dealbreaker**：`persist_user_matches` 支持 `max_save`；`one_to_one` 把过门槛候选按分降序全部交给 persist，底线冲突 skip 后继续试下一名，最终仍只落库 1 人（`app.py` / `batch_job.py` / `config.py`）
+- **Fixed / batch 建边排除底线**：`matcher.py` 在 batch / greedy 建边时跳过硬性底线冲突；并提供 `pick_without_dealbreaker`
+- **Improved / 失败文案**：区分「过门槛候选全是硬性底线」与「暂无合适人选」等混合原因（`app.py`）
+
+---
+
 ## [1.9.32] — 2026-08-09
 
 ### 问题（上次）
