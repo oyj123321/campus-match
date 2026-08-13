@@ -112,6 +112,9 @@ ICEBREAKER_FOLLOWUP_DAYS = int(os.environ.get("ICEBREAKER_FOLLOWUP_DAYS", "3"))
 # 「暂未配对」提醒 + 破冰随访（匹配成功始终发信）
 MAIL_NO_MATCH_ENABLED = os.environ.get("MAIL_NO_MATCH_ENABLED", "true").lower() == "true"
 ICEBREAKER_FOLLOWUP_ENABLED = os.environ.get("ICEBREAKER_FOLLOWUP_ENABLED", "true").lower() == "true"
+# 未完成问卷催填邮件（脚本/管理 API；脚本需显式 --send 才会发）
+MAIL_INCOMPLETE_NUDGE_ENABLED = os.environ.get("MAIL_INCOMPLETE_NUDGE_ENABLED", "true").lower() == "true"
+INCOMPLETE_NUDGE_COOLDOWN_DAYS = int(os.environ.get("INCOMPLETE_NUDGE_COOLDOWN_DAYS", "3"))
 
 # 验证码
 VERIFICATION_EXPIRE_SECONDS = 600  # 10 分钟

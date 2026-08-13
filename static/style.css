@@ -143,6 +143,45 @@ body {
     text-align: center;
 }
 
+/* ── 未完成问卷催填条 ── */
+.incomplete-banner {
+    background: linear-gradient(90deg, #fdf2f8, #fce7f3);
+    border-bottom: 1px solid rgba(190, 24, 93, 0.28);
+    position: relative;
+    z-index: 27;
+}
+.incomplete-banner-inner {
+    display: block;
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 11px 16px;
+    font-size: 0.95em;
+    font-weight: 700;
+    line-height: 1.5;
+    text-align: center;
+    color: #9d174d;
+    text-decoration: none;
+}
+.incomplete-banner-inner:hover { text-decoration: underline; color: #831843; }
+.nav-link-alert { color: #be185d !important; font-weight: 700; }
+.nav-incomplete-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    border-radius: 6px;
+    background: #fce7f3;
+    color: #9d174d;
+    font-size: 0.75em;
+    font-weight: 700;
+    text-decoration: none;
+    white-space: nowrap;
+}
+.nav-incomplete-chip:hover { background: #fbcfe8; }
+.incomplete-page-card {
+    border: 1px solid rgba(190, 24, 93, 0.35);
+    background: rgba(253, 242, 248, 0.85);
+}
+
 /* ── Nav ── */
 .nav {
     background: rgba(255, 255, 255, 0.72);

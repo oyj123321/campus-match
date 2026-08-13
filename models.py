@@ -49,6 +49,8 @@ class User(db.Model):
     open_to_match = db.Column(db.Boolean, default=True)
     # 问卷推演 MBTI 报告 JSON（娱乐向，不参与匹配）
     mbti_json = db.Column(db.Text)
+    # 上次「未完成问卷」催填邮件时间（UTC）
+    incomplete_nudge_at = db.Column(db.DateTime, nullable=True)
 
     tags = db.relationship("UserTag", backref="user", lazy="joined", cascade="all, delete-orphan")
 

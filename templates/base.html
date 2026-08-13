@@ -4,9 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CampusMatch — 校园恋爱匹配</title>
-    <link rel="stylesheet" href="/static/style.css?v=1958">
+    <link rel="stylesheet" href="/static/style.css?v=1959">
     <link rel="stylesheet" href="/static/personality_themes.css?v=1958">
-    <script src="/static/i18n.js?v=1953"></script>
+    <script src="/static/i18n.js?v=1959"></script>
     <script src="/static/love_personality_i18n.js?v=1953"></script>
     <script src="/static/vendor/html2canvas.min.js"></script>
     <script src="/static/vendor/qrcode-generator.min.js"></script>
@@ -148,7 +148,10 @@
             <div class="nav-right">
                 {% if session.user_id %}
                     <a href="/matches" class="nav-link" data-i18n="nav.matches">匹配结果</a>
-                    <a href="/questionnaire" class="nav-link" data-i18n="nav.questionnaire">问卷</a>
+                    <a href="/questionnaire" class="nav-link{% if questionnaire_incomplete %} nav-link-alert{% endif %}" data-i18n="nav.questionnaire">问卷</a>
+                    {% if questionnaire_incomplete %}
+                    <a href="/questionnaire" class="nav-incomplete-chip" data-i18n="incomplete.nav">未完成</a>
+                    {% endif %}
                     <a href="/" class="nav-link" onclick="logout(); return false;" data-i18n="nav.logout">返回首页</a>
                 {% endif %}
                 <select id="lang-sel" class="lang-select" onchange="setLang(this.value)" aria-label="Language">
@@ -165,6 +168,14 @@
     <div class="site-announcement" role="status">
         {# 不用 data-i18n，以便 .env 的 SITE_ANNOUNCEMENT 可原样覆盖 #}
         <div class="site-announcement-inner">{{ site_announcement }}</div>
+    </div>
+    {% endif %}
+
+    {% if questionnaire_incomplete %}
+    <div class="incomplete-banner" role="status">
+        <a href="/questionnaire" class="incomplete-banner-inner">
+            <span data-i18n="incomplete.banner">问卷未完成，点此继续 →</span>
+        </a>
     </div>
     {% endif %}
 

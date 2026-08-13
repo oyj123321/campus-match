@@ -24,6 +24,7 @@ from config import (
     ADMIN_SECRET, WEEKDAY_LABELS,
     REVEAL_REQUIRE_OPT_IN, INSTANT_MATCH_ENABLED, CROSS_SCHOOL_MATCHING_ENABLED,
     ICEBREAKER_FOLLOWUP_DAYS, MAIL_NO_MATCH_ENABLED, ICEBREAKER_FOLLOWUP_ENABLED,
+    MAIL_INCOMPLETE_NUDGE_ENABLED, INCOMPLETE_NUDGE_COOLDOWN_DAYS,
     MAIL_ENABLED, MAIL_PROVIDER, MAIL_SERVER, MAIL_PORT, MAIL_USERNAME, MAIL_PASSWORD, MAIL_FROM,
     CONTACT_EMAIL,
     RESEND_API_KEY,
@@ -33,7 +34,9 @@ from models import db, User, UserTag, Match, Blocklist
 from questionnaire import QUESTIONS, build_feature_vector, get_compatibility_insight, get_open_letter
 from personality import build_love_personality
 from matcher import real_time_match, batch_match_school
-from email_service import send_verification_email, send_match_result_email
+from email_service import (
+    send_verification_email, send_match_result_email, send_incomplete_nudges,
+)
 from batch_job import (
     persist_user_matches, count_new_matches_this_week,
     next_batch_datetime, run_batch_all, schedule_loop, current_week_key,
@@ -54,11 +57,17 @@ db.init_app(app)
 
 @app.context_processor
 def inject_globals():
+    user = get_current_user()
+    incomplete = bool(
+        user and user.email_verified and not user.questionnaire_completed()
+    )
     return {
         "contact_email": CONTACT_EMAIL,
         "site_announcement": (SITE_ANNOUNCEMENT or "").strip(),
         "login_once_per_day": LOGIN_ONCE_PER_DAY,
         "public_url": PUBLIC_URL,
+        "current_user": user,
+        "questionnaire_incomplete": incomplete,
     }
 
 
@@ -387,12 +396,14 @@ def questionnaire_page():
 @login_required
 def matches_page():
     user = get_current_user()
-    if not user.questionnaire_completed():
-        return redirect(url_for("questionnaire_page"))
+    if not user.email_verified:
+        return redirect(url_for("verify_page"))
+    # 未完成问卷也可进入：顶部/导航会醒目催填；匹配操作仍由 API 的 ready_to_match 拦截
     return render_template(
         "matches.html",
         user=user,
         quota=match_quota_status(user),
+        questionnaire_incomplete=not user.questionnaire_completed(),
     )
 
 
@@ -1421,6 +1432,38 @@ def api_admin_batch_run():
     return jsonify({"ok": True, "results": results})
 
 
+@app.route("/api/admin/nudge-incomplete", methods=["POST"])
+def api_admin_nudge_incomplete():
+    """催填未完成问卷。需要 Header: X-Admin-Secret；默认 dry_run，send=true 才发信。"""
+    if not ADMIN_SECRET:
+        return jsonify({"ok": False, "error": "未配置 ADMIN_SECRET，拒绝执行"}), 403
+    body = request.get_json(silent=True) or {}
+    secret = request.headers.get("X-Admin-Secret") or body.get("secret")
+    if secret != ADMIN_SECRET:
+        return jsonify({"ok": False, "error": "密钥错误"}), 403
+    if not MAIL_INCOMPLETE_NUDGE_ENABLED:
+        return jsonify({
+            "ok": False,
+            "error": "MAIL_INCOMPLETE_NUDGE_ENABLED=false",
+        }), 403
+    dry_run = not bool(body.get("send"))
+    try:
+        days = int(body.get("days") or INCOMPLETE_NUDGE_COOLDOWN_DAYS)
+    except (TypeError, ValueError):
+        days = INCOMPLETE_NUDGE_COOLDOWN_DAYS
+    try:
+        limit = int(body.get("limit") or 200)
+    except (TypeError, ValueError):
+        limit = 200
+    result = send_incomplete_nudges(
+        get_mail_config(),
+        cooldown_days=days,
+        limit=limit,
+        dry_run=dry_run,
+    )
+    return jsonify({"ok": True, "result": result})
+
+
 # ============================================================
 # 学校信息 API
 # ============================================================
@@ -1496,6 +1539,11 @@ def ensure_schema():
         db.session.execute(text("ALTER TABLE users ADD COLUMN last_login_at DATETIME"))
         db.session.commit()
         print("[CampusMatch] migrated: users.last_login_at")
+
+    if "incomplete_nudge_at" not in user_cols:
+        db.session.execute(text("ALTER TABLE users ADD COLUMN incomplete_nudge_at DATETIME"))
+        db.session.commit()
+        print("[CampusMatch] migrated: users.incomplete_nudge_at")
 
     if "icebreaker_followup_sent" not in match_cols:
         db.session.execute(text("ALTER TABLE matches ADD COLUMN icebreaker_followup_sent BOOLEAN DEFAULT 0"))

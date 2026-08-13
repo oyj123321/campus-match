@@ -4,6 +4,19 @@ All notable changes to CampusMatch.
 
 ---
 
+## [1.9.34] — 2026-08-13
+
+### 问题（上次）
+- 填问卷时未说清「匹配非必然」，用户易以为填完就保证有对象
+- 已验证邮箱但问卷未完成时，站内缺少醒目续填引导，运营也无安全催填通道
+
+### 改动
+- **Added / P0 匹配非必然**：问卷页顶部与提交区说明每周一对一有额度、池子小/取向不合/硬性底线时可能配不上；首页 CTA 旁一句短提示；zh/tw/en/pt（`questionnaire.html` / `index.html` / `i18n.js`）
+- **Added / P1 站内催填**：已登录且 `email_verified`、问卷未完成时，导航高亮 + 全站粉条「问卷未完成，点此继续」；匹配页可进入并显示续填卡片（不再硬跳转）（`base.html` / `matches.html` / `style.css`）
+- **Added / P1 催填邮件**：`send_incomplete_nudge_email` + `send_incomplete_nudges`；`users.incomplete_nudge_at`（ensure_schema）；`MAIL_INCOMPLETE_NUDGE_ENABLED` / `INCOMPLETE_NUDGE_COOLDOWN_DAYS`；脚本 `scripts/nudge_incomplete.py`（默认 dry-run，`--send` 才发）；`POST /api/admin/nudge-incomplete`（`email_service.py` / `app.py` / `config.py`）
+
+---
+
 ## [1.9.33] — 2026-08-13
 
 ### 问题（上次）

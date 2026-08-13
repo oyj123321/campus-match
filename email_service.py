@@ -253,6 +253,112 @@ def send_icebreaker_followup_email(to_email, partner_name, mail_config):
     return _dispatch_email(to_email, subject, body, mail_config)
 
 
+def send_incomplete_nudge_email(to_email, mail_config, name=None):
+    """催未完成问卷的用户回来续填。"""
+    site_url = (mail_config.get("public_url") or "#").rstrip("/")
+    continue_url = f"{site_url}/questionnaire"
+    display = (name or "").strip() or "同学"
+    safe_name = (
+        display.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+        .replace('"', "&quot;")
+    )
+    subject = "CampusMatch - 问卷还没填完，回来继续？"
+    body = f"""<!DOCTYPE html>
+<html lang="zh-CN">
+<head><meta charset="utf-8"></head>
+<body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Noto Sans SC',sans-serif;max-width:480px;margin:0 auto;padding:24px;color:#1e293b;">
+    <div style="text-align:center;padding:20px 0;">
+        <h1 style="color:#2563eb;margin:0;font-size:22px;">问卷还差几步</h1>
+        <p style="color:#64748b;font-size:14px;margin:8px 0 0;">填完才能进本周匹配池</p>
+    </div>
+    <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:24px;">
+        <p style="font-size:16px;line-height:1.7;margin:0;">
+            你好，{safe_name}！你已验证学校邮箱，但资料问卷还没答完。
+            未完成问卷时<strong>无法参与每周一对一匹配</strong>。
+        </p>
+        <p style="font-size:14px;line-height:1.7;color:#64748b;margin:16px 0 0;">
+            点下面链接登录后继续填写（进度会保留）。填完也不保证一定配上——池子小、取向不合或硬性底线冲突时可能暂无对象。
+        </p>
+        <div style="text-align:center;margin-top:20px;">
+            <a href="{continue_url}" style="display:inline-block;padding:10px 24px;background:#2563eb;color:#fff;border-radius:8px;text-decoration:none;font-weight:600;">继续填写问卷</a>
+        </div>
+        <p style="font-size:12px;line-height:1.7;color:#94a3b8;margin:16px 0 0;">
+            若打不开链接，请打开 {site_url} 用学校邮箱登录后进入「问卷」。
+        </p>
+    </div>
+    <p style="text-align:center;color:#94a3b8;font-size:12px;margin-top:24px;">CampusMatch · 用算法连接校园里有缘的人</p>
+</body>
+</html>"""
+    if not mail_config.get("enabled"):
+        print(f"[DEV] 未完成问卷催填 → {to_email} · link={continue_url}")
+        return True, "dev-printed"
+    return _dispatch_email(to_email, subject, body, mail_config)
+
+
+def send_incomplete_nudges(mail_config, cooldown_days=None, limit=200, dry_run=True):
+    """给 verified 且问卷未完成的用户发催填信。
+
+    返回 dict: candidates / sent / skipped_cooldown / failed / disabled / dry_run
+    """
+    from datetime import timedelta
+    from models import db, User
+    from config import (
+        MAIL_INCOMPLETE_NUDGE_ENABLED,
+        INCOMPLETE_NUDGE_COOLDOWN_DAYS,
+    )
+
+    if cooldown_days is None:
+        cooldown_days = INCOMPLETE_NUDGE_COOLDOWN_DAYS
+    cooldown_days = max(1, int(cooldown_days))
+    limit = max(1, int(limit))
+
+    result = {
+        "dry_run": bool(dry_run),
+        "enabled": MAIL_INCOMPLETE_NUDGE_ENABLED,
+        "cooldown_days": cooldown_days,
+        "candidates": 0,
+        "sent": 0,
+        "skipped_cooldown": 0,
+        "failed": 0,
+        "emails": [],
+    }
+    if not MAIL_INCOMPLETE_NUDGE_ENABLED:
+        result["disabled"] = True
+        return result
+
+    cutoff = datetime.utcnow() - timedelta(days=cooldown_days)
+    verified = (
+        User.query.filter(User.email_verified.is_(True))
+        .order_by(User.id.asc())
+        .all()
+    )
+    targets = []
+    for u in verified:
+        if u.questionnaire_completed():
+            continue
+        if u.incomplete_nudge_at and u.incomplete_nudge_at > cutoff:
+            result["skipped_cooldown"] += 1
+            continue
+        targets.append(u)
+        if len(targets) >= limit:
+            break
+
+    result["candidates"] = len(targets)
+    for u in targets:
+        result["emails"].append(u.email)
+        if dry_run:
+            continue
+        ok, _info = send_incomplete_nudge_email(u.email, mail_config, name=u.name)
+        if ok:
+            u.incomplete_nudge_at = datetime.utcnow()
+            result["sent"] += 1
+        else:
+            result["failed"] += 1
+    if not dry_run and result["sent"]:
+        db.session.commit()
+    return result
+
+
 def send_due_icebreaker_followups(mail_config):
     """扫描到期配对，各发一封破冰随访；返回处理对数。"""
     from datetime import timedelta

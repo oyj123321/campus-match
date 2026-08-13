@@ -2,7 +2,10 @@
 {% block content %}
 
 <h2 style="text-align:center;margin-bottom:8px;" data-i18n="qn.title">填写资料 & 问卷</h2>
-<p class="hint" style="text-align:center;margin-bottom:16px;"><span data-i18n="qn.sub1">共</span> 39 <span data-i18n="qn.sub2">道必答题 · 另有可选留言；量表/多选未选不算已答</span></p>
+<p class="hint" style="text-align:center;margin-bottom:12px;"><span data-i18n="qn.sub1">共</span> 39 <span data-i18n="qn.sub2">道必答题 · 另有可选留言；量表/多选未选不算已答</span></p>
+<div class="box box-warn" style="margin-bottom:16px;text-align:left;">
+    <p style="margin:0;font-size:0.92em;line-height:1.65;" data-i18n="qn.noguarantee">每周一对一有额度；池子偏小、取向不合或硬性底线冲突时，可能配不上——填完问卷不等于保证有对象。</p>
+</div>
 
 <!-- 基本资料 -->
 <div class="card" id="profile-card">
@@ -83,6 +86,7 @@
     <div id="questions-container"><!-- JS 渲染 --></div>
 
     <div class="card" style="text-align:center;">
+        <p class="hint" style="margin:0 0 12px;line-height:1.6;" data-i18n="qn.noguarantee">每周一对一有额度；池子偏小、取向不合或硬性底线冲突时，可能配不上——填完问卷不等于保证有对象。</p>
         <button type="button" class="btn btn-match" id="submit-btn" onclick="submitAll()" data-i18n="qn.submit">
             提交问卷 & 开始匹配
         </button>
