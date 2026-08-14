@@ -126,10 +126,8 @@ REGISTER_RATE_WINDOW = int(os.environ.get("REGISTER_RATE_WINDOW", "3600"))  # �
 LOGIN_ONCE_PER_DAY = os.environ.get("LOGIN_ONCE_PER_DAY", "false").lower() == "true"
 # 全站公告：.env 设 SITE_ANNOUNCEMENT= 可强制清空；未设置则用默认运营文案
 _DEFAULT_SITE_ANNOUNCEMENT = (
-    "【通知】邮件已恢复正常："
-    "①将重新发送「暂未配对」提醒与破冰随访；"
-    "②匹配成功仍会发邮件；"
-    "③欢迎预约本周匹配，每周二晚揭晓——多一人进池，多一分遇见。"
+    "【更新】首页换成澳门湾区构图：旅游塔、跨海桥，还有莲花和洋紫荆会跟着鼠标轻轻躲开。"
+    "手机上会自动简化。匹配规则没变。"
 )
 if "SITE_ANNOUNCEMENT" in os.environ:
     SITE_ANNOUNCEMENT = os.environ.get("SITE_ANNOUNCEMENT", "").strip()
