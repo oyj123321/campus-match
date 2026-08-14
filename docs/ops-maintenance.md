@@ -41,6 +41,16 @@ curl -X POST http://你的地址/api/admin/batch-run \
   -d '{"secret":"你的ADMIN_SECRET"}'
 ```
 
+催填「已验证但问卷未完成」用户（默认只预览，不会发信）：
+
+```bash
+cd /opt/campus-match && source .venv/bin/activate
+python scripts/nudge_incomplete.py                 # dry-run
+python scripts/nudge_incomplete.py --send          # 真正发信
+python scripts/nudge_incomplete.py --email xx@um.edu.mo --send
+# 或 API：POST /api/admin/nudge-incomplete  body: {"secret":"...","send":true,"days":3}
+```
+
 ---
 
 ## 2. 数据库在哪、怎么看每个人的数据

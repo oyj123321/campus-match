@@ -4,6 +4,18 @@ All notable changes to CampusMatch.
 
 ---
 
+## [1.9.35] — 2026-08-14
+
+### 问题（上次）
+- 首页背景是地标贴纸排成一排，寓意散；网格/光点偏科技，和清晨湾区气质不合
+
+### 改动
+- **Improved / 氛围底**：全站 WebGL 流体雾 + 港澳市花粒子（澳门莲花 / 香港洋紫荆），鼠标推开；手机与「减少动态」降级（`static/atmosphere.js` / `base.html`）
+- **Improved / 天际形体**：按澳门航拍构图——旅游塔为轴、西湾桥长 S 线、塔基匝道交汇、对岸楼群退后（`base.html` / `style.css`）
+- **Added / 催填运维说明**：`.env.example` 催填开关；`docs/ops-maintenance.md` 催填脚本用法（补 1.9.34）
+
+---
+
 ## [1.9.34] — 2026-08-13
 
 ### 问题（上次）
