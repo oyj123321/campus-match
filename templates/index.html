@@ -27,6 +27,7 @@
         </span>
     </label>
     <button class="btn btn-primary" id="register-btn" onclick="register()"><span data-i18n="btn.send">发送验证码</span></button>
+    <p class="hint" style="margin-top:10px;" data-i18n="step1.remember">同一设备验证过一次后，7 天内再登录不用验证码。</p>
     <p class="hint" style="margin-top:12px;margin-bottom:0;" data-i18n="schools.support">支持学校（已验证人数）：</p>
     {% set rows = [] %}
     {% for name in schools %}{% set _ = rows.append((school_stats.get(name, 0), name)) %}{% endfor %}
@@ -128,7 +129,7 @@
 <!-- CTA -->
 <div class="card" style="text-align:center;">
     <h2 style="margin-bottom:6px;" data-i18n="cta.title">准备好了？</h2>
-    <p class="hint" style="margin-bottom:8px;" data-i18n="cta.sub">用学校邮箱开始，整个流程 10 分钟。</p>
+    <p class="hint" style="margin-bottom:8px;" data-i18n="cta.sub">用学校邮箱开始。想少填隐私可用隐私模式，约 2 分钟。</p>
     <p class="hint" style="margin-bottom:14px;font-size:0.88em;opacity:0.9;" data-i18n="cta.noguarantee">填完不保证配上：每周一对一有额度，人也要对得上。</p>
     <a class="btn btn-match" href="#step1-card"
        onclick="document.getElementById('email').focus(); return true;" data-i18n="cta.btn">立即开始匹配</a>
@@ -159,7 +160,7 @@ async function register() {
     }
 
     // 内测号 / 已验证用户紧急免邮件直登：跳过验证码
-    if (data.beta_skip_verify || data.direct_login) {
+    if (data.beta_skip_verify || data.direct_login || data.remembered) {
         window.location.href = '/questionnaire';
         return;
     }

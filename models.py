@@ -5,6 +5,7 @@ from datetime import datetime
 import secrets, json
 
 db = SQLAlchemy()
+EXPRESS_BIO_MIN = 30
 
 
 class User(db.Model):
@@ -51,6 +52,8 @@ class User(db.Model):
     mbti_json = db.Column(db.Text)
     # 上次「未完成问卷」催填邮件时间（UTC）
     incomplete_nudge_at = db.Column(db.DateTime, nullable=True)
+    # full = 39 题问卷；privacy/express = 隐私模式（昵称/性别/取向 + 一段话，微信可选）
+    profile_mode = db.Column(db.String(16), default="full")
 
     tags = db.relationship("UserTag", backref="user", lazy="joined", cascade="all, delete-orphan")
 
@@ -151,6 +154,9 @@ class User(db.Model):
             return other_gender in ("male", "female")
         return pref == other_gender
 
+    def is_express(self):
+        return (self.profile_mode or "full") in ("express", "privacy")
+
     def questionnaire_completed(self):
         """检查是否完成了问卷"""
         from questionnaire import QUESTIONS
@@ -171,14 +177,17 @@ class User(db.Model):
 
     def ready_to_match(self):
         """资料是否齐全（不含是否愿意进池）。"""
-        return bool(
+        if not (
             self.email_verified
-            and self.questionnaire_completed()
             and self.gender in ("male", "female")
             and self.looking_for in ("male", "female", "both")
-            and self.wechat_id
             and self.feature_vector
-        )
+        ):
+            return False
+        if self.is_express():
+            bio = (self.bio or "").strip()
+            return bool((self.name or "").strip() and len(bio) >= EXPRESS_BIO_MIN)
+        return bool(self.questionnaire_completed() and self.wechat_id)
 
     def is_open_to_match(self):
         """是否愿意进入匹配池；NULL/缺省视为 True（兼容旧数据）。"""
@@ -237,6 +246,7 @@ class User(db.Model):
             "cross_schools": self.get_cross_schools(),
             "open_to_match": self.is_open_to_match(),
             "mbti": self.mbti_report,
+            "profile_mode": "privacy" if self.is_express() else "full",
         }
 
 

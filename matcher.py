@@ -15,6 +15,62 @@ import math
 from itertools import combinations
 
 
+def _matching_text(user):
+    from questionnaire import get_open_letter
+
+    parts = []
+    bio = (getattr(user, "bio", None) or "").strip()
+    if bio:
+        parts.append(bio)
+    letter = get_open_letter(getattr(user, "answers", None) or {})
+    if letter:
+        parts.append(letter)
+    return "\n".join(parts)
+
+
+def text_similarity(a, b):
+    """中英都可用的 bigram Jaccard，映射到约 0.18–1，避免隐私用户分过低进不了门槛。"""
+    a = (a or "").strip().lower()
+    b = (b or "").strip().lower()
+    if len(a) < 2 or len(b) < 2:
+        return 0.18
+
+    def grams(s):
+        g = {s[i : i + 2] for i in range(len(s) - 1)}
+        for tok in s.replace("，", " ").replace(",", " ").split():
+            if len(tok) >= 2:
+                g.add(tok)
+        return g
+
+    ga, gb = grams(a), grams(b)
+    if not ga or not gb:
+        return 0.18
+    j = len(ga & gb) / max(1, len(ga | gb))
+    return round(0.18 + 0.82 * j, 4)
+
+
+def _is_express_user(u):
+    fn = getattr(u, "is_express", None)
+    if callable(fn):
+        return bool(fn())
+    return (getattr(u, "profile_mode", None) or "full") in ("express", "privacy")
+
+
+def pair_score(user_a, user_b):
+    """问卷用户走余弦；任一方隐私模式则混入自我介绍文本相似。"""
+    c = cosine_similarity(
+        getattr(user_a, "feature_vector", None),
+        getattr(user_b, "feature_vector", None),
+    )
+    ea, eb = _is_express_user(user_a), _is_express_user(user_b)
+    if not ea and not eb:
+        return c
+    t = text_similarity(_matching_text(user_a), _matching_text(user_b))
+    if ea and eb:
+        return round(0.25 * c + 0.75 * t, 4)
+    return round(0.45 * c + 0.55 * t, 4)
+
+
 def cosine_similarity(vec1, vec2):
     """余弦相似度 [0, 1]。维数不一致时返回 0（需双方重交问卷对齐）。"""
     if not vec1 or not vec2 or len(vec1) != len(vec2):
@@ -37,7 +93,9 @@ def orientation_compatible(user_a, user_b):
 
 
 def _dealbreaker_conflict(user_a, user_b):
-    """硬性底线冲突（延迟导入避免循环依赖）。"""
+    """硬性底线冲突。任一方隐私模式则不否决（含从问卷改过来、旧答案仍在库里）。"""
+    if _is_express_user(user_a) or _is_express_user(user_b):
+        return False
     from questionnaire import check_dealbreakers
     a = getattr(user_a, "answers", None) or {}
     b = getattr(user_b, "answers", None) or {}
@@ -88,7 +146,7 @@ def real_time_match(user, candidates, top_n=5, min_score=0.15):
             continue
         if not orientation_compatible(user, c):
             continue
-        sim = cosine_similarity(uv, c.feature_vector)
+        sim = pair_score(user, c)
         if sim >= min_score:
             scored.append((c, round(sim, 4)))
 
@@ -229,9 +287,7 @@ def batch_match_school(users, filter_same_gender=True):
                         continue
                     if _dealbreaker_conflict(group_a[i], group_b[j]):
                         continue  # 一票否决：保持 0，不当作可配边
-                    score_matrix[i][j] = cosine_similarity(
-                        group_a[i].feature_vector, group_b[j].feature_vector
-                    )
+                    score_matrix[i][j] = pair_score(group_a[i], group_b[j])
             return hungarian_match(group_a, group_b, score_matrix)
 
     # 含同性/不限取向：贪心最大权匹配
@@ -253,7 +309,7 @@ def greedy_match_all(users, min_score=0.15, require_orientation=True):
             continue
         if _dealbreaker_conflict(u1, u2):
             continue
-        sim = cosine_similarity(u1.feature_vector, u2.feature_vector)
+        sim = pair_score(u1, u2)
         if sim >= min_score:
             pairs.append((u1, u2, sim))
 

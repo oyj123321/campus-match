@@ -44,12 +44,15 @@ def _pool_sql(uc: set[str]) -> str:
     open_clause = "1=1"
     if "open_to_match" in uc:
         open_clause = "(open_to_match IS NULL OR open_to_match = 1)"
+    wechat_clause = "wechat_id IS NOT NULL AND wechat_id != ''"
+    if "profile_mode" in uc:
+        wechat_clause = f"(({wechat_clause}) OR profile_mode IN ('express','privacy'))"
     return f"""
         email_verified = 1
           AND feature_vector_json IS NOT NULL AND feature_vector_json != ''
           AND gender IN ('male', 'female')
           AND looking_for IN ('male', 'female', 'both')
-          AND wechat_id IS NOT NULL AND wechat_id != ''
+          AND {wechat_clause}
           AND {open_clause}
     """
 

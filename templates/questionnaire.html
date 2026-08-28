@@ -7,6 +7,15 @@
     <p style="margin:0;font-size:0.92em;line-height:1.65;" data-i18n="qn.noguarantee">每周一对一有额度；池子偏小、取向不合或硬性底线冲突时，可能配不上——填完问卷不等于保证有对象。</p>
 </div>
 
+<div class="card" id="profile-mode-card" style="margin-bottom:16px;">
+    <p style="font-weight:700;margin:0 0 8px;" data-i18n="qn.mode.title">资料深度</p>
+    <p class="hint" style="margin:0 0 12px;" data-i18n="qn.mode.hint">不想交太多隐私可以走隐私模式：学校邮箱已验证身份，再写一段话就能进同一匹配池。对方会看到你是隐私用户。完整问卷会更准。</p>
+    <div class="profile-mode-btns">
+        <button type="button" class="btn btn-secondary" id="btn-mode-express" onclick="setProfileUi('express')" data-i18n="qn.mode.express">隐私模式</button>
+        <button type="button" class="btn btn-secondary" id="btn-mode-full" onclick="setProfileUi('full')" data-i18n="qn.mode.full">完整问卷</button>
+    </div>
+</div>
+
 <!-- 基本资料 -->
 <div class="card" id="profile-card">
     <h3 data-i18n="qn.basic">基本信息</h3>
@@ -36,15 +45,15 @@
     </div>
     <div class="form-row">
         <div class="form-group" style="flex:1;">
-            <label for="wechat_id" data-i18n="qn.wechat">附加联系方式（必填）</label>
+            <label for="wechat_id" id="wechat-label" data-i18n="qn.wechat">附加联系方式（必填）</label>
             <input type="text" id="wechat_id" value="{{ user.wechat_id or '' }}" maxlength="120"
                    placeholder="例如：wechat:mahuateng1998"
-                   data-i18n-ph="qn.wechat.ph" autocomplete="off" required>
-            <p class="hint" data-i18n="qn.wechat.hint">配对成功后双方会互见学校邮箱，并互见你在此留下的联系方式。微信/其他通讯均可，请认真填写。</p>
+                   data-i18n-ph="qn.wechat.ph" autocomplete="off">
+            <p class="hint" id="wechat-hint" data-i18n="qn.wechat.hint">配对成功后双方会互见学校邮箱，并互见你在此留下的联系方式。微信/其他通讯均可，请认真填写。</p>
         </div>
         <div class="form-group" style="flex:1;">
             <label for="bio" data-i18n="qn.bio">一句话介绍</label>
-            <input type="text" id="bio" value="{{ user.bio or '' }}" maxlength="80" placeholder="例：大三心理学在读，喜欢猫咪和下雨天" data-i18n-ph="qn.bio.ph">
+            <textarea id="bio" maxlength="800" rows="2" placeholder="例：大三心理学在读，喜欢猫咪和下雨天" data-i18n-ph="qn.bio.ph">{{ user.bio or '' }}</textarea>
         </div>
     </div>
     <div class="form-group" style="margin-top:8px;">
@@ -93,6 +102,12 @@
         <p id="save-status" style="margin-top:8px;"></p>
     </div>
 </form>
+
+<div class="card" id="express-submit-card" style="text-align:center;display:none;">
+    <p class="hint" style="margin:0 0 12px;line-height:1.6;" data-i18n="qn.express.submitHint">不填 39 题。匹配会参考这段自我介绍，并与问卷用户在同一池。配对对象会被告知你是隐私用户。</p>
+    <button type="button" class="btn btn-match" id="express-submit-btn" onclick="submitExpress()" data-i18n="qn.express.submit">保存隐私资料并进池</button>
+    <p id="express-save-status" style="margin-top:8px;"></p>
+</div>
 
 <div id="personality-modal" class="personality-modal" style="display:none;" aria-hidden="true">
     <div class="personality-modal-backdrop" onclick="closePersonalityModal()"></div>
@@ -447,7 +462,7 @@ async function submitAll() {
         document.getElementById('looking_for').focus();
         return;
     }
-    if (!wechat) {
+    if (!wechat && window.CM_PROFILE_UI !== 'express') {
         alert(t('qn.needWechat'));
         document.getElementById('wechat_id').focus();
         document.getElementById('profile-card').scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -559,11 +574,80 @@ async function shareModalPersonality() {
     }
 }
 
+var EXPRESS_BIO_MIN = 30;
+window.CM_PROFILE_UI = {{ ('express' if user.is_express() else 'full') | tojson }};
+
+function setProfileUi(mode) {
+    window.CM_PROFILE_UI = mode === 'express' ? 'express' : 'full';
+    var qForm = document.getElementById('q-form');
+    var progress = document.getElementById('progress-card');
+    var expressCard = document.getElementById('express-submit-card');
+    var bio = document.getElementById('bio');
+    var wxLabel = document.getElementById('wechat-label');
+    var wxHint = document.getElementById('wechat-hint');
+    var wxInput = document.getElementById('wechat_id');
+    var be = document.getElementById('btn-mode-express');
+    var bf = document.getElementById('btn-mode-full');
+    var expressOn = window.CM_PROFILE_UI === 'express';
+    if (qForm) qForm.style.display = expressOn ? 'none' : 'block';
+    if (progress) progress.style.display = expressOn ? 'none' : 'block';
+    if (expressCard) expressCard.style.display = expressOn ? 'block' : 'none';
+    if (bio) {
+        bio.rows = expressOn ? 7 : 2;
+        bio.maxLength = expressOn ? 800 : 80;
+        bio.setAttribute('placeholder', t(expressOn ? 'qn.express.bio.ph' : 'qn.bio.ph'));
+    }
+    var bioLab = document.querySelector('label[for="bio"]');
+    if (bioLab) bioLab.textContent = t(expressOn ? 'qn.express.bio' : 'qn.bio');
+    if (wxLabel) wxLabel.textContent = t(expressOn ? 'qn.wechat.optional' : 'qn.wechat');
+    if (wxHint) wxHint.textContent = t(expressOn ? 'qn.wechat.expressHint' : 'qn.wechat.hint');
+    if (wxInput) wxInput.required = !expressOn;
+    if (be) be.classList.toggle('btn-primary', expressOn);
+    if (be) be.classList.toggle('btn-secondary', !expressOn);
+    if (bf) bf.classList.toggle('btn-primary', !expressOn);
+    if (bf) bf.classList.toggle('btn-secondary', expressOn);
+}
+
+async function submitExpress() {
+    var name = document.getElementById('name').value.trim();
+    var gender = document.getElementById('gender').value;
+    var lookingFor = document.getElementById('looking_for').value;
+    var wechat = document.getElementById('wechat_id').value.trim();
+    var bio = document.getElementById('bio').value.trim();
+    var status = document.getElementById('express-save-status');
+    var btn = document.getElementById('express-submit-btn');
+    if (!name) { alert(t('qn.needName')); document.getElementById('name').focus(); return; }
+    if (!gender) { alert(t('qn.needGender')); return; }
+    if (!lookingFor) { alert(t('qn.needLf')); return; }
+    if (bio.length < EXPRESS_BIO_MIN) {
+        alert(tf('qn.express.needBio', { n: EXPRESS_BIO_MIN }));
+        document.getElementById('bio').focus();
+        return;
+    }
+    btn.disabled = true;
+    btn.textContent = t('qn.saving');
+    var r = await api('POST', '/api/express-profile', {
+        name: name, gender: gender, looking_for: lookingFor, wechat_id: wechat, bio: bio,
+        open_to_match: document.getElementById('open_to_match').checked,
+        cross_schools: selectedCrossSchools()
+    });
+    btn.disabled = false;
+    btn.textContent = t('qn.express.submit');
+    if (!r.ok) {
+        status.innerHTML = '<span class="error">' + esc(r.error || t('al.fail')) + '</span>';
+        return;
+    }
+    status.innerHTML = '<span class="t-ok">' + esc(r.message || t('qn.express.saved')) + '</span>';
+    setTimeout(function () { location.href = '/matches'; }, 600);
+}
+
 render();
+setProfileUi(window.CM_PROFILE_UI);
 
 // 切换语言时就地重渲染题目（答案保存在内存，不丢失）；弹窗开着则刷新文案
 window.addEventListener('cm:lang', function () {
     render();
+    setProfileUi(window.CM_PROFILE_UI);
     var modal = document.getElementById('personality-modal');
     if (modal && modal.style.display === 'flex' && modalPersonality) {
         showPersonalityModal(modalPersonality);

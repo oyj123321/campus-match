@@ -22,8 +22,8 @@ from config import (
     MAIL_NO_MATCH_ENABLED, ICEBREAKER_FOLLOWUP_ENABLED,
 )
 from models import db, User, Match
-from matcher import batch_match_school, orientation_compatible
-from questionnaire import check_dealbreakers, get_compatibility_insight
+from matcher import batch_match_school, orientation_compatible, _dealbreaker_conflict
+from questionnaire import get_compatibility_insight
 from email_service import send_match_result_email
 from match_pool import is_blocked_pair, school_compatible, vectors_aligned
 
@@ -49,12 +49,11 @@ def week_window_start(now=None):
 
 
 def count_new_matches_this_week(user_id, now=None):
-    """本自然周内，该用户作为任一方参与的「新建」有效匹配次数。"""
+    """本自然周内该用户作为任一方参与过的新建匹配次数（含已失效，拉黑不回充额度）。"""
     since = week_window_start(now)
     return Match.query.filter(
         ((Match.user1_id == user_id) | (Match.user2_id == user_id)),
         Match.created_at >= since,
-        Match.active.is_(True),
     ).count()
 
 
@@ -171,7 +170,7 @@ def persist_user_matches(user, scored_pairs, mode, mail_cfg, weekly_new_limit=No
             continue
         if is_blocked_pair(user.id, other.id):
             continue
-        if check_dealbreakers(user.answers, other.answers):
+        if _dealbreaker_conflict(user, other):
             skipped_dealbreaker += 1
             continue
         if weekly_new_limit is not None and not partner_accepts_match(
@@ -325,7 +324,7 @@ def run_batch_school(school, mail_cfg, require_opt_in=False, exclude_ids=None):
             continue
         if not vectors_aligned(a, b):
             continue
-        if check_dealbreakers(a.answers, b.answers):
+        if _dealbreaker_conflict(a, b):
             continue
         if not partner_accepts_match(a.id, b.id, weekly_new_limit=MATCH_WEEKLY_NEW_LIMIT):
             continue
@@ -415,7 +414,7 @@ def run_batch_cross(mail_cfg, require_opt_in=False, exclude_ids=None):
             continue
         if not vectors_aligned(a, b):
             continue
-        if check_dealbreakers(a.answers, b.answers):
+        if _dealbreaker_conflict(a, b):
             continue
         if not partner_accepts_match(a.id, b.id, weekly_new_limit=MATCH_WEEKLY_NEW_LIMIT):
             continue

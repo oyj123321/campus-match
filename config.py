@@ -18,7 +18,9 @@ if os.path.exists(_ENV_FILE):
                     os.environ[key] = val
 
 # Flask
-SECRET_KEY = os.environ.get("SECRET_KEY", "campus-match-dev-secret-key-change-in-production")
+_DEFAULT_SECRET_KEY = "campus-match-dev-secret-key-change-in-production"
+SECRET_KEY = os.environ.get("SECRET_KEY", _DEFAULT_SECRET_KEY)
+USING_DEFAULT_SECRET_KEY = SECRET_KEY == _DEFAULT_SECRET_KEY
 FLASK_DEBUG = os.environ.get("FLASK_DEBUG", "true").lower() == "true"
 SQLALCHEMY_DATABASE_URI = os.environ.get(
     "DATABASE_URL",
@@ -124,6 +126,9 @@ REGISTER_RATE_WINDOW = int(os.environ.get("REGISTER_RATE_WINDOW", "3600"))  # �
 
 # 每人每天仅可登录一次（澳门时区日界）；额度紧张时可 true
 LOGIN_ONCE_PER_DAY = os.environ.get("LOGIN_ONCE_PER_DAY", "false").lower() == "true"
+# 同设备登录保留天数：会话 cookie + 设备信任 cookie；期内再登录不发验证码
+SESSION_REMEMBER_DAYS = int(os.environ.get("SESSION_REMEMBER_DAYS", "7"))
+DEVICE_COOKIE_NAME = "cm_device"
 # 全站公告：.env 设 SITE_ANNOUNCEMENT= 可强制清空；未设置则用默认运营文案
 _DEFAULT_SITE_ANNOUNCEMENT = (
     "【更新】首页换成澳门湾区构图：旅游塔、跨海桥，还有莲花和洋紫荆会跟着鼠标轻轻躲开。"

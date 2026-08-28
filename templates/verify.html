@@ -44,7 +44,7 @@ async function verify() {
     if (data.ok) {
         status.innerHTML = '<span class="t-ok">' + t('vf.ok') + '</span>';
         setTimeout(function() {
-            window.location.href = '/questionnaire';
+            window.location.href = '/';
         }, 600);
     } else {
         status.innerHTML = '<span class="t-err">' + data.error + '</span>';

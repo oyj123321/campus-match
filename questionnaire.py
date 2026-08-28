@@ -633,6 +633,25 @@ def build_feature_vector(answers, important_ids=None):
     return vector, dim_names
 
 
+def build_express_vector(bio):
+    """与问卷同维：中性量表底 + 自我介绍 n-gram 哈希，便于同一匹配器。"""
+    import hashlib
+
+    base, names = build_feature_vector({})
+    n = len(base)
+    hashed = [0.0] * n
+    text = (bio or "").strip().lower()
+    if len(text) >= 2:
+        for i in range(len(text) - 1):
+            bg = text[i : i + 2].encode("utf-8")
+            idx = int(hashlib.md5(bg).hexdigest(), 16) % n
+            hashed[idx] += 1.0
+    mx = max(hashed) if hashed and max(hashed) > 0 else 1.0
+    hashed = [x / mx for x in hashed]
+    mixed = [0.28 * b + 0.72 * h for b, h in zip(base, hashed)]
+    return mixed, names
+
+
 OPEN_LETTER_QID = 40
 OPEN_LETTER_MAX_LEN = 2000
 
@@ -716,6 +735,33 @@ def get_compatibility_insight(user_vec, match_vec, answers, match_answers, score
 
     answers = _norm_answers(answers)
     match_answers = _norm_answers(match_answers)
+
+    scale_filled = sum(
+        1 for q in QUESTIONS
+        if q["type"] == "scale" and q["id"] in answers and q["id"] in match_answers
+    )
+    if scale_filled < 8:
+        from icebreakers import pick_icebreakers
+
+        icebreakers = pick_icebreakers(
+            shared_tags=[], seed=seed, n=3,
+            my_school=my_school, their_school=their_school,
+        )
+        strengths = [
+            "双方都愿意先认识：用一段自我介绍进池，不强制交卷面问卷",
+        ]
+        if (answers or match_answers):
+            strengths.append("其中一方写了更完整的问卷，相处时多问、少猜")
+        return {
+            "summary": "这次配对更看重自我介绍与取向是否合拍；深度问卷未双方填齐，不编造「量表很接近」。",
+            "strengths": strengths[:6],
+            "differences": ["问卷完整度不同——以聊天核实习惯与底线，不要默认对方填过同一套题。"],
+            "icebreakers": icebreakers[:3],
+            "shared_tags": [],
+            "total_strengths": len(strengths),
+            "total_differences": 1,
+        }
+
     strengths = []
     differences = []
     shared_tags = []

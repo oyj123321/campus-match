@@ -12,10 +12,12 @@ from datetime import datetime, timedelta, date
 from functools import wraps
 
 from flask import Flask, request, session, jsonify, render_template, redirect, url_for
+from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
 from sqlalchemy import inspect, text
 
 from config import (
     SECRET_KEY, FLASK_DEBUG, SQLALCHEMY_DATABASE_URI, PUBLIC_URL,
+    USING_DEFAULT_SECRET_KEY,
     SCHOOL_DOMAINS, MATCH_MODE, MATCH_TOP_N, MATCH_MIN_SCORE,
     MATCH_DELAY_SECONDS, VERIFICATION_EXPIRE_SECONDS,
     REGISTER_RATE_LIMIT, REGISTER_RATE_WINDOW,
@@ -29,11 +31,13 @@ from config import (
     CONTACT_EMAIL,
     RESEND_API_KEY,
     LOGIN_ONCE_PER_DAY, SITE_ANNOUNCEMENT,
+    SESSION_REMEMBER_DAYS, DEVICE_COOKIE_NAME,
 )
-from models import db, User, UserTag, Match, Blocklist
-from questionnaire import QUESTIONS, build_feature_vector, get_compatibility_insight, get_open_letter
+from models import db, User, UserTag, Match, Blocklist, EXPRESS_BIO_MIN
+from questionnaire import QUESTIONS, build_feature_vector, build_express_vector, get_compatibility_insight, get_open_letter
 from personality import build_love_personality
 from matcher import real_time_match, batch_match_school
+from i18n_server import api_err, t_api, request_lang
 from email_service import (
     send_verification_email, send_match_result_email, send_incomplete_nudges,
 )
@@ -50,16 +54,18 @@ app.config["SQLALCHEMY_DATABASE_URI"] = SQLALCHEMY_DATABASE_URI
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config["SESSION_COOKIE_HTTPONLY"] = True
 app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(days=SESSION_REMEMBER_DAYS)
 if PUBLIC_URL.startswith("https://"):
     app.config["SESSION_COOKIE_SECURE"] = True
 db.init_app(app)
+_DEVICE_SERIALIZER = URLSafeTimedSerializer(SECRET_KEY, salt="cm-device-v1")
 
 
 @app.context_processor
 def inject_globals():
     user = get_current_user()
     incomplete = bool(
-        user and user.email_verified and not user.questionnaire_completed()
+        user and user.email_verified and not user.ready_to_match()
     )
     return {
         "contact_email": CONTACT_EMAIL,
@@ -73,6 +79,9 @@ def inject_globals():
 
 # 邮箱 → 近期请求时间戳（进程内限流，MVP 够用）
 _register_hits = defaultdict(deque)
+_verify_fails = defaultdict(deque)
+VERIFY_FAIL_LIMIT = 8
+VERIFY_FAIL_WINDOW = 900  # 秒
 
 
 def get_mail_config():
@@ -154,7 +163,7 @@ def login_required(f):
     def decorated(*args, **kwargs):
         if "user_id" not in session:
             if request.is_json or request.path.startswith("/api/"):
-                return jsonify({"ok": False, "error": "请先登录"}), 401
+                return api_err("err.login", 401)
             return redirect(url_for("index"))
         return f(*args, **kwargs)
     return decorated
@@ -167,6 +176,20 @@ def get_current_user():
     return None
 
 
+def check_verify_fail_rate(email):
+    """验证码猜错次数限制。返回是否允许再试。"""
+    now = time.time()
+    key = (email or "").strip().lower()
+    q = _verify_fails[key]
+    while q and now - q[0] > VERIFY_FAIL_WINDOW:
+        q.popleft()
+    return len(q) < VERIFY_FAIL_LIMIT
+
+
+def record_verify_fail(email):
+    _verify_fails[(email or "").strip().lower()].append(time.time())
+
+
 def check_register_rate(email):
     """同一邮箱在窗口内发送验证码次数限制。返回 (ok, error_msg)。"""
     now = time.time()
@@ -175,7 +198,7 @@ def check_register_rate(email):
     while q and now - q[0] > REGISTER_RATE_WINDOW:
         q.popleft()
     if len(q) >= REGISTER_RATE_LIMIT:
-        return False, f"发送过于频繁，请 {REGISTER_RATE_WINDOW // 60} 分钟后再试"
+        return False, None
     q.append(now)
     return True, None
 
@@ -202,6 +225,67 @@ def _mark_login(user: User) -> None:
     user.last_login_at = datetime.utcnow()
 
 
+def _cookie_secure() -> bool:
+    return bool(app.config.get("SESSION_COOKIE_SECURE")) or (PUBLIC_URL or "").startswith("https://")
+
+
+def _device_cookie_max_age() -> int:
+    return max(1, SESSION_REMEMBER_DAYS) * 86400
+
+
+def _read_device_user():
+    """读本设备 7 天信任 cookie；签名无效或过期则忽略。"""
+    raw = request.cookies.get(DEVICE_COOKIE_NAME)
+    if not raw:
+        return None
+    try:
+        data = _DEVICE_SERIALIZER.loads(raw, max_age=_device_cookie_max_age())
+    except (BadSignature, SignatureExpired, TypeError, ValueError):
+        return None
+    uid = data.get("uid")
+    em = (data.get("em") or "").strip().lower()
+    if not uid or not em:
+        return None
+    user = db.session.get(User, uid)
+    if not user or (user.email or "").strip().lower() != em:
+        return None
+    return user
+
+
+def _device_trusted(user: User) -> bool:
+    remembered = _read_device_user()
+    return bool(
+        user and remembered
+        and remembered.id == user.id
+        and (remembered.email or "").strip().lower() == (user.email or "").strip().lower()
+    )
+
+
+def _attach_remember(resp, user: User):
+    """写入 7 天会话 + 设备信任 cookie（HttpOnly）。"""
+    session.permanent = True
+    session["user_id"] = user.id
+    token = _DEVICE_SERIALIZER.dumps({"uid": user.id, "em": (user.email or "").strip().lower()})
+    resp.set_cookie(
+        DEVICE_COOKIE_NAME,
+        token,
+        max_age=_device_cookie_max_age(),
+        httponly=True,
+        samesite="Lax",
+        secure=_cookie_secure(),
+        path="/",
+    )
+    return resp
+
+
+def _login_json(user: User, payload: dict, status: int = 200):
+    _mark_login(user)
+    db.session.commit()
+    resp = jsonify(payload)
+    resp.status_code = status
+    return _attach_remember(resp, user)
+
+
 LOGIN_ONCE_MSG = (
     "今日已登录过（紧急限流：每人每天仅可登录一次，以澳门时区计日）。"
     "若你仍保持登录可继续使用；退出后请明天再试。给大家带来不便，敬请谅解。"
@@ -219,7 +303,7 @@ def _deny_login_once_today(user: User):
     if _is_beta_account(user.email):
         return None
     if _logged_in_today(user):
-        return jsonify({"ok": False, "error": LOGIN_ONCE_MSG}), 429
+        return api_err("err.login_once", 429)
     return None
 
 
@@ -289,6 +373,7 @@ def serialize_match_payload(other, score, insight, active=True):
         "email": other.email if active else None,
         "wechat_id": other.wechat_id if active else None,
         "bio": other.bio if active else None,
+        "privacy_user": bool(active and getattr(other, "is_express", lambda: False)()),
         "open_letter": letter,
         "summary": insight.get("summary") if active else None,
         "strengths": insight.get("strengths", [])[:6] if active else [],
@@ -348,9 +433,9 @@ def index():
     if user:
         if not user.email_verified:
             return redirect(url_for("verify_page"))
-        if not user.questionnaire_completed():
-            return redirect(url_for("questionnaire_page"))
-        return redirect(url_for("matches_page"))
+        if user.ready_to_match():
+            return redirect(url_for("matches_page"))
+        return redirect(url_for("questionnaire_page"))
     from sqlalchemy import func
     stats = dict(
         db.session.query(User.school, func.count(User.id))
@@ -373,6 +458,8 @@ def verify_page():
     if not user:
         return redirect(url_for("index"))
     if user.email_verified:
+        if user.ready_to_match():
+            return redirect(url_for("matches_page"))
         return redirect(url_for("questionnaire_page"))
     return render_template("verify.html", email=user.email)
 
@@ -403,7 +490,7 @@ def matches_page():
         "matches.html",
         user=user,
         quota=match_quota_status(user),
-        questionnaire_incomplete=not user.questionnaire_completed(),
+        questionnaire_incomplete=not user.ready_to_match(),
     )
 
 
@@ -619,32 +706,36 @@ def api_register():
     email = (data.get("email") or "").strip().lower()
 
     if not email or "@" not in email:
-        return jsonify({"ok": False, "error": "请输入有效的邮箱地址"}), 400
+        return api_err("err.email_invalid")
 
     if not data.get("privacy_accepted"):
-        return jsonify({"ok": False, "error": "请先阅读并同意《隐私政策》"}), 400
+        return api_err("err.privacy")
 
     school = get_school_from_email(email)
     if not school:
-        return jsonify({
-            "ok": False,
-            "error": "暂不支持该学校邮箱。目前支持: " + "、".join(SCHOOL_DOMAINS.keys()),
-        }), 400
+        sep = ", " if request_lang() in ("en", "pt") else "、"
+        return api_err("err.school", schools=sep.join(SCHOOL_DOMAINS.keys()))
 
     # 同校同本地名只允许一个账号（兼容多域名时防一人多号）
     sibling = find_sibling_account(email, school)
     if sibling:
-        return jsonify({"ok": False, "error": sibling_account_error(sibling)}), 409
-
-    ok_rate, rate_err = check_register_rate(email)
-    if not ok_rate:
-        return jsonify({"ok": False, "error": rate_err}), 429
+        return api_err("err.sibling", 409, email=sibling.email)
 
     user = User.query.filter_by(email=email).first()
     if not user:
         user = User(email=email, school=school)
         db.session.add(user)
         db.session.flush()
+
+    # 同设备 7 天内已验证过：免验证码、不吃发码限流、也不吃「每天只能登一次」
+    if user.email_verified and _device_trusted(user):
+        return _login_json(user, {
+            "ok": True,
+            "mail_sent": False,
+            "direct_login": True,
+            "remembered": True,
+            "message": t_api("ok.device_login"),
+        })
 
     denied = _deny_login_once_today(user)
     if denied:
@@ -654,38 +745,27 @@ def api_register():
     if _is_beta_account(email):
         user.verification_token = None
         user.email_verified = True
-        _mark_login(user)
-        db.session.commit()
-        session["user_id"] = user.id
-        return jsonify({
+        return _login_json(user, {
             "ok": True,
             "mail_sent": False,
             "beta_skip_verify": True,
-            "message": f"内测账号已直接登录（{email}）。验证码可随便填，或不填直接点验证亦可。",
+            "message": t_api("ok.beta_login", email=email),
             "dev_token": "任意",
         })
 
-    # 已验证用户：紧急省邮件 — 当日首次直接登录，不发验证码
-    if user.email_verified and LOGIN_ONCE_PER_DAY:
-        _mark_login(user)
-        db.session.commit()
-        session["user_id"] = user.id
-        return jsonify({
-            "ok": True,
-            "mail_sent": False,
-            "direct_login": True,
-            "message": "已登录。紧急限流期间每人每天仅可登录一次，请勿随意退出。",
-        })
-
-    # 未验证：当天已发过验证码则不再发信，但仍放行进验证步骤（避免刷新后卡死）
+    # 未验证或换设备：当天已发过验证码则不再发信，但仍放行进验证步骤
     if LOGIN_ONCE_PER_DAY and _email_sent_today(user):
         return jsonify({
             "ok": True,
             "mail_sent": False,
             "code_already_sent": True,
-            "message": "今日验证码已发送，请查收学校邮箱（含垃圾箱）并在下方输入；请勿重复申请。",
+            "message": t_api("ok.code_already"),
             "dev_token": None if MAIL_ENABLED else user.verification_token,
         })
+
+    ok_rate, _rate_err = check_register_rate(email)
+    if not ok_rate:
+        return api_err("err.rate", 429, mins=REGISTER_RATE_WINDOW // 60)
 
     token = user.generate_token()
     db.session.commit()
@@ -695,7 +775,7 @@ def api_register():
     return jsonify({
         "ok": True,
         "mail_sent": mail_ok,
-        "message": f"验证码已发送至 {email}" if mail_ok else f"邮件发送失败，请使用页面验证码。详情: {info}",
+        "message": t_api("ok.code_sent", email=email) if mail_ok else t_api("ok.code_fail", info=info),
         "dev_token": None if (mail_ok and MAIL_ENABLED) else token,
     })
 
@@ -716,11 +796,19 @@ def api_verify():
     token = (data.get("token") or "").strip().upper()
 
     if not email:
-        return jsonify({"ok": False, "error": "邮箱不能为空"}), 400
+        return api_err("err.email_empty")
 
     user = User.query.filter_by(email=email).first()
     if not user:
-        return jsonify({"ok": False, "error": "用户不存在"}), 404
+        return api_err("err.user_missing", 404)
+
+    if user.email_verified and _device_trusted(user):
+        return _login_json(user, {
+            "ok": True,
+            "direct_login": True,
+            "remembered": True,
+            "message": t_api("ok.device_login"),
+        })
 
     denied = _deny_login_once_today(user)
     if denied:
@@ -731,44 +819,34 @@ def api_verify():
     if beta:
         sibling = find_sibling_account(email, user.school)
         if sibling and sibling.email_verified and sibling.id != user.id:
-            return jsonify({"ok": False, "error": sibling_account_error(sibling)}), 409
+            return api_err("err.sibling", 409, email=sibling.email)
         user.email_verified = True
         user.verification_token = None
-        _mark_login(user)
-        db.session.commit()
-        session["user_id"] = user.id
-        return jsonify({"ok": True, "message": "内测账号已登录"})
+        return _login_json(user, {"ok": True, "message": t_api("ok.beta_in")})
 
     if not token:
-        return jsonify({"ok": False, "error": "邮箱和验证码不能为空"}), 400
+        return api_err("err.email_token_empty")
 
-    # 已验证用户直接登录（仍受每日一次限制）
-    if user.email_verified:
-        _mark_login(user)
-        db.session.commit()
-        session["user_id"] = user.id
-        return jsonify({"ok": True, "message": "已登录"})
+    if not check_verify_fail_rate(email):
+        return api_err("err.rate", 429, mins=VERIFY_FAIL_WINDOW // 60)
 
-    if user.verification_token != token:
-        return jsonify({"ok": False, "error": "验证码错误"}), 400
+    if not user.verification_token or user.verification_token != token:
+        record_verify_fail(email)
+        return api_err("err.token_bad")
 
     if user.verification_sent_at:
         elapsed = (datetime.utcnow() - user.verification_sent_at).total_seconds()
         if elapsed > VERIFICATION_EXPIRE_SECONDS:
-            return jsonify({"ok": False, "error": "验证码已过期"}), 400
+            return api_err("err.token_expired")
 
     # 验证落库前再拦一次，防止并发双号同时过验证
     sibling = find_sibling_account(email, user.school)
     if sibling and sibling.email_verified and sibling.id != user.id:
-        return jsonify({"ok": False, "error": sibling_account_error(sibling)}), 409
+        return api_err("err.sibling", 409, email=sibling.email)
 
     user.email_verified = True
     user.verification_token = None
-    _mark_login(user)
-    db.session.commit()
-
-    session["user_id"] = user.id
-    return jsonify({"ok": True, "message": "验证成功！"})
+    return _login_json(user, {"ok": True, "message": t_api("ok.verified")})
 
 
 @app.route("/api/resend-verification", methods=["POST"])
@@ -778,34 +856,39 @@ def api_resend_verification():
 
     user = User.query.filter_by(email=email).first()
     if not user:
-        return jsonify({"ok": False, "error": "用户不存在"}), 404
+        return api_err("err.user_missing", 404)
+
+    if user.email_verified and _device_trusted(user):
+        return _login_json(user, {
+            "ok": True,
+            "direct_login": True,
+            "remembered": True,
+            "message": t_api("ok.device_login"),
+        })
 
     denied = _deny_login_once_today(user)
     if denied:
         return denied
 
     if user.email_verified and not _is_beta_account(email):
-        return jsonify({"ok": True, "message": "已验证"})
+        return jsonify({"ok": True, "message": t_api("ok.already_verified")})
 
     ok_rate, rate_err = check_register_rate(email)
     if not ok_rate:
-        return jsonify({"ok": False, "error": rate_err}), 429
+        return api_err("err.rate", 429, mins=REGISTER_RATE_WINDOW // 60)
 
     if _is_beta_account(email):
         user.verification_token = None
         user.email_verified = True
-        _mark_login(user)
-        db.session.commit()
-        session["user_id"] = user.id
-        return jsonify({
+        return _login_json(user, {
             "ok": True,
             "beta_skip_verify": True,
             "dev_token": "任意",
-            "message": "内测账号已登录，验证码可随便填",
+            "message": t_api("ok.beta_any_code"),
         })
 
     if LOGIN_ONCE_PER_DAY and _email_sent_today(user):
-        return jsonify({"ok": False, "error": EMAIL_ONCE_MSG}), 429
+        return api_err("err.email_once", 429)
 
     token = user.generate_token()
     db.session.commit()
@@ -820,6 +903,50 @@ def api_resend_verification():
 # 问卷 API
 # ============================================================
 
+
+@app.route("/api/express-profile", methods=["POST"])
+@login_required
+def api_express_profile():
+    """隐私模式：昵称 + 性别/取向 + 一段话进池；微信可选。"""
+    user = get_current_user()
+    if not user.email_verified:
+        return api_err("err.need_verify")
+    data = request.get_json() or {}
+    name = (data.get("name") or "").strip()
+    gender = (data.get("gender") or "").strip()
+    looking_for = (data.get("looking_for") or "").strip()
+    bio = (data.get("bio") or "").strip()
+    if not name:
+        return api_err("err.express_name")
+    if gender not in ("male", "female") or looking_for not in LOOKING_FOR_VALUES:
+        return api_err("err.need_gender")
+    if len(bio) < EXPRESS_BIO_MIN:
+        return api_err("err.express_bio", n=EXPRESS_BIO_MIN)
+    user.name = name[:32]
+    user.gender = gender
+    user.looking_for = looking_for
+    user.bio = bio[:800]
+    contact = (data.get("wechat_id") or "").strip()
+    user.wechat_id = contact[:120] if contact else user.wechat_id
+    if "cross_schools" in data:
+        raw = data.get("cross_schools") or []
+        if not isinstance(raw, list):
+            return api_err("err.cross_list")
+        if CROSS_SCHOOL_MATCHING_ENABLED:
+            user.set_cross_schools(raw)
+        else:
+            user.set_cross_schools([])
+    if "open_to_match" in data:
+        user.open_to_match = bool(data.get("open_to_match"))
+        if not user.open_to_match:
+            user.opt_in_week = None
+    vec, _ = build_express_vector(user.bio)
+    user.feature_vector = vec
+    user.profile_mode = "privacy"
+    db.session.commit()
+    return jsonify({"ok": True, "message": t_api("ok.express_saved"), "user": user.to_dict()})
+
+
 @app.route("/api/questionnaire", methods=["GET", "POST"])
 @login_required
 def api_questionnaire():
@@ -833,13 +960,14 @@ def api_questionnaire():
             "answers": user.answers,
             "important_qids": list(user.important_qids),
             "completed": user.questionnaire_completed(),
+            "profile_mode": "privacy" if user.is_express() else "full",
         })
 
     # POST: 提交答案 + 生成特征向量
     data = request.get_json() or {}
     answers_raw = data.get("answers", {})
     if not isinstance(answers_raw, dict):
-        return jsonify({"ok": False, "error": "问卷答案格式错误"}), 400
+        return api_err("err.answers_format")
     valid_qids = {q["id"] for q in QUESTIONS}
     important_qids = set()
     for raw_qid in data.get("important_qids", []):
@@ -900,10 +1028,11 @@ def api_questionnaire():
             missing.append(q["id"])
     if missing:
         required_n = sum(1 for q in QUESTIONS if not q.get("optional") and q["type"] != "text")
-        return jsonify({
-            "ok": False,
-            "error": f"请完成全部 {required_n} 道必答题（未完成：{', '.join('Q' + str(x) for x in missing)}）",
-        }), 400
+        return api_err(
+            "err.answers_missing",
+            n=required_n,
+            ids=", ".join("Q" + str(x) for x in missing),
+        )
 
     # 构建特征向量
     vec, dim_names = build_feature_vector(answers, important_qids)
@@ -925,12 +1054,13 @@ def api_questionnaire():
 
     personality = build_love_personality(answers)
     user.mbti_report = personality
+    user.profile_mode = "full"
 
     db.session.commit()
 
     return jsonify({
         "ok": True,
-        "message": "问卷已保存",
+        "message": t_api("ok.survey_saved"),
         "vector_dim": len(vec),
         "completed": user.questionnaire_completed(),
         "personality": personality,
@@ -955,7 +1085,7 @@ def api_me_mbti():
     """恋爱人格报告（存 mbti_json）；旧 MBTI 缓存会按答案重算覆盖。"""
     user = get_current_user()
     if not user.answers:
-        return jsonify({"ok": False, "error": "请先完成问卷"}), 400
+        return api_err("err.need_questionnaire")
     report = user.mbti_report
     if not report or report.get("kind") != "love_personality":
         report = build_love_personality(user.answers)
@@ -972,43 +1102,44 @@ def api_match():
 
     if not user.ready_to_match():
         if not user.email_verified:
-            return jsonify({"ok": False, "error": "请先验证邮箱"}), 400
-        if not user.questionnaire_completed() or not user.feature_vector:
-            return jsonify({"ok": False, "error": "请先完成问卷并提交"}), 400
+            return api_err("err.need_verify")
         if not user.gender or user.looking_for not in LOOKING_FOR_VALUES:
-            return jsonify({"ok": False, "error": "请先在问卷页设置性别与择偶取向"}), 400
+            return api_err("err.need_gender")
+        if user.is_express():
+            return api_err("err.profile_incomplete")
+        if not user.questionnaire_completed() or not user.feature_vector:
+            return api_err("err.need_survey_submit")
         if not user.wechat_id:
-            return jsonify({"ok": False, "error": "请先填写附加联系方式"}), 400
-        return jsonify({"ok": False, "error": "资料不完整，请返回问卷页补全"}), 400
+            return api_err("err.need_wechat")
+        return api_err("err.profile_incomplete")
 
     if not user.is_open_to_match():
-        return jsonify({
-            "ok": False,
-            "error": "你已关闭「参与匹配」。可在匹配中心重新打开后再试。",
-            "quota": match_quota_status(user),
-        }), 403
+        body, status = api_err("err.match_closed", 403)
+        payload = body.get_json()
+        payload["quota"] = match_quota_status(user)
+        return jsonify(payload), status
 
     if not INSTANT_MATCH_ENABLED:
-        return jsonify({
-            "ok": False,
-            "error": "当前为「每周揭晓」模式，请先预约本周匹配，等待统一揭晓。",
-            "quota": match_quota_status(user),
-        }), 403
+        body, status = api_err("err.weekly_only", 403)
+        payload = body.get_json()
+        payload["quota"] = match_quota_status(user)
+        return jsonify(payload), status
 
     quota = match_quota_status(user)
     if quota["cooldown_seconds_left"] > 0:
         mins = max(1, quota["cooldown_seconds_left"] // 60)
-        return jsonify({
-            "ok": False,
-            "error": f"匹配冷却中，请约 {mins} 分钟后再试（冷却 {MATCH_COOLDOWN_HOURS} 小时）",
-            "quota": quota,
-        }), 429
+        body, status = api_err("err.cooldown", 429, mins=mins, hours=MATCH_COOLDOWN_HOURS)
+        payload = body.get_json()
+        payload["quota"] = quota
+        return jsonify(payload), status
     if quota["weekly_remaining"] <= 0:
-        return jsonify({
-            "ok": False,
-            "error": f"本周新建匹配已达上限（{MATCH_WEEKLY_NEW_LIMIT} 个）。可查看历史结果，或等下周 / {quota['next_batch_label']} 批量匹配。",
-            "quota": quota,
-        }), 429
+        body, status = api_err(
+            "err.weekly_cap", 429,
+            n=MATCH_WEEKLY_NEW_LIMIT, when=quota["next_batch_label"],
+        )
+        payload = body.get_json()
+        payload["quota"] = quota
+        return jsonify(payload), status
 
     # 通过冷却/周额度检查后立即落库冷却：失败也算一次尝试，防刷「暂未配对」邮件
     touch_instant_match_cooldown(user)
@@ -1017,10 +1148,6 @@ def api_match():
         time.sleep(MATCH_DELAY_SECONDS)
 
     mode = MATCH_MODE
-    if request.is_json:
-        body = request.get_json(silent=True) or {}
-        mode = body.get("mode", MATCH_MODE)
-
     # 兼容旧配置名 realtime → one_to_one
     if mode == "realtime":
         mode = "one_to_one"
@@ -1036,9 +1163,9 @@ def api_match():
     candidates = eligible_candidates(user)
 
     if not candidates:
-        msg = "当前暂无符合你择偶取向的可匹配用户"
+        msg = t_api("match.none_orient")
         if CROSS_SCHOOL_MATCHING_ENABLED and not user.get_cross_schools():
-            msg += "（可在问卷/匹配页勾选愿意跨配的学校，且对方也须勾选你的学校）"
+            msg += t_api("match.none_orient_cross")
         mail_ok, mail_info = notify_no_match(user, reason=msg)
         return jsonify({
             "ok": True,
@@ -1050,7 +1177,7 @@ def api_match():
             "mail_info": str(mail_info)[:120] if mail_info else None,
             "quota": match_quota_status(user),
             "explain": _match_explain_text(mode),
-            "note": "结果以本页为准；邮件仅作通知，发送失败不影响查看。",
+            "note": t_api("match.note"),
         })
 
     if mode == "batch":
@@ -1076,10 +1203,7 @@ def api_match():
         )
 
     if not my_matches:
-        msg = (
-            "池子里有人，但暂时没有足够合适的人选"
-            "（或合适人选本周已配过）。宁缺毋滥，请下周再试或完善问卷。"
-        )
+        msg = t_api("match.none_fit")
         mail_ok, mail_info = notify_no_match(user, reason=msg)
         return jsonify({
             "ok": True,
@@ -1091,7 +1215,7 @@ def api_match():
             "mail_info": str(mail_info)[:120] if mail_info else None,
             "quota": match_quota_status(user),
             "explain": _match_explain_text(mode),
-            "note": "结果以本页为准；邮件仅作通知，发送失败不影响查看。",
+            "note": t_api("match.note"),
         })
 
     summary = persist_user_matches(
@@ -1109,22 +1233,21 @@ def api_match():
             and not summary.get("quota_skipped")
         )
         if db_only:
-            msg = (
-                "未能完成配对：当前过门槛的候选人均与你存在硬性底线冲突，"
-                "未强行配对。可完善问卷或下周再试。"
-            )
+            msg = t_api("match.fail_db")
         else:
             parts = []
             if summary.get("partner_quota_skipped"):
-                parts.append("对方本周已有配对")
+                parts.append(t_api("match.rs.partner"))
             if summary.get("low_score_skipped"):
-                parts.append("相似度未达内部门槛")
+                parts.append(t_api("match.rs.score"))
             if summary.get("dealbreaker_skipped"):
-                parts.append("部分人选硬性底线冲突")
+                parts.append(t_api("match.rs.db"))
             if summary.get("quota_skipped"):
-                parts.append("你的本周额度已用完")
-            reason = "；".join(parts) if parts else "暂无合适人选"
-            msg = f"未能完成配对：{reason}。"
+                parts.append(t_api("match.rs.quota"))
+            reason = "；".join(parts) if parts else t_api("match.rs.none")
+            if request_lang() in ("en", "pt"):
+                reason = "; ".join(parts) if parts else t_api("match.rs.none")
+            msg = t_api("match.fail", reason=reason)
         mail_ok, mail_info = notify_no_match(user, reason=msg)
         return jsonify({
             "ok": True,
@@ -1139,7 +1262,7 @@ def api_match():
             "mail_info": str(mail_info)[:120] if mail_info else None,
             "quota": match_quota_status(user),
             "explain": _match_explain_text(mode),
-            "note": "结果以本页为准；邮件仅作通知。",
+            "note": t_api("match.note"),
         })
 
     return jsonify({
@@ -1161,7 +1284,7 @@ def api_match():
         "mail_details": summary.get("mail_details", []),
         "quota": match_quota_status(user),
         "explain": _match_explain_text(mode),
-        "note": "结果以本页为准；邮件仅作通知。种子/无效邮箱常会发送失败，你的真实学校邮箱应能收到。",
+        "note": t_api("match.note"),
     })
 
 
@@ -1171,13 +1294,12 @@ def api_match_opt_in():
     """预约 / 取消本周批量匹配。"""
     user = get_current_user()
     if not user.ready_to_match():
-        return jsonify({"ok": False, "error": "请先完成问卷、性别、择偶取向与附加联系方式"}), 400
+        return api_err("err.need_ready_optin")
     if not user.is_open_to_match():
-        return jsonify({
-            "ok": False,
-            "error": "请先开启「参与匹配」，再预约本周揭晓",
-            "quota": match_quota_status(user),
-        }), 403
+        body, status = api_err("err.need_open_optin", 403)
+        payload = body.get_json()
+        payload["quota"] = match_quota_status(user)
+        return jsonify(payload), status
 
     week = current_week_key()
     if request.method == "DELETE":
@@ -1192,7 +1314,7 @@ def api_match_opt_in():
         "ok": True,
         "opted_in": True,
         "week_key": week,
-        "message": f"已预约本周匹配，将在 {match_quota_status(user)['next_batch_label']} 揭晓",
+        "message": t_api("ok.optin", when=match_quota_status(user)["next_batch_label"]),
         "quota": match_quota_status(user),
     })
 
@@ -1240,7 +1362,7 @@ def api_get_matches():
         "ok": True,
         "matches": results,
         "quota": match_quota_status(user),
-        "note": "一对一：你只能看到当前有效配对；学校邮箱已互见，可先邮件开聊。",
+        "note": t_api("match.list_note"),
     })
 
 
@@ -1267,16 +1389,21 @@ def api_me():
         user.looking_for = looking_for
     contact = (data.get("wechat_id") or "").strip()
     if "wechat_id" in data:
-        if not contact:
-            return jsonify({"ok": False, "error": "请填写附加联系方式（微信或其他均可）"}), 400
-        user.wechat_id = contact[:120]
-    user.bio = (data.get("bio") or "").strip() or user.bio
+        if not contact and not user.is_express():
+            return api_err("err.wechat_required")
+        user.wechat_id = contact[:120] if contact else None
+    if "bio" in data:
+        bio = (data.get("bio") or "").strip()
+        if user.is_express() and len(bio) < EXPRESS_BIO_MIN:
+            return api_err("err.express_bio", n=EXPRESS_BIO_MIN)
+        if bio:
+            user.bio = bio[:800]
     if "cross_schools" in data:
         raw = data.get("cross_schools")
         if raw is None:
             raw = []
         if not isinstance(raw, list):
-            return jsonify({"ok": False, "error": "cross_schools 须为学校名列表"}), 400
+            return api_err("err.cross_list")
         if not CROSS_SCHOOL_MATCHING_ENABLED:
             user.set_cross_schools([])
         else:
@@ -1300,9 +1427,14 @@ def api_me():
 def api_users_search():
     """按昵称或邮箱精确搜索可拉黑对象（不返回联系方式）。"""
     user = get_current_user()
+    if not user.ready_to_match():
+        return api_err("err.need_ready_optin")
     q = (request.args.get("q") or "").strip()
-    if len(q) < 1:
-        return jsonify({"ok": False, "error": "请输入昵称或邮箱"}), 400
+    if "@" in q:
+        if len(q) < 5:
+            return api_err("err.search_q")
+    elif len(q) < 2:
+        return api_err("err.search_q")
 
     query = User.query.filter(
         User.id != user.id,
@@ -1359,14 +1491,14 @@ def api_blocklist():
     try:
         target_id = int(target_id)
     except (TypeError, ValueError):
-        return jsonify({"ok": False, "error": "请指定要拉黑的用户（从搜索结果点选）"}), 400
+        return api_err("err.block_pick")
 
     if target_id == user.id:
-        return jsonify({"ok": False, "error": "不能拉黑自己"}), 400
+        return api_err("err.block_self")
 
     target = User.query.get(target_id)
     if not target or not target.email_verified:
-        return jsonify({"ok": False, "error": "用户不存在"}), 404
+        return api_err("err.user_missing", 404)
 
     if request.method == "DELETE":
         Blocklist.query.filter_by(user_id=user.id, blocked_user_id=target_id).delete()
@@ -1390,13 +1522,14 @@ def api_blocklist():
     return jsonify({
         "ok": True,
         "blocked": True,
-        "message": f"已将 {target.name or target.email} 加入黑名单，之后不会再匹配",
+        "message": t_api("ok.blocked", name=target.name or target.email),
         "deactivated_matches": len(active),
     })
 
 
 @app.route("/api/logout", methods=["POST"])
 def api_logout():
+    """退出当前会话。设备信任 cookie 保留 7 天，再输入同一邮箱可免验证码。"""
     session.clear()
     return jsonify({"ok": True})
 
@@ -1424,10 +1557,10 @@ def api_health():
 def api_admin_batch_run():
     """手动触发全校批量匹配。需要 Header: X-Admin-Secret"""
     if not ADMIN_SECRET:
-        return jsonify({"ok": False, "error": "未配置 ADMIN_SECRET，拒绝执行"}), 403
+        return api_err("err.admin_secret_missing", 403)
     secret = request.headers.get("X-Admin-Secret") or (request.get_json(silent=True) or {}).get("secret")
     if secret != ADMIN_SECRET:
-        return jsonify({"ok": False, "error": "密钥错误"}), 403
+        return api_err("err.admin_secret_bad", 403)
     results = run_batch_all(get_mail_config())
     return jsonify({"ok": True, "results": results})
 
@@ -1436,11 +1569,11 @@ def api_admin_batch_run():
 def api_admin_nudge_incomplete():
     """催填未完成问卷。需要 Header: X-Admin-Secret；默认 dry_run，send=true 才发信。"""
     if not ADMIN_SECRET:
-        return jsonify({"ok": False, "error": "未配置 ADMIN_SECRET，拒绝执行"}), 403
+        return api_err("err.admin_secret_missing", 403)
     body = request.get_json(silent=True) or {}
     secret = request.headers.get("X-Admin-Secret") or body.get("secret")
     if secret != ADMIN_SECRET:
-        return jsonify({"ok": False, "error": "密钥错误"}), 403
+        return api_err("err.admin_secret_bad", 403)
     if not MAIL_INCOMPLETE_NUDGE_ENABLED:
         return jsonify({
             "ok": False,
@@ -1545,6 +1678,12 @@ def ensure_schema():
         db.session.commit()
         print("[CampusMatch] migrated: users.incomplete_nudge_at")
 
+    if "profile_mode" not in user_cols:
+        db.session.execute(text("ALTER TABLE users ADD COLUMN profile_mode VARCHAR(16) DEFAULT 'full'"))
+        db.session.execute(text("UPDATE users SET profile_mode = 'full' WHERE profile_mode IS NULL"))
+        db.session.commit()
+        print("[CampusMatch] migrated: users.profile_mode")
+
     if "icebreaker_followup_sent" not in match_cols:
         db.session.execute(text("ALTER TABLE matches ADD COLUMN icebreaker_followup_sent BOOLEAN DEFAULT 0"))
         db.session.execute(text(
@@ -1647,5 +1786,9 @@ if __name__ == "__main__":
     print(f"  Debug: {FLASK_DEBUG}")
     print(f"  支持学校: {', '.join(SCHOOL_DOMAINS.keys())}")
     print(f"  邮件: {'真实发送' if MAIL_ENABLED else '开发模式'}")
+    if USING_DEFAULT_SECRET_KEY:
+        print("  警告: 正在使用仓库默认 SECRET_KEY，会话 cookie 可被伪造。请在 .env 设置随机 SECRET_KEY。")
+        if not FLASK_DEBUG:
+            raise SystemExit("Refusing to start: SECRET_KEY is the repository default")
     start_batch_scheduler()
     app.run(debug=FLASK_DEBUG, host=os.environ.get("FLASK_HOST", "0.0.0.0"), port=int(os.environ.get("FLASK_PORT", "5000")))

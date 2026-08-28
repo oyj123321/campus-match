@@ -3,7 +3,7 @@
 {% if questionnaire_incomplete %}
 <div class="card incomplete-page-card" style="text-align:center;margin-bottom:14px;">
     <p style="margin:0 0 10px;font-weight:700;font-size:1.05em;" data-i18n="incomplete.matchesTitle">问卷未完成</p>
-    <p class="hint" style="margin:0 0 12px;" data-i18n="incomplete.matchesBody">完成问卷后才能预约与匹配。点此继续填写。</p>
+    <p class="hint" style="margin:0 0 12px;" data-i18n="incomplete.matchesBody">完成隐私模式资料或完整问卷后才能预约与匹配。点此继续。</p>
     <a href="/questionnaire" class="btn btn-match" data-i18n="incomplete.cta">继续填写问卷</a>
 </div>
 {% endif %}
@@ -233,9 +233,18 @@ function renderMatchCards(matches, headerHtml) {
             + '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">'
             + '<span style="font-size:1.25em;font-weight:800;color:#2563eb;">' + t('card.assigned') + '</span>'
             + '<span style="font-size:1.15em;font-weight:700;">' + esc(m.name) + '</span>'
+            + (m.privacy_user ? '<span class="privacy-badge">' + t('card.privacyBadge') + '</span>' : '')
             + '<span>' + (m.gender === 'male' ? t('g.male') : m.gender === 'female' ? t('g.female') : '') + '</span>'
             + (m.school ? '<span class="hint">' + esc(tSchool(m.school)) + '</span>' : '')
             + '</div>';
+
+        if (m.privacy_user) {
+            html += '<p class="privacy-hint">' + t('card.privacyHint') + '</p>';
+        }
+        if (m.bio) {
+            html += '<div style="margin-top:12px;"><strong>' + t('card.bio') + '</strong>'
+                + '<p class="hint" style="margin:6px 0 0;white-space:pre-wrap;line-height:1.65;">' + esc(m.bio) + '</p></div>';
+        }
 
         if (m.strengths && m.strengths.length) {
             html += '<div style="margin-top:12px;"><strong class="t-ok">' + t('card.strengths') + '</strong><ul class="hint" style="padding-left:18px;margin:6px 0;">';

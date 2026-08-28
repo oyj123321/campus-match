@@ -9,7 +9,14 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
 
-def _dispatch_email(to_email, subject, html_body, mail_config):
+def _html_esc(s):
+    return (
+        str(s or "")
+        .replace("&", "&amp;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
+        .replace('"', "&quot;")
+    )
     """按 MAIL_PROVIDER 选择 Resend API 或 SMTP。"""
     provider = (mail_config.get("provider") or "smtp").strip().lower()
     if provider == "resend":
@@ -62,7 +69,7 @@ def send_match_result_email(to_email, matches, mail_config, insight=None, reason
         reason_line = (reason or "").strip()
         reason_html = (
             f"<p style='color:#475569;font-size:14px;line-height:1.7;margin:16px 0 0;'>"
-            f"本轮情况：{reason_line}</p>"
+            f"本轮情况：{_html_esc(reason_line)}</p>"
             if reason_line else ""
         )
         subject = "CampusMatch - 本次暂未配对"
@@ -105,26 +112,60 @@ def send_match_result_email(to_email, matches, mail_config, insight=None, reason
         return _dispatch_email(to_email, subject, body, mail_config)
 
     rows = ""
+    any_privacy = False
     for i, (m_user, score) in enumerate(matches, 1):
-        extra = m_user.wechat_id or ""
+        extra = _html_esc(m_user.wechat_id or "")
         extra_cell = (
             f'<td style="padding:10px 8px;border-bottom:1px solid #e2e8f0;color:#059669;font-weight:700;">{extra}</td>'
             if extra else
             '<td style="padding:10px 8px;border-bottom:1px solid #e2e8f0;color:#94a3b8;">—</td>'
         )
+        is_privacy = False
+        fn = getattr(m_user, "is_express", None)
+        if callable(fn):
+            is_privacy = bool(fn())
+        else:
+            is_privacy = (getattr(m_user, "profile_mode", None) or "full") in ("express", "privacy")
+        if is_privacy:
+            any_privacy = True
+        badge = (
+            ' <span style="display:inline-block;padding:2px 8px;border-radius:99px;'
+            'background:#fef3c7;color:#92400e;font-size:12px;font-weight:700;">隐私用户</span>'
+            if is_privacy else ""
+        )
+        display_name = _html_esc(m_user.name or "(匿名)")
         rows += f"""
             <tr>
                 <td style="padding:10px 8px;border-bottom:1px solid #e2e8f0;text-align:center;">#{i}</td>
-                <td style="padding:10px 8px;border-bottom:1px solid #e2e8f0;">{m_user.name or '(匿名)'}</td>
-                <td style="padding:10px 8px;border-bottom:1px solid #e2e8f0;color:#2563eb;font-weight:600;">{m_user.email}</td>
+                <td style="padding:10px 8px;border-bottom:1px solid #e2e8f0;">{display_name}{badge}</td>
+                <td style="padding:10px 8px;border-bottom:1px solid #e2e8f0;color:#2563eb;font-weight:600;">{_html_esc(m_user.email)}</td>
                 {extra_cell}
             </tr>"""
+        bio = (getattr(m_user, "bio", None) or "").strip()
+        if is_privacy and bio:
+            safe_bio = _html_esc(bio).replace("\n", "<br>")
+            rows += f"""
+            <tr>
+                <td colspan="4" style="padding:4px 8px 12px;border-bottom:1px solid #e2e8f0;font-size:13px;color:#475569;line-height:1.65;">
+                    <strong style="color:#92400e;">自我介绍：</strong>{safe_bio}
+                </td>
+            </tr>"""
+
+    privacy_html = ""
+    if any_privacy:
+        privacy_html = (
+            "<div style='background:#fffbeb;border:1px solid #fcd34d;border-radius:8px;padding:12px 16px;margin-top:16px;'>"
+            "<strong style='color:#92400e;'>对方是隐私用户</strong>"
+            "<p style='margin:8px 0 0;font-size:14px;line-height:1.65;color:#78350f;'>"
+            "TA 选择了隐私模式，没有填完整问卷，资料更少。请尊重边界，用学校邮箱慢慢聊。"
+            "</p></div>"
+        )
 
     insight_html = ""
     if insight:
         strengths = insight.get("strengths", [])[:4]
         if strengths:
-            items = "".join(f"<li style='margin:4px 0;'>{s}</li>" for s in strengths)
+            items = "".join(f"<li style='margin:4px 0;'>{_html_esc(s)}</li>" for s in strengths)
             insight_html += f"<div style='background:#f0fdf4;border-radius:8px;padding:12px 16px;margin-top:16px;'><strong style='color:#059669;'>你们的契合点</strong><ul style='margin:8px 0 0;padding-left:18px;font-size:14px;'>{items}</ul></div>"
         letter = None
         try:
@@ -134,10 +175,7 @@ def send_match_result_email(to_email, matches, mail_config, insight=None, reason
         except Exception:
             letter = None
         if letter:
-            safe = (
-                letter.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
-                .replace("\n", "<br>")
-            )
+            safe = _html_esc(letter).replace("\n", "<br>")
             insight_html += (
                 f"<div style='background:#f0fdfa;border-radius:8px;padding:12px 16px;margin-top:10px;'>"
                 f"<strong style='color:#0f766e;'>TA 留给你的话</strong>"
@@ -148,14 +186,14 @@ def send_match_result_email(to_email, matches, mail_config, insight=None, reason
             items = []
             for x in ice:
                 if isinstance(x, dict):
-                    tip = x.get("tip") or ""
-                    send = x.get("send") or ""
+                    tip = _html_esc(x.get("tip") or "")
+                    send = _html_esc(x.get("send") or "")
                     chunk = tip
                     if send:
                         chunk += f"<br><em style='color:#9d174d;'>可以发：</em>{send}"
                     items.append(f"<li style='margin:8px 0;'>{chunk}</li>")
                 else:
-                    items.append(f"<li style='margin:4px 0;'>{x}</li>")
+                    items.append(f"<li style='margin:4px 0;'>{_html_esc(x)}</li>")
             insight_html += (
                 f"<div style='background:#fdf2f8;border-radius:8px;padding:12px 16px;margin-top:10px;'>"
                 f"<strong style='color:#be185d;'>破冰话题</strong>"
@@ -182,6 +220,7 @@ def send_match_result_email(to_email, matches, mail_config, insight=None, reason
             </thead>
             <tbody>{rows}</tbody>
         </table>
+        {privacy_html}
         {insight_html}
         <p style="font-size:13px;line-height:1.7;color:#64748b;margin:18px 0 0;">
             建议尽快打个招呼（学校邮箱或附加联系方式均可）。友善、真诚比完美开场白更重要。
@@ -205,7 +244,8 @@ def send_match_result_email(to_email, matches, mail_config, insight=None, reason
         print(f"\n{'='*60}")
         print(f"[DEV] 匹配结果 → {to_email}")
         for i, (m_user, score) in enumerate(matches, 1):
-            print(f"  #{i} {m_user.name} | email:{m_user.email} | extra:{m_user.wechat_id or '-'}")
+            mode = "隐私用户" if getattr(m_user, "is_express", lambda: False)() else "问卷用户"
+            print(f"  #{i} {m_user.name} | {mode} | email:{m_user.email} | extra:{m_user.wechat_id or '-'}")
         if insight and insight.get("strengths"):
             print(f"  共同点: {' | '.join(insight['strengths'][:3])}")
         print(f"{'='*60}\n")
@@ -334,7 +374,7 @@ def send_incomplete_nudges(mail_config, cooldown_days=None, limit=200, dry_run=T
     )
     targets = []
     for u in verified:
-        if u.questionnaire_completed():
+        if u.ready_to_match():
             continue
         if u.incomplete_nudge_at and u.incomplete_nudge_at > cutoff:
             result["skipped_cooldown"] += 1
