@@ -17,11 +17,18 @@ def _html_esc(s):
         .replace(">", "&gt;")
         .replace('"', "&quot;")
     )
+
+
+def _dispatch_email(to_email, subject, html_body, mail_config):
     """按 MAIL_PROVIDER 选择 Resend API 或 SMTP。"""
-    provider = (mail_config.get("provider") or "smtp").strip().lower()
-    if provider == "resend":
-        return _send_resend(to_email, subject, html_body, mail_config)
-    return _send_smtp(to_email, subject, html_body, mail_config)
+    try:
+        provider = (mail_config.get("provider") or "smtp").strip().lower()
+        if provider == "resend":
+            return _send_resend(to_email, subject, html_body, mail_config)
+        return _send_smtp(to_email, subject, html_body, mail_config)
+    except Exception as e:
+        print(f"[ERROR] 发信异常 → {to_email}: {e}")
+        return False, str(e)
 
 
 def send_verification_email(to_email, token, mail_config):

@@ -123,6 +123,8 @@ VERIFICATION_EXPIRE_SECONDS = 600  # 10 分钟
 # 注册/重发验证码限流（同一邮箱）
 REGISTER_RATE_LIMIT = int(os.environ.get("REGISTER_RATE_LIMIT", "5"))  # 窗口内最多次数
 REGISTER_RATE_WINDOW = int(os.environ.get("REGISTER_RATE_WINDOW", "3600"))  # 秒
+# 未过期验证码的最短重发间隔；期内连点不换码、不占用小时额度
+REGISTER_RESEND_SECONDS = int(os.environ.get("REGISTER_RESEND_SECONDS", "60"))
 
 # 每人每天仅可登录一次（澳门时区日界）；额度紧张时可 true
 LOGIN_ONCE_PER_DAY = os.environ.get("LOGIN_ONCE_PER_DAY", "false").lower() == "true"

@@ -20,7 +20,7 @@ from config import (
     USING_DEFAULT_SECRET_KEY,
     SCHOOL_DOMAINS, MATCH_MODE, MATCH_TOP_N, MATCH_MIN_SCORE,
     MATCH_DELAY_SECONDS, VERIFICATION_EXPIRE_SECONDS,
-    REGISTER_RATE_LIMIT, REGISTER_RATE_WINDOW,
+    REGISTER_RATE_LIMIT, REGISTER_RATE_WINDOW, REGISTER_RESEND_SECONDS,
     MATCH_WEEKLY_NEW_LIMIT, MATCH_COOLDOWN_HOURS,
     BATCH_MATCH_DAY, BATCH_MATCH_HOUR, BATCH_SCHEDULER_ENABLED,
     ADMIN_SECRET, WEEKDAY_LABELS,
@@ -80,6 +80,7 @@ def inject_globals():
 # 邮箱 → 近期请求时间戳（进程内限流，MVP 够用）
 _register_hits = defaultdict(deque)
 _verify_fails = defaultdict(deque)
+_email_locks = defaultdict(threading.Lock)
 VERIFY_FAIL_LIMIT = 8
 VERIFY_FAIL_WINDOW = 900  # 秒
 
@@ -201,6 +202,68 @@ def check_register_rate(email):
         return False, None
     q.append(now)
     return True, None
+
+
+def _token_unexpired(user):
+    if not user or not user.verification_token or not user.verification_sent_at:
+        return False
+    elapsed = (datetime.utcnow() - user.verification_sent_at).total_seconds()
+    return 0 <= elapsed <= VERIFICATION_EXPIRE_SECONDS
+
+
+def _seconds_since_code(user):
+    if not user or not user.verification_sent_at:
+        return None
+    return (datetime.utcnow() - user.verification_sent_at).total_seconds()
+
+
+def _code_json(user, email, *, mail_ok=False, already=False, rate_limited=False, wait=False, info=None):
+    """发码接口统一成功体：始终让前端打开验证码输入框。"""
+    if rate_limited:
+        msg = t_api("err.rate_enter", mins=REGISTER_RATE_WINDOW // 60)
+    elif wait:
+        msg = t_api("ok.code_wait", secs=REGISTER_RESEND_SECONDS)
+    elif already:
+        msg = t_api("ok.code_already")
+    elif mail_ok:
+        msg = t_api("ok.code_sent", email=email)
+    else:
+        msg = t_api("ok.code_fail", info=info or "")
+    show_dev = (not MAIL_ENABLED) or (not mail_ok and not already and not wait and not rate_limited)
+    return jsonify({
+        "ok": True,
+        "mail_sent": bool(mail_ok),
+        "code_already_sent": bool(already or wait or rate_limited),
+        "message": msg,
+        "dev_token": user.verification_token if show_dev and user.verification_token else None,
+    })
+
+
+def _send_or_reuse_verification(user, email):
+    """发验证码：未过期则复用，连点不换码；限额打满仍允许输入已发的码。"""
+    if _token_unexpired(user):
+        elapsed = _seconds_since_code(user) or 0
+        if elapsed < REGISTER_RESEND_SECONDS:
+            return _code_json(user, email, already=True, wait=True)
+        ok_rate, _ = check_register_rate(email)
+        if not ok_rate:
+            return _code_json(user, email, already=True, rate_limited=True)
+        token = user.verification_token
+        user.verification_sent_at = datetime.utcnow()
+        db.session.commit()
+        mail_ok, info = send_verification_email(email, token, get_mail_config())
+        return _code_json(user, email, mail_ok=mail_ok, info=info)
+
+    ok_rate, _ = check_register_rate(email)
+    if not ok_rate:
+        if user.verification_token:
+            return _code_json(user, email, already=True, rate_limited=True)
+        return api_err("err.rate", 429, mins=REGISTER_RATE_WINDOW // 60)
+
+    token = user.generate_token()
+    db.session.commit()
+    mail_ok, info = send_verification_email(email, token, get_mail_config())
+    return _code_json(user, email, mail_ok=mail_ok, info=info)
 
 
 def _macau_date(dt_utc_naive: datetime | None = None) -> date:
@@ -721,63 +784,44 @@ def api_register():
     if sibling:
         return api_err("err.sibling", 409, email=sibling.email)
 
-    user = User.query.filter_by(email=email).first()
-    if not user:
-        user = User(email=email, school=school)
-        db.session.add(user)
-        db.session.flush()
+    with _email_locks[email]:
+        user = User.query.filter_by(email=email).first()
+        if not user:
+            user = User(email=email, school=school)
+            db.session.add(user)
+            db.session.flush()
 
-    # 同设备 7 天内已验证过：免验证码、不吃发码限流、也不吃「每天只能登一次」
-    if user.email_verified and _device_trusted(user):
-        return _login_json(user, {
-            "ok": True,
-            "mail_sent": False,
-            "direct_login": True,
-            "remembered": True,
-            "message": t_api("ok.device_login"),
-        })
+        # 同设备 7 天内已验证过：免验证码、不吃发码限流、也不吃「每天只能登一次」
+        if user.email_verified and _device_trusted(user):
+            return _login_json(user, {
+                "ok": True,
+                "mail_sent": False,
+                "direct_login": True,
+                "remembered": True,
+                "message": t_api("ok.device_login"),
+            })
 
-    denied = _deny_login_once_today(user)
-    if denied:
-        return denied
+        denied = _deny_login_once_today(user)
+        if denied:
+            return denied
 
-    # 内测号：免邮件，注册后直接登录（验证码随便填也能进）
-    if _is_beta_account(email):
-        user.verification_token = None
-        user.email_verified = True
-        return _login_json(user, {
-            "ok": True,
-            "mail_sent": False,
-            "beta_skip_verify": True,
-            "message": t_api("ok.beta_login", email=email),
-            "dev_token": "任意",
-        })
+        # 内测号：免邮件，注册后直接登录（验证码随便填也能进）
+        if _is_beta_account(email):
+            user.verification_token = None
+            user.email_verified = True
+            return _login_json(user, {
+                "ok": True,
+                "mail_sent": False,
+                "beta_skip_verify": True,
+                "message": t_api("ok.beta_login", email=email),
+                "dev_token": "任意",
+            })
 
-    # 未验证或换设备：当天已发过验证码则不再发信，但仍放行进验证步骤
-    if LOGIN_ONCE_PER_DAY and _email_sent_today(user):
-        return jsonify({
-            "ok": True,
-            "mail_sent": False,
-            "code_already_sent": True,
-            "message": t_api("ok.code_already"),
-            "dev_token": None if MAIL_ENABLED else user.verification_token,
-        })
+        # 未验证或换设备：当天已发过验证码则不再发信，但仍放行进验证步骤
+        if LOGIN_ONCE_PER_DAY and _email_sent_today(user):
+            return _code_json(user, email, already=True)
 
-    ok_rate, _rate_err = check_register_rate(email)
-    if not ok_rate:
-        return api_err("err.rate", 429, mins=REGISTER_RATE_WINDOW // 60)
-
-    token = user.generate_token()
-    db.session.commit()
-
-    mail_ok, info = send_verification_email(email, token, get_mail_config())
-    # 邮件失败仍允许进入验证步骤（开发/收件箱拒信时用页面展示验证码）
-    return jsonify({
-        "ok": True,
-        "mail_sent": mail_ok,
-        "message": t_api("ok.code_sent", email=email) if mail_ok else t_api("ok.code_fail", info=info),
-        "dev_token": None if (mail_ok and MAIL_ENABLED) else token,
-    })
+        return _send_or_reuse_verification(user, email)
 
 
 def _is_beta_account(email: str) -> bool:
@@ -828,7 +872,7 @@ def api_verify():
         return api_err("err.email_token_empty")
 
     if not check_verify_fail_rate(email):
-        return api_err("err.rate", 429, mins=VERIFY_FAIL_WINDOW // 60)
+        return api_err("err.rate_verify", 429, mins=VERIFY_FAIL_WINDOW // 60)
 
     if not user.verification_token or user.verification_token != token:
         record_verify_fail(email)
@@ -854,49 +898,43 @@ def api_resend_verification():
     data = request.get_json() or {}
     email = (data.get("email") or "").strip().lower()
 
-    user = User.query.filter_by(email=email).first()
-    if not user:
-        return api_err("err.user_missing", 404)
+    if not email:
+        return api_err("err.email_empty")
 
-    if user.email_verified and _device_trusted(user):
-        return _login_json(user, {
-            "ok": True,
-            "direct_login": True,
-            "remembered": True,
-            "message": t_api("ok.device_login"),
-        })
+    with _email_locks[email]:
+        user = User.query.filter_by(email=email).first()
+        if not user:
+            return api_err("err.user_missing", 404)
 
-    denied = _deny_login_once_today(user)
-    if denied:
-        return denied
+        if user.email_verified and _device_trusted(user):
+            return _login_json(user, {
+                "ok": True,
+                "direct_login": True,
+                "remembered": True,
+                "message": t_api("ok.device_login"),
+            })
 
-    if user.email_verified and not _is_beta_account(email):
-        return jsonify({"ok": True, "message": t_api("ok.already_verified")})
+        denied = _deny_login_once_today(user)
+        if denied:
+            return denied
 
-    ok_rate, rate_err = check_register_rate(email)
-    if not ok_rate:
-        return api_err("err.rate", 429, mins=REGISTER_RATE_WINDOW // 60)
+        if user.email_verified and not _is_beta_account(email):
+            return jsonify({"ok": True, "message": t_api("ok.already_verified")})
 
-    if _is_beta_account(email):
-        user.verification_token = None
-        user.email_verified = True
-        return _login_json(user, {
-            "ok": True,
-            "beta_skip_verify": True,
-            "dev_token": "任意",
-            "message": t_api("ok.beta_any_code"),
-        })
+        if _is_beta_account(email):
+            user.verification_token = None
+            user.email_verified = True
+            return _login_json(user, {
+                "ok": True,
+                "beta_skip_verify": True,
+                "dev_token": "任意",
+                "message": t_api("ok.beta_any_code"),
+            })
 
-    if LOGIN_ONCE_PER_DAY and _email_sent_today(user):
-        return api_err("err.email_once", 429)
+        if LOGIN_ONCE_PER_DAY and _email_sent_today(user):
+            return _code_json(user, email, already=True)
 
-    token = user.generate_token()
-    db.session.commit()
-    ok, _ = send_verification_email(email, token, get_mail_config())
-    return jsonify({
-        "ok": ok,
-        "dev_token": token if not (ok and MAIL_ENABLED) else None,
-    })
+        return _send_or_reuse_verification(user, email)
 
 
 # ============================================================

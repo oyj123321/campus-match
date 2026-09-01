@@ -165,16 +165,16 @@ async function register() {
         return;
     }
 
-    // 显示 Step 2（含「今日已发过码、不再重发」的续填场景）
+    // 显示 Step 2（含「码已发送、请直接输入」；连点发送不再挡住输入框）
     currentEmail = email;
     document.getElementById('step2-email').textContent = email;
     document.getElementById('step2-card').style.display = 'block';
     document.getElementById('step2-card').scrollIntoView({ behavior: 'smooth' });
     document.getElementById('token').focus();
 
-    if (data.code_already_sent) {
+    if (data.message) {
         document.getElementById('verify-msg').innerHTML =
-            '<span class="t-ok">' + (data.message || '今日验证码已发送，请查收邮箱。') + '</span>';
+            '<span class="t-ok">' + data.message + '</span>';
     }
 
     // 如果有 dev_token（邮件发送失败的降级），显示在页面上

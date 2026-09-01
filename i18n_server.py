@@ -30,10 +30,22 @@ M = {
         "pt": "Este número de aluno já está registado como {email}. Entra com esse email; não te voltes a registar noutro domínio da mesma escola.",
     },
     "err.rate": {
-        "zh": "发送过于频繁，请 {mins} 分钟后再试",
-        "tw": "發送過於頻繁，請 {mins} 分鐘後再試",
-        "en": "Too many attempts. Please wait {mins} minutes.",
-        "pt": "Demasiadas tentativas. Espera {mins} minutos.",
+        "zh": "发送过于频繁，请 {mins} 分钟后再试。若邮箱里已有验证码，可直接输入。",
+        "tw": "發送過於頻繁，請 {mins} 分鐘後再試。若電郵裡已有驗證碼，可直接輸入。",
+        "en": "Too many send attempts. Wait {mins} minutes. If a code is already in your inbox, enter it below.",
+        "pt": "Demasiados envios. Espera {mins} minutos. Se já tens um código no email, introduz-o abaixo.",
+    },
+    "err.rate_enter": {
+        "zh": "发送次数已达上限，请 {mins} 分钟后再点发送。邮箱里若已有验证码，可在下方直接输入。",
+        "tw": "發送次數已達上限，請 {mins} 分鐘後再點發送。電郵裡若已有驗證碼，可在下方直接輸入。",
+        "en": "Send limit reached. Wait {mins} minutes before requesting another code. You can still enter a code already in your inbox.",
+        "pt": "Limite de envios atingido. Espera {mins} minutos. Podes ainda introduzir um código que já esteja no email.",
+    },
+    "err.rate_verify": {
+        "zh": "验证码试错次数过多，请 {mins} 分钟后再试",
+        "tw": "驗證碼試錯次數過多，請 {mins} 分鐘後再試",
+        "en": "Too many incorrect codes. Please wait {mins} minutes.",
+        "pt": "Demasiados códigos incorretos. Espera {mins} minutos.",
     },
     "err.email_empty": {
         "zh": "邮箱不能为空", "tw": "電郵不能為空",
@@ -205,6 +217,12 @@ M = {
         "tw": "今日驗證碼已發送，請查收學校電郵（含垃圾箱）並在下方輸入。",
         "en": "A code was already sent today. Check your school inbox (and spam) and enter it below.",
         "pt": "Já enviámos um código hoje. Vê a caixa escolar (e o spam) e introduz-o abaixo.",
+    },
+    "ok.code_wait": {
+        "zh": "验证码已发送，请查收学校邮箱（含垃圾箱）。{secs} 秒内不必重复点发送，可直接在下方输入。",
+        "tw": "驗證碼已發送，請查收學校電郵（含垃圾箱）。{secs} 秒內不必重複點發送，可直接在下方輸入。",
+        "en": "A code was already sent. Check your school inbox (and spam). Wait {secs}s before requesting another; you can enter it below now.",
+        "pt": "Já enviámos um código. Vê a caixa escolar (e o spam). Espera {secs}s antes de pedir outro; podes introduzi-lo já abaixo.",
     },
     "ok.code_sent": {
         "zh": "验证码已发送至 {email}", "tw": "驗證碼已發送至 {email}",

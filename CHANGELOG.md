@@ -4,6 +4,18 @@ All notable changes to CampusMatch.
 
 ---
 
+## [1.9.39] — 2026-09-01
+
+### 问题（上次）
+- 点「发送验证码」弹「服务器错误 (500)」：1.9.38 加邮件 HTML 转义时把 `_dispatch_email` 函数头盖掉了，发信即 `NameError`。失败后连点会打满 5 次限额，再变成「请 60 分钟后再试」，输入框也不出现
+
+### 改动
+- **Fixed / 发信 500**：恢复 `_dispatch_email`，发信异常改为返回失败信息而不是把整个注册接口打崩（`email_service.py`）
+- **Fixed / 发码连点**：未过期的验证码 60 秒内不重发、不换码；小时限额打满后仍打开输入框（`app.py` / `i18n_server.py` / `templates/index.html`）
+- **Added / `REGISTER_RESEND_SECONDS`**：默认 60 秒最短重发间隔（`config.py`）
+
+---
+
 ## [1.9.38] — 2026-08-28
 
 ### 问题（上次）
