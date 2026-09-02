@@ -25,7 +25,7 @@ from models import db, User, Match
 from matcher import batch_match_school, orientation_compatible, _dealbreaker_conflict
 from questionnaire import get_compatibility_insight
 from email_service import send_match_result_email
-from match_pool import is_blocked_pair, school_compatible, vectors_aligned
+from match_pool import is_blocked_pair, school_compatible, vectors_aligned, previous_pair_keys
 
 
 WEEKDAY_NAMES = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"]
@@ -303,7 +303,10 @@ def run_batch_school(school, mail_cfg, require_opt_in=False, exclude_ids=None):
     if len(users) < 2:
         return {"school": school, "users": len(users), "pairs": 0, "created": 0, "updated": 0, "matched_ids": set()}
 
-    pairs = batch_match_school(users, filter_same_gender=True)
+    pairs = batch_match_school(
+        users, filter_same_gender=True,
+        previous_pairs=previous_pair_keys([u.id for u in users]),
+    )
     created = 0
     updated = 0
     notified = 0
@@ -394,7 +397,10 @@ def run_batch_cross(mail_cfg, require_opt_in=False, exclude_ids=None):
 
     # 复用 school 批量逻辑：临时把 school 标签忽略，靠 school_compatible 过滤
     # 直接跑匈牙利，再过滤非跨校对
-    pairs = batch_match_school(users, filter_same_gender=True)
+    pairs = batch_match_school(
+        users, filter_same_gender=True,
+        previous_pairs=previous_pair_keys([u.id for u in users]),
+    )
     created = updated = notified = 0
     matched_ids = set()
     kept = 0

@@ -1,7 +1,7 @@
 """匹配池过滤：学校规则 + 黑名单 + 取向 + 是否进池。"""
 
 from config import CROSS_SCHOOL_MATCHING_ENABLED
-from models import User, Blocklist
+from models import User, Blocklist, Match
 from matcher import orientation_compatible
 
 
@@ -43,6 +43,35 @@ def vectors_aligned(user_a, user_b):
     va = user_a.feature_vector
     vb = user_b.feature_vector
     return bool(va and vb and len(va) == len(vb))
+
+
+def pair_key(a_id, b_id):
+    return (a_id, b_id) if a_id < b_id else (b_id, a_id)
+
+
+def previous_partner_ids(user_id):
+    """曾与该用户配过对的对方 ID（含已失效，不含拉黑过滤）。"""
+    rows = Match.query.filter(
+        (Match.user1_id == user_id) | (Match.user2_id == user_id)
+    ).all()
+    ids = set()
+    for r in rows:
+        ids.add(r.user2_id if r.user1_id == user_id else r.user1_id)
+    return ids
+
+
+def previous_pair_keys(user_ids=None):
+    """历史配对 (min_id, max_id)。传入 user_ids 时只收两端都在集合内的对。"""
+    q = Match.query
+    if user_ids is not None:
+        ids = set(user_ids)
+        if not ids:
+            return set()
+        q = q.filter(Match.user1_id.in_(ids), Match.user2_id.in_(ids))
+    keys = set()
+    for r in q.all():
+        keys.add(pair_key(r.user1_id, r.user2_id))
+    return keys
 
 
 def eligible_candidates(user, exclude_ids=None):

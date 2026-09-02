@@ -56,6 +56,35 @@ def _is_express_user(u):
     return (getattr(u, "profile_mode", None) or "full") in ("express", "privacy")
 
 
+# 排序档位间隔 > 1，确保压过 pair_score∈[0,1]；下限约 1.15，匈牙利虚拟边代价 1.0 仍会选真实边
+_TIER_BOTH_QUESTIONNAIRE = 6.0
+_TIER_MIXED = 4.0
+_TIER_BOTH_PRIVACY = 2.0
+_PREVIOUS_MATCH_PENALTY = 1.0
+
+
+def pair_priority(user_a, user_b, previously_matched=False):
+    """匹配优先级：双方问卷 > 一方问卷 > 双方隐私；曾配过再降一档；最后才看 pair_score。"""
+    ea, eb = _is_express_user(user_a), _is_express_user(user_b)
+    if not ea and not eb:
+        tier = _TIER_BOTH_QUESTIONNAIRE
+    elif not ea or not eb:
+        tier = _TIER_MIXED
+    else:
+        tier = _TIER_BOTH_PRIVACY
+    if previously_matched:
+        tier -= _PREVIOUS_MATCH_PENALTY
+    return round(tier + pair_score(user_a, user_b), 4)
+
+
+def _was_matched_before(user_a, user_b, previous_pairs):
+    if not previous_pairs:
+        return False
+    a, b = user_a.id, user_b.id
+    key = (a, b) if a < b else (b, a)
+    return key in previous_pairs
+
+
 def pair_score(user_a, user_b):
     """问卷用户走余弦；任一方隐私模式则混入自我介绍文本相似。"""
     c = cosine_similarity(
@@ -124,20 +153,21 @@ def pick_without_dealbreaker(user, scored_pairs, max_n=1):
     return kept, skipped
 
 
-def real_time_match(user, candidates, top_n=5, min_score=0.15):
+def real_time_match(user, candidates, top_n=5, min_score=0.15, previous_partner_ids=None):
     """
-    实时匹配：余弦相似度 Top-N。
+    实时匹配：先按问卷/隐私档位与是否配过排序，同档再比相似度。
 
     user/candidates 必须有 .feature_vector 属性（list of float）
     不在此过滤硬性底线：由调用方按序跳过，避免 Top-1 冲突就放弃更低分可配人选。
+    落库分数仍是 pair_score，不含档位加成。
 
     Returns:
-        [(candidate_user, score), ...] 按分数降序
+        [(candidate_user, score), ...] 按优先级降序
     """
     if not user.feature_vector:
         return []
 
-    uv = user.feature_vector
+    prev = set(previous_partner_ids or ())
     scored = []
     for c in candidates:
         if c.id == user.id:
@@ -148,10 +178,11 @@ def real_time_match(user, candidates, top_n=5, min_score=0.15):
             continue
         sim = pair_score(user, c)
         if sim >= min_score:
-            scored.append((c, round(sim, 4)))
+            rank = pair_priority(user, c, c.id in prev)
+            scored.append((c, round(sim, 4), rank))
 
-    scored.sort(key=lambda x: x[1], reverse=True)
-    return scored[:top_n]
+    scored.sort(key=lambda x: x[2], reverse=True)
+    return [(c, s) for c, s, _ in scored[:top_n]]
 
 
 # ============================================================
@@ -255,17 +286,19 @@ def hungarian_match(group_a, group_b, score_matrix):
     return matches
 
 
-def batch_match_school(users, filter_same_gender=True):
+def batch_match_school(users, filter_same_gender=True, previous_pairs=None):
     """
     对学校内用户做全局匹配。
 
     - 默认按择偶取向双向过滤后贪心配对（支持同性/双性取向）
     - filter_same_gender=True 且全部为「异性取向」时，仍可用匈牙利二部图
+    - previous_pairs: {(min_id, max_id), ...} 历史配对，用于降权
 
     Returns:
-        list of (user1, user2, score)
+        list of (user1, user2, score)  score 为原始 pair_score
     """
     pool = [u for u in users if u.feature_vector and u.gender]
+    prev = set(previous_pairs or ())
 
     # 经典异性池：双方都明确只要异性 → 匈牙利
     hetero = [
@@ -280,27 +313,41 @@ def batch_match_school(users, filter_same_gender=True):
         group_b = [u for u in hetero if u.gender == "male"]
         if group_a and group_b:
             n, m = len(group_a), len(group_b)
-            score_matrix = [[0.0] * m for _ in range(n)]
+            rank_matrix = [[0.0] * m for _ in range(n)]
+            raw_matrix = [[0.0] * m for _ in range(n)]
             for i in range(n):
                 for j in range(m):
                     if not orientation_compatible(group_a[i], group_b[j]):
                         continue
                     if _dealbreaker_conflict(group_a[i], group_b[j]):
                         continue  # 一票否决：保持 0，不当作可配边
-                    score_matrix[i][j] = pair_score(group_a[i], group_b[j])
-            return hungarian_match(group_a, group_b, score_matrix)
+                    raw = pair_score(group_a[i], group_b[j])
+                    raw_matrix[i][j] = raw
+                    rank_matrix[i][j] = pair_priority(
+                        group_a[i], group_b[j],
+                        _was_matched_before(group_a[i], group_b[j], prev),
+                    )
+            ranked = hungarian_match(group_a, group_b, rank_matrix)
+            out = []
+            for ua, ub, _rank in ranked:
+                i = group_a.index(ua)
+                j = group_b.index(ub)
+                out.append((ua, ub, round(raw_matrix[i][j], 4)))
+            out.sort(key=lambda x: x[2], reverse=True)
+            return out
 
     # 含同性/不限取向：贪心最大权匹配
-    return greedy_match_all(pool, min_score=0.0, require_orientation=True)
+    return greedy_match_all(pool, min_score=0.0, require_orientation=True, previous_pairs=prev)
 
 
-def greedy_match_all(users, min_score=0.15, require_orientation=True):
+def greedy_match_all(users, min_score=0.15, require_orientation=True, previous_pairs=None):
     """
     贪心匹配。
 
-    对所有用户两两计算相似度，按分数从高到低贪心配对。
+    对所有用户两两计算相似度，按优先级从高到低贪心配对。
     每人只能匹配一次。require_orientation 时要求双向择偶兼容。
     """
+    prev = set(previous_pairs or ())
     pairs = []
     for u1, u2 in combinations(users, 2):
         if not u1.feature_vector or not u2.feature_vector:
@@ -311,13 +358,14 @@ def greedy_match_all(users, min_score=0.15, require_orientation=True):
             continue
         sim = pair_score(u1, u2)
         if sim >= min_score:
-            pairs.append((u1, u2, sim))
+            rank = pair_priority(u1, u2, _was_matched_before(u1, u2, prev))
+            pairs.append((u1, u2, sim, rank))
 
-    pairs.sort(key=lambda x: x[2], reverse=True)
+    pairs.sort(key=lambda x: x[3], reverse=True)
 
     matched_ids = set()
     results = []
-    for u1, u2, score in pairs:
+    for u1, u2, score, _rank in pairs:
         if u1.id in matched_ids or u2.id in matched_ids:
             continue
         matched_ids.add(u1.id)

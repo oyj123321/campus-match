@@ -45,7 +45,7 @@ from batch_job import (
     persist_user_matches, count_new_matches_this_week,
     next_batch_datetime, run_batch_all, schedule_loop, current_week_key,
 )
-from match_pool import eligible_candidates
+from match_pool import eligible_candidates, previous_partner_ids, previous_pair_keys
 
 # ---- App Factory ----
 app = Flask(__name__)
@@ -450,8 +450,9 @@ def serialize_match_payload(other, score, insight, active=True):
 def _match_explain_text(mode):
     """给开发者/用户看的通俗说明（不讲公式也能懂）。"""
     school_line = (
-        "一对一：在取向互相接受、本周仍有额度的人里算问卷相似度，"
-        "只给你得分最高的 1 人；页面不展示匹配度分数，只给契合点与破冰话题"
+        "一对一：在取向互相接受、本周仍有额度的人里排序，"
+        "问卷用户优先于隐私用户，曾经配过的人再往后排，同档再看问卷相似度，"
+        "只给你优先级最高的 1 人；页面不展示匹配度分数，只给契合点与破冰话题"
         + (
             "；默认同校，跨校需双方互相勾选对方学校（双向白名单）。"
             if CROSS_SCHOOL_MATCHING_ENABLED else "（同校）。"
@@ -468,7 +469,7 @@ def _match_explain_text(mode):
         ),
         "steps": [
             "1. 问卷答案变成双向平衡的特征向量，选左端或右端都不会天然占优势；「对我很重要」的题权重更大。",
-            "2. 余弦相似度：两串数字方向越接近，匹配分越高（仅用于内部排序，不对用户展示）。",
+            "2. 排序：双方填问卷 > 一方填问卷 > 双方隐私；曾经配过的人降一档；同档再用余弦相似度（仅内部排序，不展示分数）。",
             "3. 一票否决：婚姻、孩子出现明确相反意愿，或出轨观、吸烟接受度差异过大时直接跳过。",
             "4. 择偶取向：双方都愿意匹配对方的性别才进入候选。",
             "5. 黑名单双向生效；跨校需双方都勾选且总闸开启。",
@@ -1220,7 +1221,11 @@ def api_match():
 
     if mode == "batch":
         all_users = candidates + [user]
-        results = batch_match_school(all_users, filter_same_gender=True)
+        results = batch_match_school(
+            all_users,
+            filter_same_gender=True,
+            previous_pairs=previous_pair_keys([u.id for u in all_users]),
+        )
         my_matches = [
             (a if b.id == user.id else b, s)
             for a, b, s in results
@@ -1228,7 +1233,7 @@ def api_match():
         ]
         max_save = 1
     else:
-        # 过门槛的候选按分降序全部交给 persist；硬性底线冲突时跳过并试下一个。
+        # 过门槛的候选按优先级交给 persist；硬性底线冲突时跳过并试下一个。
         # one_to_one：最终只落库 1 人；top_n：可多人（调试）。
         if mode == "top_n":
             top_n = max(1, MATCH_TOP_N)
@@ -1237,7 +1242,8 @@ def api_match():
             top_n = max(len(candidates), 1)
             max_save = 1
         my_matches = real_time_match(
-            user, candidates, top_n=top_n, min_score=MATCH_MIN_SCORE
+            user, candidates, top_n=top_n, min_score=MATCH_MIN_SCORE,
+            previous_partner_ids=previous_partner_ids(user.id),
         )
 
     if not my_matches:
