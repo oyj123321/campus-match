@@ -134,8 +134,8 @@ SESSION_REMEMBER_DAYS = int(os.environ.get("SESSION_REMEMBER_DAYS", "7"))
 DEVICE_COOKIE_NAME = "cm_device"
 # 全站公告：.env 设 SITE_ANNOUNCEMENT= 可强制清空；未设置则用默认运营文案
 _DEFAULT_SITE_ANNOUNCEMENT = (
-    "【更新】首页换成澳门湾区构图：旅游塔、跨海桥，还有莲花和洋紫荆会跟着鼠标轻轻躲开。"
-    "手机上会自动简化。匹配规则没变。"
+    "【更新】恋爱人格分享卡金句换成莎士比亚、勃朗宁、彭斯等英文经典一句；"
+    "16 型名字仍是中文。匹配规则没变。"
 )
 if "SITE_ANNOUNCEMENT" in os.environ:
     SITE_ANNOUNCEMENT = os.environ.get("SITE_ANNOUNCEMENT", "").strip()
