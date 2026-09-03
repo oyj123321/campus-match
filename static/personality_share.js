@@ -131,6 +131,18 @@
         });
     }
 
+    /** html2canvas 截图前等书法体就绪，避免金句回落到系统无衬线 */
+    async function waitVerseFont() {
+        try {
+            if (document.fonts && document.fonts.load) {
+                await Promise.race([
+                    document.fonts.load('400 32px "CM Verse"'),
+                    new Promise(function (r) { setTimeout(r, 1200); })
+                ]);
+            }
+        } catch (err) {}
+    }
+
     function readPersonalityFromCard(cardEl) {
         if (!cardEl) return {};
         var nameEl = cardEl.querySelector('.personality-name');
@@ -431,7 +443,7 @@
 
     /**
      * 构建精简分享卡（海报感 / 打磨试版）：
-     * 洗底外框（无厚彩框）→ 顶栏 → 出血岛图 → 型名/code/金句（半句高光）→ 底栏 CTA+域名+二维码
+     * 洗底外框（无厚彩框）→ 顶栏 → 出血岛图 → 型名/code/金句 → 底栏 CTA+域名+二维码
      */
     async function buildSlimShareStage(personality, themeCode) {
         var landing = shareLandingUrl();
@@ -468,7 +480,8 @@
             '<div class="lp-share-brand-name">CampusMatch</div>'
             + '<div class="lp-share-brand-meta">'
             +   '<span class="lp-share-brand-tag">' + t('lp.brandTag') + '</span>'
-            + '</div>';
+            + '</div>'
+            + '<div class="lp-share-brand-modes">' + t('lp.shareModes') + '</div>';
 
         /* 岛图出血区：全宽贴顶，主题色带托底 */
         var visual = document.createElement('div');
@@ -484,40 +497,7 @@
         codeEl.textContent = code;
         var subEl = document.createElement('p');
         subEl.className = 'personality-sub';
-        if (subtitle) {
-            /* 半句主题色强调：优先按逗号/破折号切开；偏前的逗号也可用（金句常前短后长） */
-            var cut = -1;
-            var markers = ['，', ',', '——', '—', '；', ';'];
-            var mi, pos, best = -1;
-            for (mi = 0; mi < markers.length; mi++) {
-                pos = subtitle.indexOf(markers[mi]);
-                if (pos > 1 && pos < subtitle.length - 2) {
-                    best = pos + markers[mi].length - 1;
-                    break;
-                }
-            }
-            cut = best;
-            if (cut < 0) {
-                var mid = Math.max(1, Math.floor(subtitle.length * 0.45));
-                cut = subtitle.indexOf(' ', mid);
-            }
-            if (cut > 0 && cut < subtitle.length - 2) {
-                var soft = document.createElement('span');
-                soft.className = 'lp-share-sub-soft';
-                soft.textContent = subtitle.slice(0, cut + 1);
-                var accent = document.createElement('span');
-                accent.className = 'lp-share-sub-accent';
-                accent.textContent = subtitle.slice(cut + 1).trim();
-                subEl.appendChild(soft);
-                if (accent.textContent) {
-                    subEl.appendChild(document.createTextNode(' '));
-                    subEl.appendChild(accent);
-                }
-            } else {
-                subEl.classList.add('lp-share-sub-accent');
-                subEl.textContent = subtitle;
-            }
-        }
+        if (subtitle) subEl.textContent = subtitle;
         hero.appendChild(nameEl);
         hero.appendChild(codeEl);
         if (subtitle) hero.appendChild(subEl);
@@ -574,7 +554,6 @@
         card.appendChild(foot);
         card.appendChild(disc);
 
-        frame.appendChild(wash);
         frame.appendChild(card);
 
         /* 结构就绪后再挂主题/岛图（岛图进 .lp-share-visual） */
@@ -587,6 +566,8 @@
                 if (n.parentNode) n.parentNode.removeChild(n);
             });
         }
+        /* 洗底只盖插画，不盖型名/金句 */
+        visual.appendChild(wash);
 
         stage.appendChild(frame);
         document.body.appendChild(stage);
@@ -595,6 +576,7 @@
         if (islandImg) await waitImg(islandImg);
         var img = card.querySelector('.lp-share-qr-img');
         if (img) await waitImg(img);
+        await waitVerseFont();
         return stage;
     }
 
@@ -679,6 +661,8 @@
             window.scrollTo(0, y);
         }
     }
+
+    window.buildLovePersonalityShareStage = buildSlimShareStage;
 
     window.sharePersonalityCard = async function (cardEl, personality) {
         if (!cardEl) return;

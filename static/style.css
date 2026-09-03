@@ -35,6 +35,15 @@
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
+/* Great Vibes — SIL OFL 1.1 (TypeSETit); share-card English verse */
+@font-face {
+    font-family: "CM Verse";
+    src: url("/static/fonts/GreatVibes-Regular.woff2") format("woff2");
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+
 html { scroll-behavior: smooth; }
 
 body {
@@ -882,6 +891,16 @@ textarea.open-letter:focus {
     visibility: visible;
     opacity: 1;
 }
+.lp-share-stage-preview {
+    position: relative;
+    left: auto;
+    top: auto;
+    transform: none;
+    width: min(420px, 100%);
+    margin: 8px 0 28px;
+    z-index: 1;
+    pointer-events: auto;
+}
 .lp-share-mask {
     position: fixed;
     inset: 0;
@@ -919,9 +938,10 @@ textarea.open-letter:focus {
         radial-gradient(ellipse 75% 55% at 92% 92%, var(--lp-2, #06b6d4), transparent 52%),
         linear-gradient(160deg, var(--lp-1, #6366f1), var(--lp-3, var(--lp-2, #818cf8)));
 }
-.lp-share-frame > .lp-share-card {
-    position: relative;
+.lp-share-visual .lp-share-wash {
     z-index: 1;
+    opacity: 0.12;
+    border-radius: 0;
 }
 /* 精简卡：与外框同圆角，边线透明 */
 .lp-share-frame > .lp-share-card-slim {
@@ -968,11 +988,11 @@ textarea.open-letter:focus {
     left: 0;
     right: 0;
     z-index: 3;
-    padding: 12px 22px 36px;
+    padding: 14px 20px 42px;
     background: linear-gradient(
         180deg,
-        rgba(255, 255, 255, 0.82) 0%,
-        rgba(255, 255, 255, 0.4) 55%,
+        rgba(255, 255, 255, 0.94) 0%,
+        rgba(255, 255, 255, 0.62) 48%,
         transparent 100%
     );
     box-sizing: border-box;
@@ -984,6 +1004,16 @@ textarea.open-letter:focus {
     color: #1e293b;
     line-height: 1.3;
 }
+.lp-share-card-slim .lp-share-brand-name {
+    font-size: 1.42em;
+    font-weight: 900;
+    letter-spacing: -0.03em;
+    color: #0f172a;
+    line-height: 1.05;
+    text-shadow:
+        0 1px 0 rgba(255, 255, 255, 0.95),
+        0 8px 20px rgba(255, 255, 255, 0.7);
+}
 .lp-share-brand-meta {
     margin-top: 2px;
     font-size: 0.68em;
@@ -994,6 +1024,20 @@ textarea.open-letter:focus {
     flex-wrap: wrap;
     gap: 4px 6px;
     align-items: center;
+}
+.lp-share-card-slim .lp-share-brand-meta {
+    margin-top: 3px;
+    font-size: 0.78em;
+    font-weight: 600;
+    color: #475569;
+}
+.lp-share-brand-modes {
+    margin-top: 6px;
+    font-size: 0.8em;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    color: #0f172a;
+    line-height: 1.35;
 }
 .lp-share-brand-sep { opacity: 0.55; }
 /* 岛图出血带：全宽顶满上半，圆角贴色带 */
@@ -1007,6 +1051,11 @@ textarea.open-letter:focus {
     flex: 0 0 auto;
     background: transparent;
 }
+.lp-share-visual .lp-share-wash {
+    inset: 0;
+    border-radius: 0;
+    z-index: 2;
+}
 .lp-share-hero {
     flex: 1 1 auto;
     padding: 12px 22px 10px;
@@ -1018,6 +1067,8 @@ textarea.open-letter:focus {
 }
 .lp-share-card-slim .lp-share-hero {
     /* 型名贴插画下沿；文字区微白底仍透主题洗底 */
+    position: relative;
+    z-index: 3;
     padding: 0 22px 6px;
     margin-top: -12px;
     background: linear-gradient(
@@ -1046,23 +1097,15 @@ textarea.open-letter:focus {
     opacity: 1;
 }
 .lp-share-card-slim .personality-sub {
-    font-size: 0.9em;
+    font-family: "CM Verse", "Palatino Linotype", Palatino, "Times New Roman", serif;
+    font-size: 1.62em;
     font-weight: 400;
-    line-height: 1.5;
-    color: #64748b;
-    margin: 0;
+    line-height: 1.28;
+    color: #0b1220;
+    margin: 6px 0 0;
     font-style: normal;
-    max-width: 92%;
-}
-.lp-share-card-slim .lp-share-sub-soft {
-    color: #94a3b8;
-    font-weight: 400;
-}
-.lp-share-card-slim .lp-share-sub-accent {
-    /* 金句半句：更亮的主题高光（偏 --lp-3 / 暖光晕） */
-    color: var(--lp-3, var(--lp-1, #4f46e5));
-    font-weight: 600;
-    text-shadow: 0 0 18px rgba(251, 191, 36, 0.28);
+    max-width: 94%;
+    letter-spacing: 0.01em;
 }
 .lp-share-foot {
     display: flex;
@@ -1071,6 +1114,8 @@ textarea.open-letter:focus {
     gap: 12px;
     padding: 0 20px 2px 24px;
     margin-top: auto;
+    position: relative;
+    z-index: 3;
 }
 .lp-share-cta {
     flex: 1 1 auto;
@@ -1152,6 +1197,8 @@ textarea.open-letter:focus {
     letter-spacing: 0.02em;
     line-height: 1.35;
     text-align: left;
+    position: relative;
+    z-index: 3;
 }
 /* App 内：次级解读默认折叠 */
 .lp-detail-expand {

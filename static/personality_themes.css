@@ -431,6 +431,7 @@
 }
 .lp-share-card.lp-share-card-slim[data-lp-code] .personality-sub {
     margin-bottom: 0;
+    line-height: 1.28;
 }
 .personality-card[data-lp-code] .lp-capture-brand,
 .lp-share-card[data-lp-code] .lp-capture-brand {

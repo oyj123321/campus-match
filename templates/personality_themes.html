@@ -8,6 +8,8 @@
         ·
         <a href="/dev/personality-compare">花园隐士型 · 极简科技 vs 插画对比 →</a>
     </p>
+    <h3 style="margin:18px 0 8px;">分享卡预览（守护者型）</h3>
+    <div id="slim-share-preview"></div>
 </div>
 <div class="lp-theme-gallery">
 {% for code, p in personalities.items() %}
@@ -40,5 +42,20 @@ document.querySelectorAll('.personality-card[data-lp-code]').forEach(function (e
         applyLovePersonalityTheme(el, el.getAttribute('data-lp-code'));
     }
 });
+(function previewSlimShare() {
+    var hold = document.getElementById('slim-share-preview');
+    if (!hold || typeof window.buildLovePersonalityShareStage !== 'function') return;
+    window.buildLovePersonalityShareStage({
+        name: '守护者型',
+        code: 'ESCP',
+        subtitle: 'I am constant as the northern star.'
+    }, 'ESCP').then(function (stage) {
+        if (!stage) return;
+        stage.classList.remove('lp-share-stage-live');
+        stage.classList.add('lp-share-stage-preview');
+        stage.removeAttribute('aria-hidden');
+        hold.appendChild(stage);
+    });
+})();
 </script>
 {% endblock %}
