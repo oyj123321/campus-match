@@ -45,6 +45,11 @@ class User(db.Model):
     # 运营补偿：仅在 quota_bonus_week 等于当前 ISO 周时，加在每周上限上
     quota_bonus = db.Column(db.Integer, default=0)
     quota_bonus_week = db.Column(db.String(16))
+    invite_code = db.Column(db.String(16), unique=True, index=True)
+    invited_by_id = db.Column(db.Integer, index=True)
+    invite_bound_at = db.Column(db.DateTime, nullable=True)
+    invite_redeemed_at = db.Column(db.DateTime, nullable=True)
+    invite_quota_week = db.Column(db.String(16))
     # 是否愿意参与跨校（兼容旧字段；与 cross_schools_json 同步：非空列表则为 True）
     allow_cross_school = db.Column(db.Boolean, default=False)
     # 愿意跨配的学校名列表 JSON，如 ["澳门科技大学"]；双向白名单；空=只同校
@@ -250,6 +255,8 @@ class User(db.Model):
             "open_to_match": self.is_open_to_match(),
             "mbti": self.mbti_report,
             "profile_mode": "privacy" if self.is_express() else "full",
+            "invite_code": self.invite_code,
+            "invited_by_id": self.invited_by_id,
         }
 
 

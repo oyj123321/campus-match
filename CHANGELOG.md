@@ -4,6 +4,17 @@ All notable changes to CampusMatch.
 
 ---
 
+## [1.9.43] — 2026-09-03
+
+### 问题（上次）
+- 分享人格卡只能拉人来测，没有邀请关系；误配补偿额度也无法变成可复制的增长玩法
+
+### 改动
+- **Added / 邀请码**：每人一个 6 位码；跨校可用；填码后对方资料齐才给双方本周额度 +1；邀请人每周最多兑现 1 次（`invite.py` / `models.py` / `batch_job.py` / `app.py`）
+- **Added / 分析卡展示**：人格卡与分享图印邀请码，二维码带 `?invite=`；首页邮箱下选填邀请码（扫码会预填）（`personality_share.js` / `index.html` / `questionnaire.html` / `matches.html`）
+
+---
+
 ## [1.9.42] — 2026-09-03
 
 ### 问题（上次）

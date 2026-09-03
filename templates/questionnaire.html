@@ -118,6 +118,7 @@
             <p class="personality-name" id="lp-modal-name">—</p>
             <p class="personality-code" id="lp-modal-code">—</p>
             <p class="personality-sub" id="lp-modal-subtitle"></p>
+            <p class="lp-invite-oncard" id="lp-modal-invite"></p>
             <details class="lp-detail-expand hint lp-no-capture">
                 <summary data-i18n="lp.detailMore">展开四维与解读</summary>
                 <div id="lp-modal-bars" class="personality-bars"></div>
@@ -527,6 +528,13 @@ function showPersonalityModal(raw) {
     document.getElementById('lp-modal-name').textContent = p.name || '—';
     document.getElementById('lp-modal-code').textContent = p.code || p.type || '—';
     document.getElementById('lp-modal-subtitle').textContent = p.subtitle || p.summary || '';
+    var invLine = document.getElementById('lp-modal-invite');
+    var inv = String(window.CM_INVITE_CODE || '').trim().toUpperCase();
+    if (invLine) {
+        invLine.textContent = inv
+            ? t('lp.inviteLine').replace('{code}', inv) + ' · ' + t('lp.inviteHint')
+            : '';
+    }
     document.getElementById('lp-modal-strength').textContent = p.strength || '';
     document.getElementById('lp-modal-match').textContent = p.match_tip || '';
     var bars = document.getElementById('lp-modal-bars');

@@ -17,6 +17,7 @@
         · <span data-i18n="hdr.openMatch">参与匹配</span> <span id="hdr-open" data-i18n="{{ 'on' if user.is_open_to_match() else 'off' }}">开</span>
         · <span data-i18n="hdr.cross">跨校</span> <span id="hdr-cross">{{ '开' if user.get_cross_schools() else '关' }}</span>
     </p>
+    <p class="hint lp-invite-oncard" id="hdr-invite" style="margin-top:8px;"></p>
 
     <div id="mbti-box" class="card personality-card" style="margin-top:14px;display:none;">
         <h3 style="margin-bottom:4px;" data-i18n="lp.title">你的恋爱人格</h3>
@@ -24,6 +25,7 @@
         <p class="personality-name"><span id="mbti-label">—</span></p>
         <p class="personality-code" id="mbti-type">—</p>
         <p class="personality-sub" id="mbti-summary"></p>
+        <p class="lp-invite-oncard" id="mbti-invite"></p>
         <details class="lp-detail-expand hint lp-no-capture">
             <summary data-i18n="lp.detailMore">展开四维与解读</summary>
             <div id="mbti-bars" class="personality-bars"></div>
@@ -484,6 +486,13 @@ async function loadMbti() {
     document.getElementById('mbti-label').textContent = m.name || m.label || '—';
     document.getElementById('mbti-type').textContent = m.code || m.type || '—';
     document.getElementById('mbti-summary').textContent = m.subtitle || m.summary || '';
+    var invLine = document.getElementById('mbti-invite');
+    var inv = String(window.CM_INVITE_CODE || '').trim().toUpperCase();
+    if (invLine) {
+        invLine.textContent = inv
+            ? t('lp.inviteLine').replace('{code}', inv) + ' · ' + t('lp.inviteHint')
+            : '';
+    }
     document.getElementById('mbti-love').textContent = m.strength || m.love || '';
     document.getElementById('mbti-compat').textContent = m.match_tip || '—';
     renderPersonalityBars(m.dimensions);
@@ -519,7 +528,18 @@ async function sharePersonality() {
     }
 }
 
+function fillInviteLabels() {
+    var inv = String(window.CM_INVITE_CODE || '').trim().toUpperCase();
+    var el = document.getElementById('hdr-invite');
+    if (el) {
+        el.textContent = inv
+            ? t('lp.inviteLine').replace('{code}', inv) + ' · ' + t('lp.inviteHint')
+            : '';
+    }
+}
+
 renderQuota({{ quota | tojson }});
+fillInviteLabels();
 loadMbti();
 loadHistory();
 loadBlocklist();
@@ -528,6 +548,7 @@ setInterval(refreshQuota, 60000);
 // 切换语言时重渲染动态区域
 window.addEventListener('cm:lang', function () {
     if (lastQuota) renderQuota(lastQuota);
+    fillInviteLabels();
     loadMbti();
     loadHistory();
     loadBlocklist();

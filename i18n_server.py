@@ -35,6 +35,18 @@ M = {
         "en": "MUST students: use studentID@student.must.edu.mo (Outlook webmail). A numeric ID @must.edu.mo cannot receive the code in web Outlook.",
         "pt": "Alunos da MUST: usa numero@student.must.edu.mo (Outlook web). Um número @must.edu.mo não recebe o código no Outlook web.",
     },
+    "err.invite_bad": {
+        "zh": "邀请码无效", "tw": "邀請碼無效",
+        "en": "Invalid invite code", "pt": "Código de convite inválido",
+    },
+    "err.invite_self": {
+        "zh": "不能填写自己的邀请码", "tw": "不能填寫自己的邀請碼",
+        "en": "You cannot use your own invite code", "pt": "Não podes usar o teu próprio código",
+    },
+    "err.invite_sibling": {
+        "zh": "不能邀请同一学号的其他邮箱", "tw": "不能邀請同一學號的其他電郵",
+        "en": "You cannot invite another mailbox of the same student ID", "pt": "Não podes convidar outro email do mesmo número de aluno",
+    },
     "err.rate": {
         "zh": "发送过于频繁，请 {mins} 分钟后再试。若邮箱里已有验证码，可直接输入。",
         "tw": "發送過於頻繁，請 {mins} 分鐘後再試。若電郵裡已有驗證碼，可直接輸入。",

@@ -677,14 +677,22 @@
             base = 'https://campusmatch.com.cn';
         }
         var url = base.replace(/\/$/, '') + '/?from=lp_share';
+        var inv = String(window.CM_INVITE_CODE || '').trim().toUpperCase();
+        if (inv) url += '&invite=' + encodeURIComponent(inv);
+        var body;
         if (typeof window.tf === 'function') {
-            return window.tf('lp.shareBody', {
+            body = window.tf('lp.shareBody', {
                 name: m.name || '',
                 code: m.code || m.type || '',
                 subtitle: m.subtitle || m.summary || '',
                 url: url
             });
+        } else {
+            body = 'CampusMatch · ' + (m.name || '') + ' (' + (m.code || '') + ')\n' + url;
         }
-        return 'CampusMatch · ' + (m.name || '') + ' (' + (m.code || '') + ')\n' + url;
+        if (inv && typeof window.t === 'function') {
+            body += '\n' + window.t('lp.inviteLine').replace('{code}', inv);
+        }
+        return body;
     };
 })();

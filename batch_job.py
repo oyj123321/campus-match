@@ -58,13 +58,16 @@ def count_new_matches_this_week(user_id, now=None):
 
 
 def weekly_limit_for(user_or_id, now=None):
-    """本周上限 = 全局额度 + 仅本周有效的运营补偿。"""
+    """本周上限 = 全局额度 + 运营补偿 + 邀请兑现（各仅本周）。"""
     if user_or_id is None:
         return MATCH_WEEKLY_NEW_LIMIT
     user = user_or_id if isinstance(user_or_id, User) else db.session.get(User, user_or_id)
     extra = 0
-    if user is not None and (user.quota_bonus_week or "") == current_week_key(now):
-        extra = max(0, int(user.quota_bonus or 0))
+    week = current_week_key(now)
+    if user is not None and (user.quota_bonus_week or "") == week:
+        extra += max(0, int(user.quota_bonus or 0))
+    if user is not None and (user.invite_quota_week or "") == week:
+        extra += 1
     return MATCH_WEEKLY_NEW_LIMIT + extra
 
 

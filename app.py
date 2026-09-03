@@ -200,9 +200,14 @@ def login_required(f):
 
 def get_current_user():
     user_id = session.get("user_id")
-    if user_id:
-        return db.session.get(User, user_id)
-    return None
+    if not user_id:
+        return None
+    user = db.session.get(User, user_id)
+    if user:
+        from invite import ensure_invite_code
+        if ensure_invite_code(user):
+            db.session.commit()
+    return user
 
 
 def check_verify_fail_rate(email):
@@ -834,6 +839,10 @@ def api_register():
             db.session.add(user)
             db.session.flush()
 
+        from invite import bind_invite, ensure_invite_code
+        ensure_invite_code(user)
+        bind_invite(user, data.get("invite_code"))
+
         # 同设备 7 天内已验证过：免验证码、不吃发码限流、也不吃「每天只能登一次」
         if user.email_verified and _device_trusted(user):
             return _login_json(user, {
@@ -933,6 +942,8 @@ def api_verify():
 
     user.email_verified = True
     user.verification_token = None
+    from invite import try_redeem_invite
+    try_redeem_invite(user)
     return _login_json(user, {"ok": True, "message": t_api("ok.verified")})
 
 
@@ -1024,6 +1035,8 @@ def api_express_profile():
     vec, _ = build_express_vector(user.bio)
     user.feature_vector = vec
     user.profile_mode = "privacy"
+    from invite import try_redeem_invite
+    try_redeem_invite(user)
     db.session.commit()
     return jsonify({"ok": True, "message": t_api("ok.express_saved"), "user": user.to_dict()})
 
@@ -1137,6 +1150,8 @@ def api_questionnaire():
     user.mbti_report = personality
     user.profile_mode = "full"
 
+    from invite import try_redeem_invite
+    try_redeem_invite(user)
     db.session.commit()
 
     return jsonify({
@@ -1504,6 +1519,8 @@ def api_me():
         user.open_to_match = bool(data.get("open_to_match"))
         if not user.open_to_match:
             user.opt_in_week = None
+    from invite import try_redeem_invite
+    try_redeem_invite(user)
     db.session.commit()
     return jsonify({"ok": True, "user": user.to_dict()})
 
@@ -1742,6 +1759,32 @@ def ensure_schema():
         db.session.execute(text("ALTER TABLE users ADD COLUMN quota_bonus_week VARCHAR(16)"))
         db.session.commit()
         print("[CampusMatch] migrated: users.quota_bonus_week")
+
+    if "invite_code" not in user_cols:
+        db.session.execute(text("ALTER TABLE users ADD COLUMN invite_code VARCHAR(16)"))
+        db.session.commit()
+        print("[CampusMatch] migrated: users.invite_code")
+    try:
+        db.session.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS ix_users_invite_code ON users (invite_code)"))
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+    if "invited_by_id" not in user_cols:
+        db.session.execute(text("ALTER TABLE users ADD COLUMN invited_by_id INTEGER"))
+        db.session.commit()
+        print("[CampusMatch] migrated: users.invited_by_id")
+    if "invite_bound_at" not in user_cols:
+        db.session.execute(text("ALTER TABLE users ADD COLUMN invite_bound_at DATETIME"))
+        db.session.commit()
+        print("[CampusMatch] migrated: users.invite_bound_at")
+    if "invite_redeemed_at" not in user_cols:
+        db.session.execute(text("ALTER TABLE users ADD COLUMN invite_redeemed_at DATETIME"))
+        db.session.commit()
+        print("[CampusMatch] migrated: users.invite_redeemed_at")
+    if "invite_quota_week" not in user_cols:
+        db.session.execute(text("ALTER TABLE users ADD COLUMN invite_quota_week VARCHAR(16)"))
+        db.session.commit()
+        print("[CampusMatch] migrated: users.invite_quota_week")
 
     if "allow_cross_school" not in user_cols:
         db.session.execute(text("ALTER TABLE users ADD COLUMN allow_cross_school BOOLEAN DEFAULT 0"))

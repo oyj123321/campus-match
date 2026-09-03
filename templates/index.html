@@ -19,6 +19,13 @@
                onkeydown="if(event.key==='Enter')register()">
         <p class="hint" style="margin-top:8px;margin-bottom:0;" data-i18n="form.email.must">科大学生请用 学号@student.must.edu.mo（Outlook 网页邮箱）；学号@must.edu.mo 收不到验证码。</p>
     </div>
+    <div class="form-group">
+        <label for="invite-code" data-i18n="form.invite">邀请码（选填）</label>
+        <input type="text" id="invite-code" maxlength="8" autocomplete="off" spellcheck="false"
+               placeholder="朋友卡片上的 6 位码" data-i18n-ph="form.invite.ph"
+               onkeydown="if(event.key==='Enter')register()">
+        <p class="hint" style="margin-top:8px;margin-bottom:0;" data-i18n="form.invite.hint">填了且对方资料齐，双方本周可多一次匹配；跨校也可以。</p>
+    </div>
     <label class="hint" style="display:flex;align-items:flex-start;gap:8px;margin:12px 0;cursor:pointer;line-height:1.55;">
         <input type="checkbox" id="privacy-accept" style="margin-top:3px;flex-shrink:0;">
         <span>
@@ -138,6 +145,16 @@
 
 <script>
 var currentEmail = '';
+(function prefInvite() {
+    try {
+        var p = new URLSearchParams(location.search);
+        var inv = (p.get('invite') || '').trim().toUpperCase();
+        if (inv) localStorage.setItem('cm_invite', inv);
+        else inv = (localStorage.getItem('cm_invite') || '').trim().toUpperCase();
+        var el = document.getElementById('invite-code');
+        if (el && inv) el.value = inv;
+    } catch (e) {}
+})();
 
 async function register() {
     var email = document.getElementById('email').value.trim();
@@ -151,7 +168,11 @@ async function register() {
     btn.disabled = true;
     btn.textContent = t('msg.sending');
 
-    var data = await api('POST', '/api/register', { email: email, privacy_accepted: true });
+    var data = await api('POST', '/api/register', {
+        email: email,
+        privacy_accepted: true,
+        invite_code: (document.getElementById('invite-code').value || '').trim()
+    });
     btn.disabled = false;
     btn.textContent = t('btn.resendCode');
 

@@ -34,14 +34,21 @@
         return false;
     }
 
-    /** 分享落地页：可用 PUBLIC_URL；本机/IP 则回落正式域名 */
+    function currentInviteCode() {
+        return String(window.CM_INVITE_CODE || '').trim().toUpperCase();
+    }
+
+    /** 分享落地页：可用 PUBLIC_URL；本机/IP 则回落正式域名；带邀请码便于扫卡注册 */
     function shareLandingUrl() {
         var base = String(window.CM_PUBLIC_URL || '').trim()
             || ((typeof location !== 'undefined' && location.origin) ? location.origin : '');
         if (isDevOrIpOrigin(base)) {
             base = CM_SHARE_ORIGIN;
         }
-        return base.replace(/\/$/, '') + '/?from=lp_share';
+        var url = base.replace(/\/$/, '') + '/?from=lp_share';
+        var inv = currentInviteCode();
+        if (inv) url += '&invite=' + encodeURIComponent(inv);
+        return url;
     }
 
     /** 卡片可见域名：永远正式站名，不跟 CM_PUBLIC_URL / location 的 IP */
@@ -527,6 +534,17 @@
         host.textContent = hostLabel;
         ctaWrap.appendChild(cta);
         ctaWrap.appendChild(host);
+        var inv = currentInviteCode();
+        if (inv) {
+            var invEl = document.createElement('p');
+            invEl.className = 'lp-share-invite';
+            invEl.textContent = t('lp.inviteLine').replace('{code}', inv);
+            ctaWrap.appendChild(invEl);
+            var invHint = document.createElement('p');
+            invHint.className = 'lp-share-invite-hint';
+            invHint.textContent = t('lp.inviteHint');
+            ctaWrap.appendChild(invHint);
+        }
 
         var qrWrap = document.createElement('div');
         qrWrap.className = 'lp-share-qr';
