@@ -57,9 +57,20 @@ def count_new_matches_this_week(user_id, now=None):
     ).count()
 
 
+def weekly_limit_for(user_or_id, now=None):
+    """本周上限 = 全局额度 + 仅本周有效的运营补偿。"""
+    if user_or_id is None:
+        return MATCH_WEEKLY_NEW_LIMIT
+    user = user_or_id if isinstance(user_or_id, User) else db.session.get(User, user_or_id)
+    extra = 0
+    if user is not None and (user.quota_bonus_week or "") == current_week_key(now):
+        extra = max(0, int(user.quota_bonus or 0))
+    return MATCH_WEEKLY_NEW_LIMIT + extra
+
+
 def weekly_quota_remaining(user_id, limit=None, now=None):
-    """剩余可参与次数；默认上限来自 MATCH_WEEKLY_NEW_LIMIT。"""
-    lim = MATCH_WEEKLY_NEW_LIMIT if limit is None else limit
+    """剩余可参与次数；默认上限来自 MATCH_WEEKLY_NEW_LIMIT + 本周补偿。"""
+    lim = weekly_limit_for(user_id, now=now) if limit is None else limit
     used = count_new_matches_this_week(user_id, now=now)
     return max(0, lim - used)
 
@@ -91,7 +102,7 @@ def partner_accepts_match(user_id, partner_id, weekly_new_limit=None):
     """
     if weekly_new_limit is None:
         return True
-    if weekly_quota_remaining(partner_id, limit=weekly_new_limit) > 0:
+    if weekly_quota_remaining(partner_id) > 0:
         return True
     return active_partner_id(partner_id) == user_id
 
@@ -204,7 +215,7 @@ def persist_user_matches(user, scored_pairs, mode, mail_cfg, weekly_new_limit=No
             enforce_one_to_one_active(user, other, existing)
             continue
 
-        if weekly_new_limit is not None and new_this_week >= weekly_new_limit:
+        if weekly_new_limit is not None and new_this_week >= weekly_limit_for(user):
             skipped_quota += 1
             continue
 

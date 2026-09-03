@@ -42,7 +42,7 @@ from email_service import (
     send_verification_email, send_match_result_email, send_incomplete_nudges,
 )
 from batch_job import (
-    persist_user_matches, count_new_matches_this_week,
+    persist_user_matches, count_new_matches_this_week, weekly_limit_for,
     next_batch_datetime, run_batch_all, schedule_loop, current_week_key,
 )
 from match_pool import eligible_candidates, previous_partner_ids, previous_pair_keys
@@ -404,7 +404,8 @@ LOOKING_FOR_VALUES = {"male", "female", "both"}
 def match_quota_status(user):
     """计算冷却 / 本周额度 / 预约揭晓状态。"""
     used = count_new_matches_this_week(user.id)
-    remaining = max(0, MATCH_WEEKLY_NEW_LIMIT - used)
+    limit = weekly_limit_for(user)
+    remaining = max(0, limit - used)
     cooldown_left = 0
     if user.last_matched_at and MATCH_COOLDOWN_HOURS > 0:
         elapsed = (datetime.utcnow() - user.last_matched_at).total_seconds()
@@ -427,7 +428,7 @@ def match_quota_status(user):
     ).first()
 
     return {
-        "weekly_limit": MATCH_WEEKLY_NEW_LIMIT,
+        "weekly_limit": limit,
         "weekly_used": used,
         "weekly_remaining": remaining,
         "cooldown_hours": MATCH_COOLDOWN_HOURS,
@@ -1215,7 +1216,7 @@ def api_match():
     if quota["weekly_remaining"] <= 0:
         body, status = api_err(
             "err.weekly_cap", 429,
-            n=MATCH_WEEKLY_NEW_LIMIT, when=quota["next_batch_label"],
+            n=quota["weekly_limit"], when=quota["next_batch_label"],
         )
         payload = body.get_json()
         payload["quota"] = quota
@@ -1731,6 +1732,16 @@ def ensure_schema():
         db.session.execute(text("ALTER TABLE users ADD COLUMN opt_in_week VARCHAR(16)"))
         db.session.commit()
         print("[CampusMatch] migrated: users.opt_in_week")
+
+    if "quota_bonus" not in user_cols:
+        db.session.execute(text("ALTER TABLE users ADD COLUMN quota_bonus INTEGER DEFAULT 0"))
+        db.session.commit()
+        print("[CampusMatch] migrated: users.quota_bonus")
+
+    if "quota_bonus_week" not in user_cols:
+        db.session.execute(text("ALTER TABLE users ADD COLUMN quota_bonus_week VARCHAR(16)"))
+        db.session.commit()
+        print("[CampusMatch] migrated: users.quota_bonus_week")
 
     if "allow_cross_school" not in user_cols:
         db.session.execute(text("ALTER TABLE users ADD COLUMN allow_cross_school BOOLEAN DEFAULT 0"))

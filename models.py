@@ -42,6 +42,9 @@ class User(db.Model):
     last_matched_at = db.Column(db.DateTime, nullable=True)
     # 本周预约匹配：ISO 周键，如 "2026-W31"；与当前周相同表示已 opt-in
     opt_in_week = db.Column(db.String(16))
+    # 运营补偿：仅在 quota_bonus_week 等于当前 ISO 周时，加在每周上限上
+    quota_bonus = db.Column(db.Integer, default=0)
+    quota_bonus_week = db.Column(db.String(16))
     # 是否愿意参与跨校（兼容旧字段；与 cross_schools_json 同步：非空列表则为 True）
     allow_cross_school = db.Column(db.Boolean, default=False)
     # 愿意跨配的学校名列表 JSON，如 ["澳门科技大学"]；双向白名单；空=只同校

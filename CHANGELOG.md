@@ -4,6 +4,17 @@ All notable changes to CampusMatch.
 
 ---
 
+## [1.9.42] — 2026-09-03
+
+### 问题（上次）
+- 运营误配会扣掉对方本周仅有的 1 次额度；失效配对不回充，没法单独给某人补两次
+
+### 改动
+- **Added / 本周额度补偿**：`quota_bonus` + `quota_bonus_week`，只在当前 ISO 周加在每周上限上，下周自动失效（`models.py` / `batch_job.py` / `app.py`）
+- **Added / `scripts/grant_weekly_quota.py`**：按昵称/邮箱/id 预览并写入补偿；可关掉误配、清冷却
+
+---
+
 ## [1.9.41] — 2026-09-03
 
 ### 问题（上次）
