@@ -8,6 +8,8 @@ from __future__ import annotations
 
 import io
 import json
+import sys
+import time
 import urllib.request
 from pathlib import Path
 
@@ -15,7 +17,7 @@ from PIL import Image, ImageEnhance, ImageFilter, ImageOps, ImageStat
 
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "static" / "personality_islands"
-UA = "CampusMatch/1.9 (engrave remix; https://campusmatch.com.cn)"
+UA = "Mozilla/5.0 (compatible; CampusMatch/1.9; +https://campusmatch.com.cn)"
 
 # (ink, paper-tint) — ink 用型主题色，纸仍偏羊皮纸
 THEMES = {
@@ -84,10 +86,11 @@ SOURCES = {
         "url": "https://live.staticflickr.com/2724/4076581052_49e5a76aeb_b.jpg",
     },
     "EFOA": {
-        "title": "Eastern comfrey and Indian sage (botanical plate)",
-        "license": "PDM 1.0",
-        "source": "https://www.flickr.com/photos/97123293@N07/15167922018",
-        "url": "https://live.staticflickr.com/2947/15167922018_0c03886566_b.jpg",
+        "title": "Landscape with a chapel (Paul Bril / Raphael Sadeler)",
+        "license": "CC0",
+        "source": "https://commons.wikimedia.org/wiki/File:Landschap_met_een_kapel,_RP-P-OB-7585.jpg",
+        "url": "https://commons.wikimedia.org/wiki/Special:FilePath/Landschap_met_een_kapel,_RP-P-OB-7585.jpg?width=2000",
+        "invert": False,
     },
     "ISCP": {
         "title": "Ramsgate, Kent: the beach and harbour by night (wood engraving, 1850)",
@@ -96,22 +99,27 @@ SOURCES = {
         "url": "https://images.rawpixel.com/editor_1024/cHJpdmF0ZS9sci9pbWFnZXMvd2Vic2l0ZS8yMDI0LTAyL2xyL3djeTRzcDlnN2ctaW1hZ2UuanBn.jpg",
     },
     "ISCA": {
-        "title": "Architecture: various masonry details. Engraving, Bénard after Lucotte",
+        "title": "Landscape with Cottage, Hendrick Goltzius",
         "license": "CC0",
-        "source": "https://www.rawpixel.com/image/14020922/architecture-various-masonry-details-engraving-benard-after-lucotte",
-        "url": "https://images.rawpixel.com/editor_1024/cHJpdmF0ZS9sci9pbWFnZXMvd2Vic2l0ZS8yMDI0LTAyL2xyL3djejRka3B5c3otaW1hZ2UuanBn.jpg",
+        "source": "https://www.metmuseum.org/art/collection/search/360269",
+        "url": "https://images.metmuseum.org/CRDImages/dp/original/DP821111.jpg",
+        "invert": False,
     },
     "IFCP": {
-        "title": "Changeable Rose and Queen Swallowtail, Maria Sibylla Merian",
-        "license": "PDM 1.0",
-        "source": "https://www.flickr.com/photos/97123293@N07/24347988201",
-        "url": "https://live.staticflickr.com/65535/24347988201_0c853dcbf9_b.jpg",
+        "title": "Shepherdess watching her flock, from Divers Paysages (Stefano della Bella)",
+        "license": "CC0",
+        "source": "https://www.metmuseum.org/art/collection/search/413297",
+        "url": "https://images.metmuseum.org/CRDImages/dp/original/DP827786.jpg",
+        "crop": (0.28, 0.18, 1.0, 0.93),
+        "invert": False,
     },
     "IFCA": {
-        "title": "Liras o cítaras de los antiguos",
-        "license": "PDM 1.0",
-        "source": "https://www.flickr.com/photos/37667416@N04/4031749408",
-        "url": "https://live.staticflickr.com/3505/4031749408_54cc341a28_b.jpg",
+        "title": "Musical Party in the Open Air (Cornelis Galle I after Gerrit Pietersz)",
+        "license": "CC0",
+        "source": "https://www.metmuseum.org/art/collection/search/786067",
+        "url": "https://images.metmuseum.org/CRDImages/dp/original/DP880189.jpg",
+        "crop": (0.08, 0.02, 0.92, 0.72),
+        "invert": False,
     },
     "ISOP": {
         "title": "A scholar in his study, reading",
@@ -120,10 +128,11 @@ SOURCES = {
         "url": "https://images.rawpixel.com/editor_1024/cHJpdmF0ZS9sci9pbWFnZXMvd2Vic2l0ZS8yMDI0LTAyL2xyL3djYWFmOXVha2ctaW1hZ2UuanBn.jpg",
     },
     "ISOA": {
-        "title": "Diogenes, seated before his barrel (Met Open Access)",
+        "title": "Rocky Landscape with St. Jerome (Aegidius Sadeler II after Jan Brueghel the Elder)",
         "license": "CC0",
-        "source": "https://www.metmuseum.org/art/collection/search/354611",
-        "url": "https://images.metmuseum.org/CRDImages/dp/original/DR89.jpg",
+        "source": "https://www.metmuseum.org/art/collection/search/415849",
+        "url": "https://images.metmuseum.org/CRDImages/dp/original/DP825800.jpg",
+        "crop": (0.02, 0.02, 0.98, 0.86),
         "invert": False,
     },
     "IFOP": {
@@ -143,12 +152,6 @@ SOURCES = {
 }
 
 PAPER = (244, 234, 214)  # #f4ead6
-
-
-def fetch(url: str) -> bytes:
-    req = urllib.request.Request(url, headers={"User-Agent": UA, "Accept": "image/*,*/*"})
-    with urllib.request.urlopen(req, timeout=40) as r:
-        return r.read()
 
 
 def hex_rgb(h: str) -> tuple[int, int, int]:
@@ -206,12 +209,53 @@ def compose(gray: Image.Image, ink: str, size: int = 1024) -> Image.Image:
     return canvas
 
 
+def fetch(url: str) -> bytes:
+    path = Path(url)
+    if path.is_file():
+        return path.read_bytes()
+    last_err: Exception | None = None
+    for attempt in range(4):
+        try:
+            req = urllib.request.Request(url, headers={"User-Agent": UA, "Accept": "image/*,*/*"})
+            with urllib.request.urlopen(req, timeout=60) as r:
+                return r.read()
+        except Exception as err:
+            last_err = err
+            time.sleep(1.5 * (attempt + 1))
+    raise last_err  # type: ignore[misc]
+
+
+def record(code: str, src: dict) -> dict:
+    dest = OUT / f"{code}.png"
+    return {
+        "code": code,
+        "title": src["title"],
+        "license": src["license"],
+        "source": src["source"],
+        "file": str(dest.relative_to(ROOT)).replace("\\", "/"),
+    }
+
+
 def run() -> None:
     OUT.mkdir(parents=True, exist_ok=True)
+    wanted = {a.upper() for a in sys.argv[1:] if a[:1] != "-"}
     meta = []
     for code, src in SOURCES.items():
+        if wanted and code not in wanted:
+            meta.append(record(code, src))
+            continue
         print("fetch", code, src["title"][:48])
-        raw = fetch(src["url"])
+        try:
+            raw = fetch(src["url"])
+        except Exception:
+            local = ROOT / "_tmp_plates" / f"{code.lower()}_2000.jpg"
+            if not local.exists() and code == "EFOA":
+                local = ROOT / "_tmp_plates" / "efoa_2000.jpg"
+            if local.exists():
+                print("  fallback", local.name)
+                raw = local.read_bytes()
+            else:
+                raise
         im = Image.open(io.BytesIO(raw)).convert("RGB")
         box = src.get("crop")
         if box:
@@ -222,15 +266,9 @@ def run() -> None:
         out = compose(gray, THEMES[code])
         dest = OUT / f"{code}.png"
         out.save(dest, "PNG", optimize=True)
-        rec = {
-            "code": code,
-            "title": src["title"],
-            "license": src["license"],
-            "source": src["source"],
-            "file": str(dest.relative_to(ROOT)).replace("\\", "/"),
-        }
-        meta.append(rec)
+        meta.append(record(code, src))
         print("  ->", dest, out.size)
+    meta = [record(c, s) for c, s in SOURCES.items()]
     manifest = ROOT / "docs" / "personality-island-sources.json"
     manifest.write_text(json.dumps(meta, ensure_ascii=False, indent=2), encoding="utf-8")
     print("wrote", manifest)

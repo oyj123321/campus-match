@@ -15,7 +15,7 @@
   },
   {
     "code": "EFCP",
-    "title": "Wood Duck / Summer Duck (Audubon plate; Biodiversity Heritage Library scan)",
+    "title": "Bird nest plate (Biodiversity Heritage Library scan)",
     "license": "PDM 1.0",
     "source": "https://www.flickr.com/photos/61021753@N02/8592743010",
     "file": "static/personality_islands/EFCP.png"
@@ -50,9 +50,9 @@
   },
   {
     "code": "EFOA",
-    "title": "Eastern comfrey and Indian sage (botanical plate, 1800)",
-    "license": "PDM 1.0",
-    "source": "https://www.flickr.com/photos/97123293@N07/15167922018",
+    "title": "Landscape with a chapel (Paul Bril / Raphael Sadeler)",
+    "license": "CC0",
+    "source": "https://commons.wikimedia.org/wiki/File:Landschap_met_een_kapel,_RP-P-OB-7585.jpg",
     "file": "static/personality_islands/EFOA.png"
   },
   {
@@ -64,23 +64,23 @@
   },
   {
     "code": "ISCA",
-    "title": "Architecture: various masonry details. Engraving, Bénard after Lucotte",
+    "title": "Landscape with Cottage, Hendrick Goltzius",
     "license": "CC0",
-    "source": "https://www.rawpixel.com/image/14020922/architecture-various-masonry-details-engraving-benard-after-lucotte",
+    "source": "https://www.metmuseum.org/art/collection/search/360269",
     "file": "static/personality_islands/ISCA.png"
   },
   {
     "code": "IFCP",
-    "title": "Changeable Rose and Queen Swallowtail, Maria Sibylla Merian",
-    "license": "PDM 1.0",
-    "source": "https://www.flickr.com/photos/97123293@N07/24347988201",
+    "title": "Shepherdess watching her flock, from Divers Paysages (Stefano della Bella)",
+    "license": "CC0",
+    "source": "https://www.metmuseum.org/art/collection/search/413297",
     "file": "static/personality_islands/IFCP.png"
   },
   {
     "code": "IFCA",
-    "title": "Liras o cítaras de los antiguos",
-    "license": "PDM 1.0",
-    "source": "https://www.flickr.com/photos/37667416@N04/4031749408",
+    "title": "Musical Party in the Open Air (Cornelis Galle I after Gerrit Pietersz)",
+    "license": "CC0",
+    "source": "https://www.metmuseum.org/art/collection/search/786067",
     "file": "static/personality_islands/IFCA.png"
   },
   {
@@ -92,9 +92,9 @@
   },
   {
     "code": "ISOA",
-    "title": "Diogenes, seated before his barrel (Met Open Access)",
+    "title": "Rocky Landscape with St. Jerome (Aegidius Sadeler II after Jan Brueghel the Elder)",
     "license": "CC0",
-    "source": "https://www.metmuseum.org/art/collection/search/354611",
+    "source": "https://www.metmuseum.org/art/collection/search/415849",
     "file": "static/personality_islands/ISOA.png"
   },
   {

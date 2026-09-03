@@ -174,7 +174,7 @@
     /** 16 型岛图 URL（文件名大写四字母） */
     window.lovePersonalityIslandUrl = function (code) {
         var c = normalizeLpCode(code);
-        return c.length === 4 ? ('/static/personality_islands/' + c + '.png?v=1970') : '';
+        return c.length === 4 ? ('/static/personality_islands/' + c + '.png?v=1980') : '';
     };
 
     /**

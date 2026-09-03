@@ -4,6 +4,16 @@ All notable changes to CampusMatch.
 
 ---
 
+## [1.9.48] — 2026-09-03
+
+### 问题（上次）
+- 16 张岛图气质对了，但有四五张仍是标本图录：砌石分图、古琴图鉴、带装订边的植物志、第欧根尼拔鸡；远看不像同一套风景版画
+
+### 改动
+- **Changed / 弱图替换**：孤岛哲人→Sadeler 孤岩隐士景；内秀构建→Goltzius 农舍；春风旅人→Bril/Sadeler 山径小堂（去掉带商业水印的植物志）；诗意栖居→林间乐会；温柔守望→della Bella 树下守羊。出处仍 CC0（`scripts/engrave_islands.py` / `docs/personality-island-sources.json`）
+
+---
+
 ## [1.9.47] — 2026-09-03
 
 ### 问题（上次）
