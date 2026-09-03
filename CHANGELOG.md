@@ -4,6 +4,19 @@ All notable changes to CampusMatch.
 
 ---
 
+## [1.9.47] — 2026-09-03
+
+### 问题（上次）
+- 16 型岛图是光滑渐变的 AI 贴纸，和英文金句、版画气质不合
+
+### 改动
+- **Changed / 岛图**：换成公有领域铜版/木刻二创（主题色单色油墨 + 羊皮纸底），Beham 纹章、Eddystone 灯塔、Merian 玫瑰、丢勒式旗手等（`static/personality_islands/`）
+- **Added / 出处**：`docs/personality-island-sources.json` + 可重跑的 `scripts/engrave_islands.py`（仅 CC0 / PDM / 馆方开放获取）
+- **Improved / 分享裁切**：版画已贴纸边，分享卡放大从 1.36 降到 1.12，避免把主体裁没（`personality_themes.css`）
+- **Changed / 站内公告**：橙条改为岛图换成铜版/木刻二创；金句仍是英文经典，型名仍中文。`.env` 的 `SITE_ANNOUNCEMENT` 仍可覆盖或置空关闭（`config.py`）
+
+---
+
 ## [1.9.46] — 2026-09-03
 
 ### 问题（上次）

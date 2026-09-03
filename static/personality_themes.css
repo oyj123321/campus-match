@@ -95,9 +95,9 @@
     object-fit: cover;
     object-position: center 40%;
     border-radius: 0;
-    /* 再放大裁掉 PNG 奶油留白，让主体更贴型名 */
-    transform: scale(1.36);
-    transform-origin: center 42%;
+    /* 版画二创已贴满纸边，不再为 AI 奶油留白放大裁切 */
+    transform: scale(1.12);
+    transform-origin: center 46%;
     box-shadow: none;
     background: transparent;
 }
@@ -797,6 +797,27 @@
         radial-gradient(circle at 88% 30%, rgba(255,255,255,0.8) 0 1px, transparent 2px),
         radial-gradient(ellipse 70% 50% at 100% 0%, rgba(129,140,248,0.28), transparent 50%),
         radial-gradient(ellipse 50% 40% at 0% 100%, rgba(236,72,153,0.16), transparent 45%);
+}
+
+.lp-share-preview-gallery {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 28px 20px;
+    margin: 16px 0 8px;
+    justify-items: center;
+}
+.lp-share-preview-item {
+    width: 100%;
+    max-width: 380px;
+}
+.lp-share-preview-item h4 {
+    margin: 0 0 10px;
+    font-size: 0.92em;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+}
+.lp-share-preview-gallery .lp-share-stage-preview {
+    width: min(380px, 100%);
 }
 
 /* 预览画廊 */

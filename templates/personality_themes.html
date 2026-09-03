@@ -8,8 +8,12 @@
         ·
         <a href="/dev/personality-compare">花园隐士型 · 极简科技 vs 插画对比 →</a>
     </p>
-    <h3 style="margin:18px 0 8px;">分享卡预览（守护者型）</h3>
-    <div id="slim-share-preview"></div>
+    <h3 style="margin:18px 0 8px;">16 型分享卡效果图</h3>
+    <p class="hint">往下滚即可看完全套海报（版画岛图 + 型名 + 金句 + 二维码）。未登录时用演示邀请码。</p>
+</div>
+<div id="slim-share-gallery" class="lp-share-preview-gallery"></div>
+<div class="card" style="text-align:left;margin-top:28px;">
+    <h3 style="margin:0 0 8px;">应用内卡片（对照）</h3>
 </div>
 <div class="lp-theme-gallery">
 {% for code, p in personalities.items() %}
@@ -42,20 +46,39 @@ document.querySelectorAll('.personality-card[data-lp-code]').forEach(function (e
         applyLovePersonalityTheme(el, el.getAttribute('data-lp-code'));
     }
 });
-(function previewSlimShare() {
-    var hold = document.getElementById('slim-share-preview');
+(function previewAllSlimShares() {
+    var hold = document.getElementById('slim-share-gallery');
     if (!hold || typeof window.buildLovePersonalityShareStage !== 'function') return;
-    window.buildLovePersonalityShareStage({
-        name: '守护者型',
-        code: 'ESCP',
-        subtitle: 'I am constant as the northern star.'
-    }, 'ESCP').then(function (stage) {
-        if (!stage) return;
-        stage.classList.remove('lp-share-stage-live');
-        stage.classList.add('lp-share-stage-preview');
-        stage.removeAttribute('aria-hidden');
-        hold.appendChild(stage);
-    });
+    if (!window.CM_INVITE_CODE) window.CM_INVITE_CODE = 'DEMO88';
+    var data = {{ personalities | tojson }};
+    var codes = Object.keys(data);
+    var i = 0;
+    function next() {
+        if (i >= codes.length) return;
+        var code = codes[i++];
+        var p = data[code] || {};
+        window.buildLovePersonalityShareStage({
+            name: p.name,
+            code: code,
+            subtitle: p.subtitle
+        }, code).then(function (stage) {
+            if (stage) {
+                stage.id = '';
+                stage.classList.remove('lp-share-stage-live');
+                stage.classList.add('lp-share-stage-preview');
+                stage.removeAttribute('aria-hidden');
+                var item = document.createElement('div');
+                item.className = 'lp-share-preview-item';
+                var cap = document.createElement('h4');
+                cap.textContent = code + ' · ' + (p.name || '');
+                item.appendChild(cap);
+                item.appendChild(stage);
+                hold.appendChild(item);
+            }
+            next();
+        }).catch(function () { next(); });
+    }
+    next();
 })();
 </script>
 {% endblock %}

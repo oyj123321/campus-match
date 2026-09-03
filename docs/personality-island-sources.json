@@ -1,0 +1,114 @@
+[
+  {
+    "code": "ESCP",
+    "title": "Coat of Arms with a Lion (1544), Sebald Beham",
+    "license": "CC0",
+    "source": "https://www.rawpixel.com/image/9992351/coat-arms-with-lion-1544-sebald-beham",
+    "file": "static/personality_islands/ESCP.png"
+  },
+  {
+    "code": "ESCA",
+    "title": "Javaans schip te Bantam, 1596",
+    "license": "CC0",
+    "source": "https://commons.wikimedia.org/wiki/File:Javaans_schip_te_Bantam,_1596,_RP-P-OB-80.259.jpg",
+    "file": "static/personality_islands/ESCA.png"
+  },
+  {
+    "code": "EFCP",
+    "title": "Wood Duck / Summer Duck (Audubon plate; Biodiversity Heritage Library scan)",
+    "license": "PDM 1.0",
+    "source": "https://www.flickr.com/photos/61021753@N02/8592743010",
+    "file": "static/personality_islands/EFCP.png"
+  },
+  {
+    "code": "EFCA",
+    "title": "Paysage avec Paris et Oenone (Claude Lorrain)",
+    "license": "CC0",
+    "source": "https://www.flickr.com/photos/125149010@N07/24607292165",
+    "file": "static/personality_islands/EFCA.png"
+  },
+  {
+    "code": "ESOP",
+    "title": "The Eddystone Lighthouse",
+    "license": "CC0",
+    "source": "https://www.rawpixel.com/image/9117587/the-eddystone-lighthouse",
+    "file": "static/personality_islands/ESOP.png"
+  },
+  {
+    "code": "ESOA",
+    "title": "The Burgundian Standard Bearer, c. 1500",
+    "license": "CC0",
+    "source": "https://www.rawpixel.com/image/8782864/the-burgundian-standard-bearer",
+    "file": "static/personality_islands/ESOA.png"
+  },
+  {
+    "code": "EFOP",
+    "title": "Cottages at Dents Hole, Byker (J.W. Carmichael / Lambert)",
+    "license": "PDM 1.0",
+    "source": "https://www.flickr.com/photos/39821974@N06/4076581052",
+    "file": "static/personality_islands/EFOP.png"
+  },
+  {
+    "code": "EFOA",
+    "title": "Eastern comfrey and Indian sage (botanical plate, 1800)",
+    "license": "PDM 1.0",
+    "source": "https://www.flickr.com/photos/97123293@N07/15167922018",
+    "file": "static/personality_islands/EFOA.png"
+  },
+  {
+    "code": "ISCP",
+    "title": "Ramsgate, Kent: the beach and harbour by night (wood engraving, 1850)",
+    "license": "CC0",
+    "source": "https://www.rawpixel.com/image/14018138/ramsgate-kent-the-beach-and-harbour-night-wood-engraving-1850",
+    "file": "static/personality_islands/ISCP.png"
+  },
+  {
+    "code": "ISCA",
+    "title": "Architecture: various masonry details. Engraving, Bénard after Lucotte",
+    "license": "CC0",
+    "source": "https://www.rawpixel.com/image/14020922/architecture-various-masonry-details-engraving-benard-after-lucotte",
+    "file": "static/personality_islands/ISCA.png"
+  },
+  {
+    "code": "IFCP",
+    "title": "Changeable Rose and Queen Swallowtail, Maria Sibylla Merian",
+    "license": "PDM 1.0",
+    "source": "https://www.flickr.com/photos/97123293@N07/24347988201",
+    "file": "static/personality_islands/IFCP.png"
+  },
+  {
+    "code": "IFCA",
+    "title": "Liras o cítaras de los antiguos",
+    "license": "PDM 1.0",
+    "source": "https://www.flickr.com/photos/37667416@N04/4031749408",
+    "file": "static/personality_islands/IFCA.png"
+  },
+  {
+    "code": "ISOP",
+    "title": "A scholar in his study, reading",
+    "license": "CC0",
+    "source": "https://www.rawpixel.com/image/13972543/image-person-book-art",
+    "file": "static/personality_islands/ISOP.png"
+  },
+  {
+    "code": "ISOA",
+    "title": "Diogenes, seated before his barrel (Met Open Access)",
+    "license": "CC0",
+    "source": "https://www.metmuseum.org/art/collection/search/354611",
+    "file": "static/personality_islands/ISOA.png"
+  },
+  {
+    "code": "IFOP",
+    "title": "Hospital of St Mary the Virgin, 1786",
+    "license": "PDM 1.0",
+    "source": "https://www.flickr.com/photos/39821974@N06/4090513911",
+    "file": "static/personality_islands/IFOP.png"
+  },
+  {
+    "code": "IFOA",
+    "title": "Saint Stephen (Cepheus), Constellation IV",
+    "license": "CC0",
+    "source": "https://www.rawpixel.com/image/7653514/image-vintage-art-public-domain",
+    "file": "static/personality_islands/IFOA.png"
+  }
+]
