@@ -29,6 +29,12 @@ M = {
         "en": "This student ID already registered as {email}. Sign in with that address; do not re-register on another campus domain.",
         "pt": "Este número de aluno já está registado como {email}. Entra com esse email; não te voltes a registar noutro domínio da mesma escola.",
     },
+    "err.must_student_mail": {
+        "zh": "澳科大学生请用 学号@student.must.edu.mo（Outlook 网页邮箱）。纯学号@must.edu.mo 无法在网页邮箱查看验证码。",
+        "tw": "澳科大學生請用 學號@student.must.edu.mo（Outlook 網頁信箱）。純學號@must.edu.mo 無法在網頁信箱查看驗證碼。",
+        "en": "MUST students: use studentID@student.must.edu.mo (Outlook webmail). A numeric ID @must.edu.mo cannot receive the code in web Outlook.",
+        "pt": "Alunos da MUST: usa numero@student.must.edu.mo (Outlook web). Um número @must.edu.mo não recebe o código no Outlook web.",
+    },
     "err.rate": {
         "zh": "发送过于频繁，请 {mins} 分钟后再试。若邮箱里已有验证码，可直接输入。",
         "tw": "發送過於頻繁，請 {mins} 分鐘後再試。若電郵裡已有驗證碼，可直接輸入。",

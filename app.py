@@ -130,6 +130,34 @@ def get_school_from_email(email):
     return None
 
 
+def _must_new_student_needs_outlook_domain(email):
+    """科大学生 Outlook 登录账号是 学号@student.must.edu.mo；纯学号@must.edu.mo 收不到网页邮箱。"""
+    email = (email or "").strip().lower()
+    if "@" not in email:
+        return False
+    local, domain = email.rsplit("@", 1)
+    return domain == "must.edu.mo" and local.isdigit() and len(local) >= 6
+
+
+def _must_should_migrate_to_student_domain(new_email, sibling):
+    """旧号 学号@must.edu.mo 改填学生域名时，把账号迁到 Outlook 能打开的邮箱。"""
+    if not sibling:
+        return False
+    new_email = (new_email or "").strip().lower()
+    old = (sibling.email or "").strip().lower()
+    if "@" not in new_email or "@" not in old:
+        return False
+    n_local, n_dom = new_email.rsplit("@", 1)
+    o_local, o_dom = old.rsplit("@", 1)
+    return (
+        n_local == o_local
+        and n_local.isdigit()
+        and len(n_local) >= 6
+        and n_dom == "student.must.edu.mo"
+        and o_dom == "must.edu.mo"
+    )
+
+
 def _email_local_part(email: str) -> str:
     return (email or "").strip().lower().split("@", 1)[0]
 
@@ -783,7 +811,20 @@ def api_register():
     # 同校同本地名只允许一个账号（兼容多域名时防一人多号）
     sibling = find_sibling_account(email, school)
     if sibling:
-        return api_err("err.sibling", 409, email=sibling.email)
+        if _must_should_migrate_to_student_domain(email, sibling):
+            taken = User.query.filter_by(email=email).first()
+            if taken:
+                return api_err("err.sibling", 409, email=taken.email)
+            sibling.email = email
+            db.session.commit()
+        else:
+            return api_err("err.sibling", 409, email=sibling.email)
+
+    # 科大新号：学号必须用 student.must.edu.mo（Outlook 网页邮箱）；已有 @must.edu.mo 账号仍可登录
+    if _must_new_student_needs_outlook_domain(email):
+        existing = User.query.filter_by(email=email).first()
+        if not existing:
+            return api_err("err.must_student_mail")
 
     with _email_locks[email]:
         user = User.query.filter_by(email=email).first()

@@ -4,6 +4,18 @@ All notable changes to CampusMatch.
 
 ---
 
+## [1.9.41] — 2026-09-03
+
+### 问题（上次）
+- 澳科大学生反馈：能登录 Outlook 网页看验证码的账号是 `学号@student.must.edu.mo`；站点只认 `@must.edu.mo`，学生域名会被拒，验证码也进不了网页邮箱
+
+### 改动
+- **Fixed / 科大学生邮箱**：白名单增加 `student.must.edu.mo`，与 `must.edu.mo` 同属澳门科技大学（`config.py`）
+- **Fixed / 学号误填**：新注册若用纯数字学号 `@must.edu.mo`，提示改用 `@student.must.edu.mo`；已有 `@must.edu.mo` 账号仍可登录，教职员姓名邮箱不受影响。若旧号是学号 `@must.edu.mo`、这次改填学生域名，则把账号邮箱迁过去再发验证码（`app.py` / `i18n_server.py`）
+- **Improved / 首页提示**：登录框与学校列表标明科大学生应用 Outlook 学生域名（`templates/index.html` / `static/i18n.js`）
+
+---
+
 ## [1.9.40] — 2026-09-02
 
 ### 问题（上次）

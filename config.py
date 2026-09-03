@@ -75,7 +75,8 @@ SCHOOL_DOMAINS = {
     # ---- 澳门 ----
     # 澳大：主域 @um.edu.mo；兼容学生 Connect @connect.um.edu.mo、旧域 @umac.mo
     "澳门大学":       ["um.edu.mo", "connect.um.edu.mo", "umac.mo"],
-    "澳门科技大学":   ["must.edu.mo"],
+    # 科大：学生 Outlook 为 学号@student.must.edu.mo；教职员/旧号仍用 @must.edu.mo
+    "澳门科技大学":   ["student.must.edu.mo", "must.edu.mo"],
     "澳门理工大学":   ["mpu.edu.mo"],
     # 旅游大学：现行 @utm.edu.mo；兼容 IFTM/IFT 旧域
     "澳门旅游大学":   ["utm.edu.mo", "iftm.edu.mo", "ift.edu.mo"],
