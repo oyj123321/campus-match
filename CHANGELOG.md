@@ -4,6 +4,21 @@ All notable changes to CampusMatch.
 
 ---
 
+## [1.9.49] — 2026-09-04
+
+### 问题（上次）
+- 匹配只有学校维度，没有学历：本科 / 硕士 / 博士会混在一起配，也无法声明「只配同学历」或「愿意跨学历」
+- 全站橙条还在说岛图换成铜版/木刻，和这次学历规则无关
+
+### 改动
+- **Added / 学历必填**：问卷与隐私模式须选本科、硕士或博士；未填则 `ready_to_match()` 为假，进不了池（`models.py` / `questionnaire.html`）
+- **Added / 跨学历双向**：默认只配同学历；不同学历须双方都勾选 `allow_cross_degree`，规则对齐跨校（`match_pool.py` / `batch_job.py`）
+- **Added / 匹配页可改**：页头显示学历与跨学历开关；卡片上可见对方学历；保存走 `PUT /api/me`（`matches.html`）
+- **Changed / 站内公告**：默认橙条改为学历必填 + 跨学历须双方勾选；`.env` 的 `SITE_ANNOUNCEMENT` 仍可覆盖或置空关闭（`config.py`）
+- **Changed / 提前揭晓**：按钮去掉「冷启动」；删除「正式运营可关掉」那句说明。即时配对仍可用（`matches.html` / `i18n.js`）
+
+---
+
 ## [1.9.48] — 2026-09-03
 
 ### 问题（上次）

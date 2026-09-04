@@ -1,7 +1,7 @@
 """匹配池过滤：学校规则 + 黑名单 + 取向 + 是否进池。"""
 
 from config import CROSS_SCHOOL_MATCHING_ENABLED
-from models import User, Blocklist, Match
+from models import EDUCATION_LEVELS, User, Blocklist, Match
 from matcher import orientation_compatible
 
 
@@ -37,6 +37,17 @@ def school_compatible(user_a, user_b):
     a_list = set(user_a.get_cross_schools())
     b_list = set(user_b.get_cross_schools())
     return user_b.school in a_list and user_a.school in b_list
+
+
+def degree_compatible(user_a, user_b):
+    """同学历始终可配；跨学历需双方都勾选 allow_cross_degree。"""
+    a = (user_a.education_level or "").strip()
+    b = (user_b.education_level or "").strip()
+    if a not in EDUCATION_LEVELS or b not in EDUCATION_LEVELS:
+        return False
+    if a == b:
+        return True
+    return bool(user_a.allow_cross_degree) and bool(user_b.allow_cross_degree)
 
 
 def vectors_aligned(user_a, user_b):
@@ -89,6 +100,9 @@ def eligible_candidates(user, exclude_ids=None):
     # 未选跨校：只查同校，少扫库
     if not (CROSS_SCHOOL_MATCHING_ENABLED and willing):
         q = q.filter(User.school == user.school)
+    # 未开跨学历：只查同学历
+    if user.education_level in EDUCATION_LEVELS and not user.allow_cross_degree:
+        q = q.filter(User.education_level == user.education_level)
 
     out = []
     for c in q.all():
@@ -97,6 +111,8 @@ def eligible_candidates(user, exclude_ids=None):
         if not c.in_match_pool():
             continue
         if not school_compatible(user, c):
+            continue
+        if not degree_compatible(user, c):
             continue
         if not orientation_compatible(user, c):
             continue

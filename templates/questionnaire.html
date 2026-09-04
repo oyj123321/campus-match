@@ -43,6 +43,16 @@
         </select>
         <p class="hint" data-i18n="qn.lf.hint">男生可选男或女，女生也可选男或女；匹配需双方取向互相接受。</p>
     </div>
+    <div class="form-group">
+        <label for="education_level" data-i18n="qn.edu">学历 *</label>
+        <select id="education_level">
+            <option value="" data-i18n="qn.select">请选择</option>
+            <option value="bachelor" {% if user.education_level == 'bachelor' %}selected{% endif %} data-i18n="edu.bachelor">本科</option>
+            <option value="master" {% if user.education_level == 'master' %}selected{% endif %} data-i18n="edu.master">硕士</option>
+            <option value="doctorate" {% if user.education_level == 'doctorate' %}selected{% endif %} data-i18n="edu.doctorate">博士</option>
+        </select>
+        <p class="hint" data-i18n="qn.edu.hint">须如实填写。默认只配同学历；勾选跨学历后，对方也须勾选才会配对。</p>
+    </div>
     <div class="form-row">
         <div class="form-group" style="flex:1;">
             <label for="wechat_id" id="wechat-label" data-i18n="qn.wechat">附加联系方式（必填）</label>
@@ -67,6 +77,13 @@
         <label data-i18n="qn.cross">愿意跨配的学校（双向：对方也须勾选你的学校）</label>
         <p class="hint" data-i18n="qn.cross.hint">不勾选 = 只同校。勾选后仅会与「也勾选了你学校」的对方跨校配对。</p>
         <div id="cross-schools-list" style="display:flex;flex-wrap:wrap;gap:8px 14px;margin-top:8px;"></div>
+    </div>
+    <div class="form-group" style="margin-top:12px;">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+            <input type="checkbox" id="allow_cross_degree" {% if user.allow_cross_degree %}checked{% endif %}>
+            <span data-i18n="qn.crossDegree">愿意跨学历匹配</span>
+        </label>
+        <p class="hint" data-i18n="qn.crossDegree.hint">不勾选 = 只配同学历（本配本、硕配硕、博配博）。勾选后仅会与「也勾选了跨学历」的对方配对。</p>
     </div>
 </div>
 
@@ -463,6 +480,13 @@ async function submitAll() {
         document.getElementById('looking_for').focus();
         return;
     }
+    var education = document.getElementById('education_level').value;
+    if (!education) {
+        alert(t('qn.needEdu'));
+        document.getElementById('education_level').focus();
+        document.getElementById('profile-card').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+    }
     if (!wechat && window.CM_PROFILE_UI !== 'express') {
         alert(t('qn.needWechat'));
         document.getElementById('wechat_id').focus();
@@ -485,6 +509,8 @@ async function submitAll() {
 
     var r1 = await api('PUT', '/api/me', {
         name: name, gender: gender, looking_for: lookingFor, wechat_id: wechat, bio: bio,
+        education_level: education,
+        allow_cross_degree: document.getElementById('allow_cross_degree').checked,
         open_to_match: document.getElementById('open_to_match').checked,
         cross_schools: selectedCrossSchools()
     });
@@ -627,6 +653,12 @@ async function submitExpress() {
     if (!name) { alert(t('qn.needName')); document.getElementById('name').focus(); return; }
     if (!gender) { alert(t('qn.needGender')); return; }
     if (!lookingFor) { alert(t('qn.needLf')); return; }
+    var education = document.getElementById('education_level').value;
+    if (!education) {
+        alert(t('qn.needEdu'));
+        document.getElementById('education_level').focus();
+        return;
+    }
     if (bio.length < EXPRESS_BIO_MIN) {
         alert(tf('qn.express.needBio', { n: EXPRESS_BIO_MIN }));
         document.getElementById('bio').focus();
@@ -636,6 +668,8 @@ async function submitExpress() {
     btn.textContent = t('qn.saving');
     var r = await api('POST', '/api/express-profile', {
         name: name, gender: gender, looking_for: lookingFor, wechat_id: wechat, bio: bio,
+        education_level: education,
+        allow_cross_degree: document.getElementById('allow_cross_degree').checked,
         open_to_match: document.getElementById('open_to_match').checked,
         cross_schools: selectedCrossSchools()
     });

@@ -33,7 +33,7 @@ from config import (
     LOGIN_ONCE_PER_DAY, SITE_ANNOUNCEMENT,
     SESSION_REMEMBER_DAYS, DEVICE_COOKIE_NAME,
 )
-from models import db, User, UserTag, Match, Blocklist, EXPRESS_BIO_MIN
+from models import db, User, UserTag, Match, Blocklist, EXPRESS_BIO_MIN, EDUCATION_LEVELS
 from questionnaire import QUESTIONS, build_feature_vector, build_express_vector, get_compatibility_insight, get_open_letter
 from personality import build_love_personality
 from matcher import real_time_match, batch_match_school
@@ -406,6 +406,18 @@ def _deny_login_once_today(user: User):
 LOOKING_FOR_VALUES = {"male", "female", "both"}
 
 
+def apply_education_fields(user, data, required=False):
+    """写入学历 / 跨学历。required 时必须带合法 education_level。失败返回 api_err，成功返回 None。"""
+    if required or "education_level" in data:
+        level = (data.get("education_level") or "").strip()
+        if level not in EDUCATION_LEVELS:
+            return api_err("err.education")
+        user.education_level = level
+    if "allow_cross_degree" in data:
+        user.allow_cross_degree = bool(data.get("allow_cross_degree"))
+    return None
+
+
 def match_quota_status(user):
     """计算冷却 / 本周额度 / 预约揭晓状态。"""
     used = count_new_matches_this_week(user.id)
@@ -453,6 +465,8 @@ def match_quota_status(user):
         "allow_cross_school": bool(user.get_cross_schools()),
         "cross_schools": user.get_cross_schools(),
         "all_schools": list(SCHOOL_DOMAINS.keys()),
+        "education_level": user.education_level if (user.education_level or "") in EDUCATION_LEVELS else None,
+        "allow_cross_degree": bool(user.allow_cross_degree),
         "open_to_match": user.is_open_to_match(),
         "explain": _match_explain_text(mode),
     }
@@ -467,6 +481,11 @@ def serialize_match_payload(other, score, insight, active=True):
         "name": other.name if active else "（已失效的配对）",
         "gender": other.gender if active else None,
         "school": getattr(other, "school", None) if active else None,
+        "education_level": (
+            other.education_level
+            if active and (getattr(other, "education_level", None) or "") in EDUCATION_LEVELS
+            else None
+        ),
         "email": other.email if active else None,
         "wechat_id": other.wechat_id if active else None,
         "bio": other.bio if active else None,
@@ -489,7 +508,8 @@ def _match_explain_text(mode):
         "只给你优先级最高的 1 人；页面不展示匹配度分数，只给契合点与破冰话题"
         + (
             "；默认同校，跨校需双方互相勾选对方学校（双向白名单）。"
-            if CROSS_SCHOOL_MATCHING_ENABLED else "（同校）。"
+            "学历须填写；不同学历需双方都勾选愿意跨学历。"
+            if CROSS_SCHOOL_MATCHING_ENABLED else "（同校）。学历须填写；不同学历需双方都勾选愿意跨学历。"
         )
     )
     return {
@@ -1014,6 +1034,9 @@ def api_express_profile():
         return api_err("err.need_gender")
     if len(bio) < EXPRESS_BIO_MIN:
         return api_err("err.express_bio", n=EXPRESS_BIO_MIN)
+    edu_err = apply_education_fields(user, data, required=True)
+    if edu_err:
+        return edu_err
     user.name = name[:32]
     user.gender = gender
     user.looking_for = looking_for
@@ -1201,6 +1224,8 @@ def api_match():
             return api_err("err.need_verify")
         if not user.gender or user.looking_for not in LOOKING_FOR_VALUES:
             return api_err("err.need_gender")
+        if (user.education_level or "") not in EDUCATION_LEVELS:
+            return api_err("err.education")
         if user.is_express():
             return api_err("err.profile_incomplete")
         if not user.questionnaire_completed() or not user.feature_vector:
@@ -1488,6 +1513,9 @@ def api_me():
     looking_for = (data.get("looking_for") or "").strip()
     if looking_for in LOOKING_FOR_VALUES:
         user.looking_for = looking_for
+    edu_err = apply_education_fields(user, data, required=False)
+    if edu_err:
+        return edu_err
     contact = (data.get("wechat_id") or "").strip()
     if "wechat_id" in data:
         if not contact and not user.is_express():
@@ -1822,6 +1850,16 @@ def ensure_schema():
         db.session.execute(text("UPDATE users SET profile_mode = 'full' WHERE profile_mode IS NULL"))
         db.session.commit()
         print("[CampusMatch] migrated: users.profile_mode")
+
+    if "education_level" not in user_cols:
+        db.session.execute(text("ALTER TABLE users ADD COLUMN education_level VARCHAR(16)"))
+        db.session.commit()
+        print("[CampusMatch] migrated: users.education_level")
+
+    if "allow_cross_degree" not in user_cols:
+        db.session.execute(text("ALTER TABLE users ADD COLUMN allow_cross_degree BOOLEAN DEFAULT 0"))
+        db.session.commit()
+        print("[CampusMatch] migrated: users.allow_cross_degree")
 
     if "icebreaker_followup_sent" not in match_cols:
         db.session.execute(text("ALTER TABLE matches ADD COLUMN icebreaker_followup_sent BOOLEAN DEFAULT 0"))

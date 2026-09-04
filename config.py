@@ -134,8 +134,8 @@ SESSION_REMEMBER_DAYS = int(os.environ.get("SESSION_REMEMBER_DAYS", "7"))
 DEVICE_COOKIE_NAME = "cm_device"
 # 全站公告：.env 设 SITE_ANNOUNCEMENT= 可强制清空；未设置则用默认运营文案
 _DEFAULT_SITE_ANNOUNCEMENT = (
-    "【更新】恋爱人格分享卡岛图换成公有领域铜版/木刻二创（主题色油墨印在羊皮纸上）；"
-    "金句仍是莎士比亚等英文经典一句，型名仍中文。匹配规则没变。"
+    "【更新】资料须填写学历（本科 / 硕士 / 博士）。默认只配同学历；"
+    "跨学历须双方都勾选，规则与跨校相同。未填请到问卷或匹配页补上。"
 )
 if "SITE_ANNOUNCEMENT" in os.environ:
     SITE_ANNOUNCEMENT = os.environ.get("SITE_ANNOUNCEMENT", "").strip()

@@ -25,7 +25,7 @@ from models import db, User, Match
 from matcher import batch_match_school, orientation_compatible, _dealbreaker_conflict
 from questionnaire import get_compatibility_insight
 from email_service import send_match_result_email
-from match_pool import is_blocked_pair, school_compatible, vectors_aligned, previous_pair_keys
+from match_pool import is_blocked_pair, school_compatible, degree_compatible, vectors_aligned, previous_pair_keys
 
 
 WEEKDAY_NAMES = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"]
@@ -337,6 +337,8 @@ def run_batch_school(school, mail_cfg, require_opt_in=False, exclude_ids=None):
             continue
         if not school_compatible(a, b):
             continue
+        if not degree_compatible(a, b):
+            continue
         if is_blocked_pair(a.id, b.id):
             continue
         if not vectors_aligned(a, b):
@@ -427,6 +429,8 @@ def run_batch_cross(mail_cfg, require_opt_in=False, exclude_ids=None):
         if a.id in matched_ids or b.id in matched_ids:
             continue
         if not school_compatible(a, b):
+            continue
+        if not degree_compatible(a, b):
             continue
         if is_blocked_pair(a.id, b.id):
             continue

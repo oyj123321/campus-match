@@ -14,8 +14,10 @@
         <span data-i18n="{{ {'male':'g.male','female':'g.female'}.get(user.gender, 'g.unset') }}">性别</span> ·
         <span data-i18n="{{ {'male':'lf.male','female':'lf.female','both':'lf.both'}.get(user.effective_looking_for(), 'lf.unset') }}">取向</span> ·
         {% if user.answers %}<span data-i18n="hdr.answered">已答</span> {{ user.answers.keys()|length }} <span data-i18n="hdr.q">题</span>{% else %}<span data-i18n="hdr.noq">未填问卷</span>{% endif %}
+        · <span id="hdr-edu" data-i18n="{{ {'bachelor':'edu.bachelor','master':'edu.master','doctorate':'edu.doctorate'}.get(user.education_level, 'edu.unset') }}">学历</span>
         · <span data-i18n="hdr.openMatch">参与匹配</span> <span id="hdr-open" data-i18n="{{ 'on' if user.is_open_to_match() else 'off' }}">开</span>
         · <span data-i18n="hdr.cross">跨校</span> <span id="hdr-cross">{{ '开' if user.get_cross_schools() else '关' }}</span>
+        · <span data-i18n="hdr.crossDegree">跨学历</span> <span id="hdr-cross-degree">{{ '开' if user.allow_cross_degree else '关' }}</span>
     </p>
     <p class="hint lp-invite-oncard" id="hdr-invite" style="margin-top:8px;"></p>
 
@@ -75,6 +77,27 @@
         <p id="cross-save-status" class="hint" style="margin-top:6px;"></p>
     </div>
 
+    <div id="degree-box" class="card box-dim" style="margin-top:14px;text-align:left;">
+        <h3 style="margin-bottom:8px;" data-i18n="degree.title">学历与跨学历</h3>
+        <p class="hint" data-i18n="degree.hint">学历必填。跨学历需双方都勾选，规则与跨校相同。</p>
+        <div class="form-group" style="margin-top:10px;">
+            <label for="match-education-level" data-i18n="qn.edu">学历 *</label>
+            <select id="match-education-level">
+                <option value="" data-i18n="qn.select">请选择</option>
+                <option value="bachelor" {% if user.education_level == 'bachelor' %}selected{% endif %} data-i18n="edu.bachelor">本科</option>
+                <option value="master" {% if user.education_level == 'master' %}selected{% endif %} data-i18n="edu.master">硕士</option>
+                <option value="doctorate" {% if user.education_level == 'doctorate' %}selected{% endif %} data-i18n="edu.doctorate">博士</option>
+            </select>
+        </div>
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-top:10px;">
+            <input type="checkbox" id="match-allow-cross-degree" {% if user.allow_cross_degree %}checked{% endif %}>
+            <span data-i18n="qn.crossDegree">愿意跨学历匹配</span>
+        </label>
+        <p class="hint" data-i18n="qn.crossDegree.hint">不勾选 = 只配同学历。勾选后仅会与「也勾选了跨学历」的对方配对。</p>
+        <button type="button" class="btn btn-secondary" id="degree-save-btn" onclick="saveDegreePrefs()" style="margin-top:10px;" data-i18n="btn.saveDegree">保存学历偏好</button>
+        <p id="degree-save-status" class="hint" style="margin-top:6px;"></p>
+    </div>
+
     <div id="quota-box" class="hint" style="margin-top:12px;line-height:1.7;">
         <span data-i18n="q.mode">模式：</span><strong id="q-mode">{{ quota.match_mode }}</strong>
         · <span data-i18n="q.quota">本周额度：</span><strong id="q-remain">{{ quota.weekly_remaining }}</strong> / {{ quota.weekly_limit }}
@@ -82,8 +105,7 @@
     </div>
 
     <div style="margin-top:12px;" id="instant-wrap">
-        <button class="btn btn-match" id="match-btn" onclick="doMatch()" style="font-size:1.05em;padding:12px 40px;" data-i18n="btn.instant">提前揭晓（冷启动）</button>
-        <p class="hint" style="margin-top:8px;" data-i18n="instant.hint">冷启动阶段保留即时配对；正式运营可关掉，只走每周揭晓。</p>
+        <button class="btn btn-match" id="match-btn" onclick="doMatch()" style="font-size:1.05em;padding:12px 40px;" data-i18n="btn.instant">提前揭晓</button>
     </div>
 </div>
 
@@ -176,6 +198,20 @@ function renderQuota(q) {
         var n = (q.cross_schools || []).length;
         hdrCross.textContent = n ? (t('cross.on') + '·' + n) : t('cross.off');
     }
+    var hdrDeg = document.getElementById('hdr-cross-degree');
+    if (hdrDeg) {
+        hdrDeg.textContent = q.allow_cross_degree ? t('on') : t('off');
+    }
+    var hdrEdu = document.getElementById('hdr-edu');
+    if (hdrEdu) {
+        var eduKey = (q.education_level ? 'edu.' + q.education_level : 'edu.unset');
+        hdrEdu.setAttribute('data-i18n', eduKey);
+        hdrEdu.textContent = t(eduKey);
+    }
+    var eduSel = document.getElementById('match-education-level');
+    if (eduSel && q.education_level) eduSel.value = q.education_level;
+    var eduCb = document.getElementById('match-allow-cross-degree');
+    if (eduCb) eduCb.checked = !!q.allow_cross_degree;
 
     var wrap = document.getElementById('instant-wrap');
     var btn = document.getElementById('match-btn');
@@ -238,6 +274,7 @@ function renderMatchCards(matches, headerHtml) {
             + (m.privacy_user ? '<span class="privacy-badge">' + t('card.privacyBadge') + '</span>' : '')
             + '<span>' + (m.gender === 'male' ? t('g.male') : m.gender === 'female' ? t('g.female') : '') + '</span>'
             + (m.school ? '<span class="hint">' + esc(tSchool(m.school)) + '</span>' : '')
+            + (m.education_level ? '<span class="hint">' + esc(t('edu.' + m.education_level) || m.education_level) + '</span>' : '')
             + '</div>';
 
         if (m.privacy_user) {
@@ -351,6 +388,26 @@ async function saveCrossSchools() {
     }
     await refreshQuota();
     st.innerHTML = '<span class="t-ok">' + t('al.crossSaved') + '</span>';
+}
+
+async function saveDegreePrefs() {
+    var level = document.getElementById('match-education-level').value;
+    var st = document.getElementById('degree-save-status');
+    if (!level) {
+        st.innerHTML = '<span class="error">' + esc(t('qn.needEdu')) + '</span>';
+        return;
+    }
+    st.textContent = t('qn.saving');
+    var d = await api('PUT', '/api/me', {
+        education_level: level,
+        allow_cross_degree: document.getElementById('match-allow-cross-degree').checked
+    });
+    if (!d.ok) {
+        st.innerHTML = '<span class="error">' + esc(d.error || t('al.fail')) + '</span>';
+        return;
+    }
+    await refreshQuota();
+    st.innerHTML = '<span class="t-ok">' + t('al.degreeSaved') + '</span>';
 }
 
 async function searchBlock() {

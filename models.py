@@ -6,6 +6,7 @@ import secrets, json
 
 db = SQLAlchemy()
 EXPRESS_BIO_MIN = 30
+EDUCATION_LEVELS = ("bachelor", "master", "doctorate")
 
 
 class User(db.Model):
@@ -23,6 +24,10 @@ class User(db.Model):
     gender = db.Column(db.String(16))       # male / female
     # 择偶取向：想匹配的性别 male / female / both（男女不限）
     looking_for = db.Column(db.String(16))
+    # bachelor / master / doctorate（本 / 硕 / 博）
+    education_level = db.Column(db.String(16))
+    # 愿意跨学历：不同学历需双方都勾选；未勾 = 只同学历
+    allow_cross_degree = db.Column(db.Boolean, default=False)
     wechat_id = db.Column(db.String(128))  # 附加联系方式（必填，如微信）；学校邮箱配对成功后也会互见
     bio = db.Column(db.Text)
 
@@ -189,6 +194,7 @@ class User(db.Model):
             self.email_verified
             and self.gender in ("male", "female")
             and self.looking_for in ("male", "female", "both")
+            and (self.education_level or "") in EDUCATION_LEVELS
             and self.feature_vector
         ):
             return False
@@ -243,6 +249,8 @@ class User(db.Model):
             "name": self.name,
             "gender": self.gender,
             "looking_for": self.effective_looking_for(),
+            "education_level": self.education_level if (self.education_level or "") in EDUCATION_LEVELS else None,
+            "allow_cross_degree": bool(self.allow_cross_degree),
             "wechat_id": self.wechat_id,
             "bio": self.bio,
             "tags": [t.tag for t in self.tags],

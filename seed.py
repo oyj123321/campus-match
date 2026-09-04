@@ -145,6 +145,18 @@ SEEDS = [
 ]
 
 
+def _degree_for(bio):
+    if any(k in bio for k in ("博士", "博一", "博二", "博三")):
+        return "doctorate"
+    if "研" in bio:
+        return "master"
+    return "bachelor"
+
+
+# Alice（本科）与 Bob（硕士）互开跨学历，避免演示配对被学历切断
+CROSS_DEGREE_EMAILS = {"alice@um.edu.mo", "bob@um.edu.mo"}
+
+
 def seed(refresh=False):
     with app.app_context():
         db.create_all()
@@ -159,6 +171,8 @@ def seed(refresh=False):
                 looking_for = "both"
             # 跨校演示：Alice(澳大) + Ivy(科大) 都开跨校
             allow_cross = email in ("alice@um.edu.mo", "ivy@must.edu.mo", "jack@must.edu.mo")
+            education = _degree_for(bio)
+            allow_cross_degree = email in CROSS_DEGREE_EMAILS
 
             # 为缺失 scale 题填默认值
             full_answers = {}
@@ -198,10 +212,12 @@ def seed(refresh=False):
                 existing.bio = bio
                 existing.email_verified = True
                 existing.allow_cross_school = allow_cross
+                existing.education_level = education
+                existing.allow_cross_degree = allow_cross_degree
                 existing.answers = full_answers
                 existing.feature_vector = vec
                 refreshed += 1
-                print(f"  REFRESH: {name} ({gender}->{looking_for}) @ {school} — {len(vec)}d vector cross={allow_cross}")
+                print(f"  REFRESH: {name} ({gender}->{looking_for}) @ {school} edu={education} cross={allow_cross} crossDeg={allow_cross_degree}")
                 continue
 
             user = User(
@@ -214,12 +230,14 @@ def seed(refresh=False):
                 wechat_id=wechat,
                 bio=bio,
                 allow_cross_school=allow_cross,
+                education_level=education,
+                allow_cross_degree=allow_cross_degree,
             )
             user.answers = full_answers
             user.feature_vector = vec
             db.session.add(user)
             count += 1
-            print(f"  ADD: {name} ({gender}->{looking_for}) @ {school} — {len(vec)}d vector cross={allow_cross}")
+            print(f"  ADD: {name} ({gender}->{looking_for}) @ {school} edu={education} cross={allow_cross} crossDeg={allow_cross_degree}")
 
         db.session.commit()
         print(f"\nSeeded {count} users, refreshed {refreshed} (skipped {len(SEEDS) - count - refreshed})")
