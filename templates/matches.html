@@ -274,7 +274,7 @@ function renderMatchCards(matches, headerHtml) {
             + (m.privacy_user ? '<span class="privacy-badge">' + t('card.privacyBadge') + '</span>' : '')
             + '<span>' + (m.gender === 'male' ? t('g.male') : m.gender === 'female' ? t('g.female') : '') + '</span>'
             + (m.school ? '<span class="hint">' + esc(tSchool(m.school)) + '</span>' : '')
-            + (m.education_level ? '<span class="hint">' + esc(t('edu.' + m.education_level) || m.education_level) + '</span>' : '')
+            + (m.education_level ? '<span class="hint" style="font-weight:700;">' + esc(t('edu.' + m.education_level) || m.education_level) + '</span>' : '')
             + '</div>';
 
         if (m.privacy_user) {

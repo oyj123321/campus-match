@@ -32,6 +32,7 @@ from config import (
     RESEND_API_KEY,
     LOGIN_ONCE_PER_DAY, SITE_ANNOUNCEMENT,
     SESSION_REMEMBER_DAYS, DEVICE_COOKIE_NAME,
+    CROSS_DEGREE_LEGACY_BEFORE,
 )
 from models import db, User, UserTag, Match, Blocklist, EXPRESS_BIO_MIN, EDUCATION_LEVELS
 from questionnaire import QUESTIONS, build_feature_vector, build_express_vector, get_compatibility_insight, get_open_letter
@@ -45,7 +46,10 @@ from batch_job import (
     persist_user_matches, count_new_matches_this_week, weekly_limit_for,
     next_batch_datetime, run_batch_all, schedule_loop, current_week_key,
 )
-from match_pool import eligible_candidates, previous_partner_ids, previous_pair_keys
+from match_pool import (
+    eligible_candidates, previous_partner_ids, previous_pair_keys,
+    deactivate_filled_degree_violations,
+)
 
 # ---- App Factory ----
 app = Flask(__name__)
@@ -1224,7 +1228,7 @@ def api_match():
             return api_err("err.need_verify")
         if not user.gender or user.looking_for not in LOOKING_FOR_VALUES:
             return api_err("err.need_gender")
-        if (user.education_level or "") not in EDUCATION_LEVELS:
+        if not user.education_known() and not user.is_legacy_degree_user():
             return api_err("err.education")
         if user.is_express():
             return api_err("err.profile_incomplete")
@@ -1452,6 +1456,10 @@ def api_get_matches():
     user = get_current_user()
     show_all = request.args.get("all") in ("1", "true", "yes")
 
+    n_deg = deactivate_filled_degree_violations(user)
+    if n_deg:
+        db.session.commit()
+
     q = Match.query.filter(
         (Match.user1_id == user.id) | (Match.user2_id == user.id)
     )
@@ -1516,6 +1524,8 @@ def api_me():
     edu_err = apply_education_fields(user, data, required=False)
     if edu_err:
         return edu_err
+    if "education_level" in data or "allow_cross_degree" in data:
+        deactivate_filled_degree_violations(user)
     contact = (data.get("wechat_id") or "").strip()
     if "wechat_id" in data:
         if not contact and not user.is_express():
@@ -1875,7 +1885,36 @@ def ensure_schema():
         db.session.commit()
         print("[CampusMatch] migrated: matches.active")
 
+    _backfill_legacy_cross_degree()
     _cleanup_one_to_one_matches()
+    n_deg = deactivate_filled_degree_violations()
+    if n_deg:
+        db.session.commit()
+        print(f"[CampusMatch] deactivated {n_deg} degree-incompatible active matches")
+
+
+def _backfill_legacy_cross_degree():
+    """2026-09-04 前注册且尚未填学历：默认愿意跨学历。已走新表单填过学历的不改。"""
+    from sqlalchemy import or_
+
+    q = User.query.filter(
+        User.created_at < CROSS_DEGREE_LEGACY_BEFORE,
+        or_(
+            User.education_level.is_(None),
+            User.education_level.notin_(list(EDUCATION_LEVELS)),
+        ),
+        or_(
+            User.allow_cross_degree.is_(None),
+            User.allow_cross_degree.is_(False),
+        ),
+    )
+    n = 0
+    for u in q.all():
+        u.allow_cross_degree = True
+        n += 1
+    if n:
+        db.session.commit()
+        print(f"[CampusMatch] legacy allow_cross_degree=1: {n} users")
 
 
 def _cleanup_one_to_one_matches():

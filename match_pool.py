@@ -40,14 +40,50 @@ def school_compatible(user_a, user_b):
 
 
 def degree_compatible(user_a, user_b):
-    """同学历始终可配；跨学历需双方都勾选 allow_cross_degree。"""
+    """双方都填了学历：同学历可配，跨学历须双方勾选。
+    有一方未填：不知道学历，不拦老用户；但已填且明确不跨的一方，不与「未知」配。"""
     a = (user_a.education_level or "").strip()
     b = (user_b.education_level or "").strip()
-    if a not in EDUCATION_LEVELS or b not in EDUCATION_LEVELS:
+    a_ok = a in EDUCATION_LEVELS
+    b_ok = b in EDUCATION_LEVELS
+    if a_ok and b_ok:
+        if a == b:
+            return True
+        return bool(user_a.allow_cross_degree) and bool(user_b.allow_cross_degree)
+    if a_ok and not user_a.allow_cross_degree:
         return False
-    if a == b:
-        return True
-    return bool(user_a.allow_cross_degree) and bool(user_b.allow_cross_degree)
+    if b_ok and not user_b.allow_cross_degree:
+        return False
+    return True
+
+
+def deactivate_filled_degree_violations(user=None):
+    """双方都已填学历、按当前规则不可配的有效配对 → active=False。
+    任一方未填学历的不拆（对方可能只是还没打开新表单，不能当成跨学历）。
+    返回拆掉的条数（调用方负责 commit）。"""
+    q = Match.query.filter(Match.active.is_(True))
+    if user is not None:
+        q = q.filter((Match.user1_id == user.id) | (Match.user2_id == user.id))
+    n = 0
+    for m in q.all():
+        a = User.query.get(m.user1_id)
+        b = User.query.get(m.user2_id)
+        if not a or not b:
+            continue
+        ea = (a.education_level or "").strip()
+        eb = (b.education_level or "").strip()
+        if ea not in EDUCATION_LEVELS or eb not in EDUCATION_LEVELS:
+            continue
+        if degree_compatible(a, b):
+            continue
+        m.active = False
+        n += 1
+        print(
+            f"[CampusMatch] deactivate match #{m.id}: "
+            f"{a.id}/{ea}/cross={int(bool(a.allow_cross_degree))} "
+            f"x {b.id}/{eb}/cross={int(bool(b.allow_cross_degree))}"
+        )
+    return n
 
 
 def vectors_aligned(user_a, user_b):

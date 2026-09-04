@@ -158,10 +158,10 @@ M = {
         "pt": "Limite semanal de novos matches atingido ({n}). Vê o histórico, ou espera até à próxima semana / {when}.",
     },
     "err.need_ready_optin": {
-        "zh": "请先完成隐私资料或完整问卷、性别、择偶取向、学历（隐私模式微信可不填）",
-        "tw": "請先完成隱私資料或完整問卷、性別、擇偶取向、學歷（隱私模式微信可不填）",
-        "en": "Finish Privacy mode or the full survey, gender, preference, and degree (WeChat optional in Privacy mode)",
-        "pt": "Completa o modo privacidade ou o questionário, género, preferência e grau (WeChat opcional no modo privacidade)",
+        "zh": "请先完成隐私资料或完整问卷、性别、择偶取向（新用户还须填学历；隐私模式微信可不填）",
+        "tw": "請先完成隱私資料或完整問卷、性別、擇偶取向（新用戶還須填學歷；隱私模式微信可不填）",
+        "en": "Finish Privacy mode or the full survey, gender, and preference (new accounts also need degree; WeChat optional in Privacy mode)",
+        "pt": "Completa o modo privacidade ou o questionário, género e preferência (contas novas também precisam do grau; WeChat opcional no modo privacidade)",
     },
     "err.need_open_optin": {
         "zh": "请先开启「参与匹配」，再预约本周揭晓",

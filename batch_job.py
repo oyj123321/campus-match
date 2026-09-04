@@ -25,7 +25,10 @@ from models import db, User, Match
 from matcher import batch_match_school, orientation_compatible, _dealbreaker_conflict
 from questionnaire import get_compatibility_insight
 from email_service import send_match_result_email
-from match_pool import is_blocked_pair, school_compatible, degree_compatible, vectors_aligned, previous_pair_keys
+from match_pool import (
+    is_blocked_pair, school_compatible, degree_compatible, vectors_aligned,
+    previous_pair_keys, deactivate_filled_degree_violations,
+)
 
 
 WEEKDAY_NAMES = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"]
@@ -183,6 +186,8 @@ def persist_user_matches(user, scored_pairs, mode, mail_cfg, weekly_new_limit=No
             skipped_low_score += 1
             continue
         if is_blocked_pair(user.id, other.id):
+            continue
+        if not school_compatible(user, other) or not degree_compatible(user, other):
             continue
         if _dealbreaker_conflict(user, other):
             skipped_dealbreaker += 1

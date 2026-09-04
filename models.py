@@ -26,7 +26,8 @@ class User(db.Model):
     looking_for = db.Column(db.String(16))
     # bachelor / master / doctorate（本 / 硕 / 博）
     education_level = db.Column(db.String(16))
-    # 愿意跨学历：不同学历需双方都勾选；未勾 = 只同学历
+    # 愿意跨学历：不同学历需双方都勾选；未勾 = 只同学历。新用户默认 False；
+    # 功能上线前且未填学历的老用户启动时回填 True。
     allow_cross_degree = db.Column(db.Boolean, default=False)
     wechat_id = db.Column(db.String(128))  # 附加联系方式（必填，如微信）；学校邮箱配对成功后也会互见
     bio = db.Column(db.Text)
@@ -188,15 +189,28 @@ class User(db.Model):
                 return False
         return True
 
+    def is_legacy_degree_user(self):
+        """学历功能上线前注册：未填学历也可进池，不按本硕博过滤。"""
+        from config import CROSS_DEGREE_LEGACY_BEFORE
+
+        created = self.created_at
+        if created is None:
+            return True
+        return created < CROSS_DEGREE_LEGACY_BEFORE
+
+    def education_known(self):
+        return (self.education_level or "") in EDUCATION_LEVELS
+
     def ready_to_match(self):
-        """资料是否齐全（不含是否愿意进池）。"""
+        """资料是否齐全（不含是否愿意进池）。老用户未填学历仍可进池。"""
         if not (
             self.email_verified
             and self.gender in ("male", "female")
             and self.looking_for in ("male", "female", "both")
-            and (self.education_level or "") in EDUCATION_LEVELS
             and self.feature_vector
         ):
+            return False
+        if not self.education_known() and not self.is_legacy_degree_user():
             return False
         if self.is_express():
             bio = (self.bio or "").strip()

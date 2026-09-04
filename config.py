@@ -1,6 +1,7 @@
 """CampusMatch 配置 — 澳门大学为基础，逐步扩展香港"""
 
 import os
+from datetime import datetime
 
 # 项目根目录
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -132,10 +133,12 @@ LOGIN_ONCE_PER_DAY = os.environ.get("LOGIN_ONCE_PER_DAY", "false").lower() == "t
 # 同设备登录保留天数：会话 cookie + 设备信任 cookie；期内再登录不发验证码
 SESSION_REMEMBER_DAYS = int(os.environ.get("SESSION_REMEMBER_DAYS", "7"))
 DEVICE_COOKIE_NAME = "cm_device"
+# 学历功能上线日（UTC）：此前注册且尚未填学历的用户，默认愿意跨学历
+CROSS_DEGREE_LEGACY_BEFORE = datetime(2026, 9, 4, 0, 0, 0)
 # 全站公告：.env 设 SITE_ANNOUNCEMENT= 可强制清空；未设置则用默认运营文案
 _DEFAULT_SITE_ANNOUNCEMENT = (
-    "【更新】资料须填写学历（本科 / 硕士 / 博士）。默认只配同学历；"
-    "跨学历须双方都勾选，规则与跨校相同。未填请到问卷或匹配页补上。"
+    "【更新】新用户须填学历（本科 / 硕士 / 博士），默认只配同学历，跨学历须双方勾选。"
+    "上线前的老用户未填也可继续匹配；填了之后按新规则。"
 )
 if "SITE_ANNOUNCEMENT" in os.environ:
     SITE_ANNOUNCEMENT = os.environ.get("SITE_ANNOUNCEMENT", "").strip()

@@ -4,7 +4,7 @@ CampusMatch 数据速查（只读）
 
 用法（项目根目录）：
   python scripts/inspect_db.py
-  python scripts/inspect_db.py stats          # 池子人数 + 匹配过人数（推荐）
+  python scripts/inspect_db.py stats          # 池子 + 按校 + 学历 + 配对（推荐）
   python scripts/inspect_db.py pool           # 池子名单
   python scripts/inspect_db.py matches
   python scripts/inspect_db.py --db /opt/campus-match/instance/campus_match.db stats
@@ -40,18 +40,31 @@ def cols(con: sqlite3.Connection, table: str) -> set[str]:
 
 
 def _pool_sql(uc: set[str]) -> str:
-    """近似 User.in_match_pool()：已验证 + 向量 + 性别取向微信 + open。"""
+    """近似 User.in_match_pool()：已验证 + 向量 + 性别取向学历微信 + open。"""
     open_clause = "1=1"
     if "open_to_match" in uc:
         open_clause = "(open_to_match IS NULL OR open_to_match = 1)"
     wechat_clause = "wechat_id IS NOT NULL AND wechat_id != ''"
     if "profile_mode" in uc:
         wechat_clause = f"(({wechat_clause}) OR profile_mode IN ('express','privacy'))"
+    edu_clause = "1=1"
+    if "education_level" in uc and "created_at" in uc:
+        # 与 ready_to_match 对齐：新用户须填学历；上线前老用户未填也可进池
+        edu_clause = (
+            "(education_level IN ('bachelor','master','doctorate') "
+            "OR created_at < '2026-09-04 00:00:00' OR created_at IS NULL)"
+        )
+    elif "education_level" in uc:
+        edu_clause = (
+            "(education_level IN ('bachelor','master','doctorate') "
+            "OR education_level IS NULL OR education_level = '')"
+        )
     return f"""
         email_verified = 1
           AND feature_vector_json IS NOT NULL AND feature_vector_json != ''
           AND gender IN ('male', 'female')
           AND looking_for IN ('male', 'female', 'both')
+          AND {edu_clause}
           AND {wechat_clause}
           AND {open_clause}
     """
@@ -111,6 +124,11 @@ def cmd_summary(con: sqlite3.Connection) -> None:
             "SELECT COUNT(*) FROM users WHERE open_to_match IS NULL OR open_to_match = 1"
         ).fetchone()[0]
         print(f"open_to_match 开/空: {n_open}")
+    if "education_level" in uc:
+        n_edu = con.execute(
+            "SELECT COUNT(*) FROM users WHERE education_level IN ('bachelor','master','doctorate')"
+        ).fetchone()[0]
+        print(f"已填学历（本/硕/博）: {n_edu}  ·  已验证但未填: {n_verified - n_edu}")
     print()
 
 
@@ -149,6 +167,61 @@ def cmd_stats(con: sqlite3.Connection) -> None:
     if not modes:
         print("  （尚无配对）")
     print()
+    _print_education(con)
+
+
+def _print_education(con: sqlite3.Connection) -> None:
+    uc = cols(con, "users")
+    if "education_level" not in uc:
+        print("=== 学历 ===")
+        print("  （库里还没有 education_level 列，先 git pull 并重启）")
+        print()
+        return
+    labels = {"bachelor": "本科", "master": "硕士", "doctorate": "博士"}
+    rows = con.execute(
+        """
+        SELECT COALESCE(education_level, '(未填)') AS edu, COUNT(*) AS n
+        FROM users
+        WHERE email_verified = 1
+        GROUP BY education_level
+        ORDER BY n DESC
+        """
+    ).fetchall()
+    print("=== 已验证用户 · 学历 ===")
+    for r in rows:
+        print(f"  {labels.get(r['edu'], r['edu'])}: {r['n']}")
+    if not rows:
+        print("  （无已验证用户）")
+    if "allow_cross_degree" in uc:
+        n_cross = con.execute(
+            "SELECT COUNT(*) FROM users WHERE email_verified = 1 AND allow_cross_degree = 1"
+        ).fetchone()[0]
+        n_same = con.execute(
+            """
+            SELECT COUNT(*) FROM users
+            WHERE email_verified = 1
+              AND education_level IN ('bachelor','master','doctorate')
+              AND (allow_cross_degree IS NULL OR allow_cross_degree = 0)
+            """
+        ).fetchone()[0]
+        print(f"  开了跨学历: {n_cross}  ·  只配同学历: {n_same}")
+    print()
+    pool_where = _pool_sql(uc)
+    pool_edu = con.execute(
+        f"""
+        SELECT COALESCE(education_level, '(未填)') AS edu, COUNT(*) AS n
+        FROM users
+        WHERE {pool_where}
+        GROUP BY education_level
+        ORDER BY n DESC
+        """
+    ).fetchall()
+    print("=== 匹配池 · 学历 ===")
+    for r in pool_edu:
+        print(f"  {labels.get(r['edu'], r['edu'])}: {r['n']}")
+    if not pool_edu:
+        print("  （空）")
+    print()
 
 
 def cmd_users(con: sqlite3.Connection, limit: int) -> None:
@@ -158,6 +231,10 @@ def cmd_users(con: sqlite3.Connection, limit: int) -> None:
         extra.append("open_to_match")
     if "opt_in_week" in uc:
         extra.append("opt_in_week")
+    if "education_level" in uc:
+        extra.append("education_level")
+    if "allow_cross_degree" in uc:
+        extra.append("allow_cross_degree")
     if "mbti_json" in uc:
         extra.append("mbti_json")
     sel = (
@@ -178,10 +255,17 @@ def cmd_users(con: sqlite3.Connection, limit: int) -> None:
                     mbti = f"{mbti}:{mj.get('name') or mj.get('label')}"
             except (TypeError, ValueError, json.JSONDecodeError):
                 mbti = "?"
+        edu = ""
+        if "education_level" in r.keys():
+            edu_map = {"bachelor": "本", "master": "硕", "doctorate": "博"}
+            edu = edu_map.get(r["education_level"] or "", "未填学历")
+            if "allow_cross_degree" in r.keys() and r["allow_cross_degree"]:
+                edu += "+跨学历"
         print(
             f"#{r['id']:>3} | {'✓' if r['email_verified'] else '·'} | {r['email']}"
             f" | {r['name'] or '（无名）'} | {r['school']}"
             f" | {r['gender'] or '-'}→{r['looking_for'] or '-'}"
+            f"{(' | ' + edu) if edu else ''}"
             f" | wx={'(有)' if r['wechat_id'] else '(无)'}"
             f"{(' | ' + mbti) if mbti else ''}"
         )
@@ -189,10 +273,20 @@ def cmd_users(con: sqlite3.Connection, limit: int) -> None:
 
 
 def cmd_incomplete(con: sqlite3.Connection) -> None:
+    uc = cols(con, "users")
+    edu_sel = "NULL AS education_level"
+    edu_where = "0"
+    if "education_level" in uc:
+        edu_sel = "education_level"
+        edu_where = (
+            "education_level IS NULL OR education_level = '' "
+            "OR education_level NOT IN ('bachelor','master','doctorate')"
+        )
     rows = con.execute(
-        """
+        f"""
         SELECT id, email, name, school, email_verified, gender, looking_for, wechat_id,
-               CASE WHEN answers_json IS NULL OR answers_json = '' OR answers_json = '{}'
+               {edu_sel},
+               CASE WHEN answers_json IS NULL OR answers_json = '' OR answers_json = '{{}}'
                     THEN 0 ELSE 1 END AS has_answers,
                created_at
         FROM users
@@ -201,7 +295,8 @@ def cmd_incomplete(con: sqlite3.Connection) -> None:
            OR gender IS NULL OR gender = ''
            OR looking_for IS NULL OR looking_for = ''
            OR wechat_id IS NULL OR wechat_id = ''
-           OR answers_json IS NULL OR answers_json = '' OR answers_json = '{}'
+           OR answers_json IS NULL OR answers_json = '' OR answers_json = '{{}}'
+           OR {edu_where}
         ORDER BY id
         """
     ).fetchall()
@@ -216,6 +311,10 @@ def cmd_incomplete(con: sqlite3.Connection) -> None:
             flags.append("无性别")
         if not r["looking_for"]:
             flags.append("无取向")
+        if "education_level" in r.keys():
+            edu = r["education_level"] or ""
+            if edu not in ("bachelor", "master", "doctorate"):
+                flags.append("无学历")
         if not r["wechat_id"]:
             flags.append("无联系方式")
         if not r["has_answers"]:
@@ -225,12 +324,18 @@ def cmd_incomplete(con: sqlite3.Connection) -> None:
 
 
 def cmd_pool(con: sqlite3.Connection) -> None:
-    """近似 in_match_pool：已验证 + 有向量 + 性别取向微信 + open_to_match。"""
+    """近似 in_match_pool：已验证 + 有向量 + 性别取向学历微信 + open_to_match。"""
     uc = cols(con, "users")
     pool_where = _pool_sql(uc)
+    extra = []
+    if "education_level" in uc:
+        extra.append("education_level")
+    if "allow_cross_degree" in uc:
+        extra.append("allow_cross_degree")
+    extra_sql = (", " + ", ".join(extra)) if extra else ""
     rows = con.execute(
         f"""
-        SELECT id, email, name, school, gender, looking_for, opt_in_week
+        SELECT id, email, name, school, gender, looking_for, opt_in_week{extra_sql}
         FROM users
         WHERE {pool_where}
         ORDER BY school, id
@@ -238,11 +343,18 @@ def cmd_pool(con: sqlite3.Connection) -> None:
     ).fetchall()
     print(f"=== 近似匹配池（{len(rows)}）===")
     by_school: dict[str, int] = {}
+    edu_map = {"bachelor": "本", "master": "硕", "doctorate": "博"}
     for r in rows:
         by_school[r["school"]] = by_school.get(r["school"], 0) + 1
         opt = r["opt_in_week"] if "opt_in_week" in r.keys() else None
+        edu = ""
+        if "education_level" in r.keys():
+            edu = edu_map.get(r["education_level"] or "", "未填")
+            if "allow_cross_degree" in r.keys() and r["allow_cross_degree"]:
+                edu += "+跨"
+            edu = f" | {edu}"
         print(
-            f"#{r['id']} {r['name'] or '?'} | {r['school']} | {r['gender']}→{r['looking_for']}"
+            f"#{r['id']} {r['name'] or '?'} | {r['school']}{edu} | {r['gender']}→{r['looking_for']}"
             f" | opt_in={opt or '-'} | {r['email']}"
         )
     print("--- 按校 ---")
