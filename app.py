@@ -549,6 +549,31 @@ def privacy_page():
     return render_template("privacy.html", contact_email=CONTACT_EMAIL)
 
 
+# 赞助二维码：放 static/support/<name>.<png|jpg|jpeg|webp>；缺哪个就不显示哪个
+SUPPORT_QR_CANDIDATES = (
+    ("wechat", "sup.wechat", "微信"),
+    ("alipay", "sup.alipay", "支付宝"),
+    ("mpay", "sup.mpay", "MPay 澳门钱包"),
+)
+
+
+@app.route("/support")
+def support_page():
+    """自愿赞助（全站唯一官方赞助入口，二维码只在此出现）。"""
+    qrs = []
+    for name, label_key, fallback in SUPPORT_QR_CANDIDATES:
+        for ext in ("png", "jpg", "jpeg", "webp"):
+            rel = f"support/{name}.{ext}"
+            if os.path.exists(os.path.join(app.static_folder, rel)):
+                qrs.append({
+                    "src": url_for("static", filename=rel),
+                    "label_key": label_key,
+                    "fallback": fallback,
+                })
+                break
+    return render_template("support.html", qrs=qrs, contact_email=CONTACT_EMAIL)
+
+
 @app.route("/")
 def index():
     user = get_current_user()

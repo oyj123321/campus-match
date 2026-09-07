@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card" style="text-align:left;max-width:640px;margin:0 auto;">
+    <h1 style="margin:0 0 8px;font-size:1.5em;" data-i18n="sup.pageTitle">支持开发者</h1>
+    <p class="hint" style="margin:0 0 18px;" data-i18n="sup.sub">完全自愿 · 不影响匹配 · 不解锁任何功能</p>
+
+    <p class="hint" style="margin:0 0 16px;line-height:1.75;" data-i18n="sup.why">
+        CampusMatch 是学生一个人做的，服务器、域名和邮件发送都自己付钱。网站一直免费，也不打算放广告或卖会员。
+        如果它帮你认识了有意思的人，或者你只是觉得这东西该活下去，可以随手支持一点——不给也完全没关系。
+    </p>
+
+    <div class="box box-dim" style="text-align:left;margin-bottom:18px;">
+        <p style="margin:0 0 8px;font-weight:700;" data-i18n="sup.ruleTitle">说清楚几件事</p>
+        <ul class="hint" style="margin:0;padding-left:18px;line-height:1.75;">
+            <li data-i18n="sup.rule1">完全自愿，不影响你使用任何功能。</li>
+            <li data-i18n="sup.rule2">给钱不会让你被优先匹配。匹配优先级只看是否填完整问卷，永远不卖。</li>
+            <li data-i18n="sup.rule3">不做捐赠排行榜，也不公开任何人的名字或金额。</li>
+            <li data-i18n="sup.rule4">这是赞助，不是购买服务，无法退款，也不产生任何权益或承诺。</li>
+        </ul>
+    </div>
+
+    {% if qrs %}
+    <h2 style="font-size:1.1em;margin:0 0 4px;" data-i18n="sup.qrTitle">赞助二维码</h2>
+    <p class="hint" style="margin:0 0 12px;" data-i18n="sup.qrHint">手机长按图片识别，或截图后用支付 App 扫码相册。金额随意。</p>
+    <div style="display:flex;flex-wrap:wrap;gap:16px;justify-content:center;margin-bottom:8px;">
+        {% for q in qrs %}
+        <figure style="margin:0;text-align:center;">
+            <img src="{{ q.src }}" alt="" style="width:200px;max-width:100%;border-radius:12px;border:1px solid #e2e8f0;display:block;">
+            <figcaption class="hint" style="margin-top:6px;font-weight:700;" data-i18n="{{ q.label_key }}">{{ q.fallback }}</figcaption>
+        </figure>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="box box-dim" style="margin-bottom:18px;">
+        <p class="hint" style="margin:0;line-height:1.75;" data-i18n="sup.noQr">赞助二维码还没放上来，暂时不用管这页。有想法或建议，欢迎写信到下面的邮箱。</p>
+    </div>
+    {% endif %}
+
+    <div class="box box-warn" style="text-align:left;margin-top:18px;">
+        <p style="margin:0 0 8px;font-weight:700;" data-i18n="sup.scamTitle">这也是唯一的官方赞助入口</p>
+        <p class="hint" style="margin:0;line-height:1.75;" data-i18n="sup.scam">
+            赞助码只出现在本站这一个页面。开发者不会私聊你要钱，不会用个人微信、电话或私人邮箱找你转账，
+            也不会以「验证」「解锁」「补差价」为由收费。任何在站外自称 CampusMatch 工作人员并向你要钱或要验证码的，都是诈骗。
+        </p>
+    </div>
+
+    <h2 style="font-size:1.1em;margin:20px 0 8px;" data-i18n="sup.freeTitle">不花钱的支持，同样管用</h2>
+    <ul class="hint" style="margin:0;padding-left:18px;line-height:1.75;">
+        <li data-i18n="sup.free1">认真填完整问卷——池子里真诚的人越多，所有人的匹配都越准。</li>
+        <li data-i18n="sup.free2">把网站分享给同学，尤其是男女比例失衡时，多一个人就多一种可能。</li>
+        <li data-i18n="sup.free3">遇到 bug 或有想法，写信告诉我：</li>
+    </ul>
+    <p class="hint" style="margin:8px 0 0;">
+        <a href="mailto:{{ contact_email }}"><strong>{{ contact_email }}</strong></a>
+    </p>
+
+    <p style="margin-top:24px;">
+        <a href="/" class="btn btn-secondary" data-i18n="priv.back">返回首页</a>
+    </p>
+</div>
+{% endblock %}
