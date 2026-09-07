@@ -270,10 +270,10 @@ M = {
     },
     "ok.survey_saved": {"zh": "问卷已保存", "tw": "問卷已儲存", "en": "Questionnaire saved", "pt": "Questionário guardado"},
     "ok.express_saved": {
-        "zh": "隐私资料已保存，已进入匹配池",
-        "tw": "隱私資料已儲存，已進入配對池",
-        "en": "Privacy profile saved — you are in the match pool",
-        "pt": "Perfil de privacidade guardado — estás no pool de matching",
+        "zh": "隐私资料已保存，已进池。完整问卷用户会优先匹配，想提高优先级请改填问卷。",
+        "tw": "隱私資料已儲存，已進池。完整問卷用戶會優先配對，想提高優先級請改填問卷。",
+        "en": "Privacy profile saved — you are in the pool. Questionnaire users are matched first; fill the survey to rank higher.",
+        "pt": "Perfil de privacidade guardado — estás no pool. Quem fez o questionário é emparelhado primeiro; preenche-o para subir de prioridade.",
     },
     "ok.optin": {
         "zh": "已预约本周匹配，将在 {when} 揭晓",

@@ -137,7 +137,7 @@ def send_match_result_email(to_email, matches, mail_config, insight=None, reason
             any_privacy = True
         badge = (
             ' <span style="display:inline-block;padding:2px 8px;border-radius:99px;'
-            'background:#fef3c7;color:#92400e;font-size:12px;font-weight:700;">隐私用户</span>'
+            'background:#fef3c7;color:#92400e;font-size:12px;font-weight:700;">隐私用户 · 稍后匹配</span>'
             if is_privacy else ""
         )
         display_name = _html_esc(m_user.name or "(匿名)")
@@ -162,9 +162,10 @@ def send_match_result_email(to_email, matches, mail_config, insight=None, reason
     if any_privacy:
         privacy_html = (
             "<div style='background:#fffbeb;border:1px solid #fcd34d;border-radius:8px;padding:12px 16px;margin-top:16px;'>"
-            "<strong style='color:#92400e;'>对方是隐私用户</strong>"
+            "<strong style='color:#92400e;'>对方是隐私用户（未填问卷，匹配优先级更低）</strong>"
             "<p style='margin:8px 0 0;font-size:14px;line-height:1.65;color:#78350f;'>"
-            "TA 选择了隐私模式，没有填完整问卷，资料更少。请尊重边界，用学校邮箱慢慢聊。"
+            "TA 走了隐私模式，没填完整问卷；算法会先把双方都填了问卷的人配出去，资料也更少。"
+            "请尊重边界，用学校邮箱慢慢聊。我们更鼓励认真填问卷。"
             "</p></div>"
         )
 
@@ -231,6 +232,9 @@ def send_match_result_email(to_email, matches, mail_config, insight=None, reason
         {insight_html}
         <p style="font-size:13px;line-height:1.7;color:#64748b;margin:18px 0 0;">
             建议尽快打个招呼（学校邮箱或附加联系方式均可）。友善、真诚比完美开场白更重要。
+        </p>
+        <p style="font-size:12px;line-height:1.7;color:#b45309;margin:10px 0 0;">
+            对方是同学，不是工作人员。开发者不会主动私聊你，也不参与匹配。自称官方、要转账或验证码的都是诈骗。
         </p>
         <p style="font-size:12px;line-height:1.7;color:#94a3b8;margin:10px 0 0;">
             若暂时不想继续被匹配，可在网站「匹配中心」关闭「参与匹配」——资料会保留，历史结果仍可查看。

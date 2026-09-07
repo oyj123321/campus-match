@@ -3,8 +3,13 @@
 {% if questionnaire_incomplete %}
 <div class="card incomplete-page-card" style="text-align:center;margin-bottom:14px;">
     <p style="margin:0 0 10px;font-weight:700;font-size:1.05em;" data-i18n="incomplete.matchesTitle">问卷未完成</p>
-    <p class="hint" style="margin:0 0 12px;" data-i18n="incomplete.matchesBody">完成隐私模式资料或完整问卷后才能预约与匹配。点此继续。</p>
+    <p class="hint" style="margin:0 0 12px;" data-i18n="incomplete.matchesBody">完整问卷会优先匹配。完成问卷或隐私资料后才能预约；新用户还须填学历。点此继续。</p>
     <a href="/questionnaire" class="btn btn-match" data-i18n="incomplete.cta">继续填写问卷</a>
+</div>
+{% elif user.is_express() %}
+<div class="box box-warn" style="margin-bottom:14px;text-align:left;">
+    <p style="margin:0 0 10px;font-size:0.92em;line-height:1.65;" data-i18n="m.privacySelf">你正在使用隐私模式：可以进池，但匹配优先级低于完整问卷。填完 39 题会更真诚，也更容易被优先配对。</p>
+    <a href="/questionnaire" class="btn btn-secondary" data-i18n="m.privacySelfCta">去填完整问卷</a>
 </div>
 {% endif %}
 <div class="card" style="text-align:center;">
@@ -320,6 +325,7 @@ function renderMatchCards(matches, headerHtml) {
 
         html += '<div class="wechat-line">' + t('card.email') + esc(m.email || t('card.nowechat')) + '</div>';
         html += '<div class="wechat-line">' + t('card.wechat') + esc(m.wechat_id || t('card.nowechat')) + '</div>';
+        html += '<p class="hint" style="margin-top:8px;color:#b45309;">' + t('card.scam') + '</p>';
         html += '<p class="hint" style="margin-top:6px;">' + t('card.opener') + '</p>';
         if (m.id) {
             html += '<button type="button" class="btn btn-secondary" style="margin-top:8px;" onclick="blockUser(' + m.id + ', this)">' + t('btn.noMore') + '</button>';

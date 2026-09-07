@@ -9,10 +9,10 @@
 
 <div class="card" id="profile-mode-card" style="margin-bottom:16px;">
     <p style="font-weight:700;margin:0 0 8px;" data-i18n="qn.mode.title">资料深度</p>
-    <p class="hint" style="margin:0 0 12px;" data-i18n="qn.mode.hint">不想交太多隐私可以走隐私模式：学校邮箱已验证身份，再写一段话就能进同一匹配池。对方会看到你是隐私用户。完整问卷会更准。</p>
+    <p class="hint" style="margin:0 0 12px;" data-i18n="qn.mode.hint">我们鼓励认真填完整问卷：双方都填问卷的人会优先配对。隐私模式也能进同一池，但优先级更低，对方会看到你是隐私用户。</p>
     <div class="profile-mode-btns">
-        <button type="button" class="btn btn-secondary" id="btn-mode-express" onclick="setProfileUi('express')" data-i18n="qn.mode.express">隐私模式</button>
-        <button type="button" class="btn btn-secondary" id="btn-mode-full" onclick="setProfileUi('full')" data-i18n="qn.mode.full">完整问卷</button>
+        <button type="button" class="btn btn-primary" id="btn-mode-full" onclick="setProfileUi('full')" data-i18n="qn.mode.full">完整问卷（优先匹配）</button>
+        <button type="button" class="btn btn-secondary" id="btn-mode-express" onclick="setProfileUi('express')" data-i18n="qn.mode.express">隐私模式（稍后匹配）</button>
     </div>
 </div>
 
@@ -121,7 +121,7 @@
 </form>
 
 <div class="card" id="express-submit-card" style="text-align:center;display:none;">
-    <p class="hint" style="margin:0 0 12px;line-height:1.6;" data-i18n="qn.express.submitHint">不填 39 题。匹配会参考这段自我介绍，并与问卷用户在同一池。配对对象会被告知你是隐私用户。</p>
+    <p class="hint" style="margin:0 0 12px;line-height:1.6;" data-i18n="qn.express.submitHint">不填 39 题，匹配主要看这段自我介绍。能进池，但会排在问卷用户后面；对方会看到你是隐私用户。想被优先匹配，请改填完整问卷。</p>
     <button type="button" class="btn btn-match" id="express-submit-btn" onclick="submitExpress()" data-i18n="qn.express.submit">保存隐私资料并进池</button>
     <p id="express-save-status" style="margin-top:8px;"></p>
 </div>
