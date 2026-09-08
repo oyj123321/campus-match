@@ -425,6 +425,7 @@ def send_due_icebreaker_followups(mail_config):
         Match.query.filter(
             Match.icebreaker_followup_sent.is_(False),
             Match.notified.is_(True),
+            Match.active.is_(True),
             Match.created_at <= cutoff,
         )
         .order_by(Match.created_at.asc())
@@ -440,6 +441,11 @@ def send_due_icebreaker_followups(mail_config):
             handled += 1
             continue
         if is_blocked_pair(a.id, b.id):
+            m.icebreaker_followup_sent = True
+            handled += 1
+            continue
+        # 双方都勾选「配对后回访」才发；否则记为已处理，避免无限重试
+        if not (bool(getattr(a, "want_match_followup", False)) and bool(getattr(b, "want_match_followup", False))):
             m.icebreaker_followup_sent = True
             handled += 1
             continue

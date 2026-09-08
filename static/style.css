@@ -384,6 +384,38 @@ input[type="text"]:focus, input[type="email"]:focus {
 }
 .btn-secondary:hover { background: #fff; border-color: #b9c4dd; }
 
+.btn-danger {
+    background: #dc2626; color: #fff;
+    border: none;
+    box-shadow: 0 4px 14px rgba(220, 38, 38, 0.28);
+}
+.btn-danger:hover:not(:disabled) { background: #b91c1c; }
+
+.btn-link-danger {
+    background: none; border: none; padding: 0;
+    color: #b91c1c; text-decoration: underline;
+    cursor: pointer; font-size: 0.95em;
+}
+.btn-link-danger:hover { color: #991b1b; }
+
+.cm-dialog {
+    position: fixed; inset: 0; z-index: 80;
+    display: flex; align-items: center; justify-content: center;
+    padding: 20px;
+}
+.cm-dialog-backdrop {
+    position: absolute; inset: 0;
+    background: rgba(15, 23, 42, 0.45);
+}
+.cm-dialog-panel {
+    position: relative; z-index: 1;
+    width: min(440px, 100%);
+    max-height: min(90vh, 640px);
+    overflow: auto;
+    text-align: left;
+    margin: 0;
+}
+
 .btn-match {
     background: var(--grad-match); color: #fff;
     box-shadow: 0 4px 20px rgba(236, 72, 153, 0.32);

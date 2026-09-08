@@ -58,10 +58,57 @@
     </div>
 
     <div id="pool-box" class="card box-dim" style="margin-top:14px;text-align:left;">
-        <h3 style="margin-bottom:8px;" data-i18n="pool.title">参与匹配</h3>
-        <p class="hint" data-i18n="pool.hint">关闭后不会再进入匹配池、不能预约/提前揭晓；历史配对仍可查看，资料不会删除。</p>
-        <p class="hint" style="margin-top:6px;"><span data-i18n="pool.status">当前：</span><strong id="q-open">…</strong></p>
-        <button type="button" class="btn btn-primary" id="open-btn" onclick="toggleOpenMatch()" style="margin-top:8px;" data-i18n="btn.openOn">开启参与匹配</button>
+        <h3 style="margin-bottom:8px;" data-i18n="pace.title">你的节奏与账号</h3>
+        <p class="hint" style="margin:0 0 12px;" data-i18n="pace.hint">暂停匹配不会删资料；删号会清掉账号与配对记录，需再次确认。</p>
+
+        <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer;margin-bottom:4px;">
+            <input type="checkbox" id="want-followup" style="margin-top:3px;" {% if user.want_match_followup %}checked{% endif %} onchange="saveFollowupPref()">
+            <span>
+                <span data-i18n="pace.followup">配对后回访邮件</span>
+                <span class="hint" style="display:block;margin-top:2px;" data-i18n="pace.followupHint">双方都勾选后才会发一次可选回访；默认关闭。</span>
+            </span>
+        </label>
+        <p id="followup-save-status" class="hint" style="margin:4px 0 12px;"></p>
+
+        <p class="hint" style="margin:0 0 8px;"><span data-i18n="pool.status">当前：</span><strong id="q-open">…</strong></p>
+        <div style="display:flex;flex-wrap:wrap;align-items:center;gap:12px 16px;">
+            <button type="button" class="btn btn-secondary" id="open-btn" onclick="onPacePrimary()" data-i18n="pace.pause">先暂停，专心了解</button>
+            <button type="button" class="btn-link-danger" id="delete-account-btn" onclick="openDeleteDialog()" data-i18n="pace.delete">删除账号</button>
+        </div>
+    </div>
+
+    <div id="exit-survey-modal" class="cm-dialog" style="display:none;" aria-hidden="true">
+        <div class="cm-dialog-backdrop" onclick="closeExitSurvey(true)"></div>
+        <div class="card cm-dialog-panel" role="dialog" aria-labelledby="exit-survey-title">
+            <h3 id="exit-survey-title" style="margin:0 0 6px;" data-i18n="exit.title">可以告诉我们为什么暂停吗？</h3>
+            <p class="hint" style="margin:0 0 12px;" data-i18n="exit.sub">可选。跳过也完全没问题，不影响你随时重新开启。</p>
+            <div id="exit-reason-list" style="display:flex;flex-direction:column;gap:8px;text-align:left;"></div>
+            <div id="exit-other-wrap" style="display:none;margin-top:10px;">
+                <label for="exit-reason-note" class="hint" data-i18n="exit.otherLabel">其他（选填）</label>
+                <input type="text" id="exit-reason-note" maxlength="280" style="width:100%;margin-top:4px;" data-i18n-ph="exit.otherPh" placeholder="想说的话…">
+            </div>
+            <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:16px;">
+                <button type="button" class="btn btn-primary" onclick="submitExitSurvey()" data-i18n="exit.submit">提交</button>
+                <button type="button" class="btn btn-secondary" onclick="closeExitSurvey(true)" data-i18n="exit.skip">跳过</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="delete-account-modal" class="cm-dialog" style="display:none;" aria-hidden="true">
+        <div class="cm-dialog-backdrop" onclick="closeDeleteDialog()"></div>
+        <div class="card cm-dialog-panel" role="dialog" aria-labelledby="delete-title">
+            <h3 id="delete-title" style="margin:0 0 6px;color:#b91c1c;" data-i18n="del.title">真的要删除账号吗？</h3>
+            <p class="hint" style="margin:0 0 10px;line-height:1.7;" data-i18n="del.warn">
+                删号不可恢复：资料、问卷、配对记录都会清掉。若只是暂时不想被匹配，请用「先暂停」——历史结果仍可看。
+            </p>
+            <p class="hint" style="margin:0 0 6px;" data-i18n="del.confirmHint">请输入你的学校邮箱以确认：</p>
+            <input type="email" id="delete-confirm-email" autocomplete="off" style="width:100%;" placeholder="name@school.edu">
+            <p id="delete-error" class="t-err" style="margin:8px 0 0;display:none;"></p>
+            <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:16px;">
+                <button type="button" class="btn btn-secondary" onclick="closeDeleteDialog()" data-i18n="del.cancel">再想想</button>
+                <button type="button" class="btn btn-danger" onclick="confirmDeleteAccount()" data-i18n="del.confirm">确认删除</button>
+            </div>
+        </div>
     </div>
 
     <div id="reveal-box" class="card box-dim" style="margin-top:14px;text-align:left;">
@@ -193,8 +240,12 @@ function renderQuota(q) {
     var hdrOpen = document.getElementById('hdr-open');
     if (hdrOpen) hdrOpen.textContent = openOn ? t('on') : t('off');
     var openBtn = document.getElementById('open-btn');
-    openBtn.textContent = openOn ? t('btn.openOff') : t('btn.openOn');
+    openBtn.textContent = openOn ? t('pace.pause') : t('pace.resume');
     openBtn.className = openOn ? 'btn btn-secondary' : 'btn btn-primary';
+    var fu = document.getElementById('want-followup');
+    if (fu && typeof q.want_match_followup === 'boolean') {
+        fu.checked = !!q.want_match_followup;
+    }
 
     var optBtn = document.getElementById('optin-btn');
     optBtn.textContent = q.opted_in ? t('btn.optout') : t('btn.optin');
@@ -380,12 +431,122 @@ function renderCrossList(q) {
     list.innerHTML = html || '<span class="hint">—</span>';
 }
 
-async function toggleOpenMatch() {
+async function onPacePrimary() {
     var on = !!(lastQuota && lastQuota.open_to_match !== false);
-    var d = await api('PUT', '/api/me', { open_to_match: !on });
-    if (!d.ok) { alert(d.error || t('al.fail')); return; }
+    if (on) {
+        var d = await api('POST', '/api/me/pause', {});
+        if (!d.ok) { alert(d.error || t('al.fail')); return; }
+        if (d.quota) renderQuota(d.quota);
+        else await refreshQuota();
+        openExitSurvey();
+        return;
+    }
+    var d2 = await api('PUT', '/api/me', { open_to_match: true });
+    if (!d2.ok) { alert(d2.error || t('al.fail')); return; }
     await refreshQuota();
-    alert(!on ? t('al.openOn') : t('al.openOff'));
+    alert(t('al.openOn'));
+}
+
+async function saveFollowupPref() {
+    var el = document.getElementById('want-followup');
+    var st = document.getElementById('followup-save-status');
+    if (!el) return;
+    st.textContent = t('qn.saving');
+    var d = await api('PUT', '/api/me', { want_match_followup: !!el.checked });
+    if (!d.ok) {
+        el.checked = !el.checked;
+        st.innerHTML = '<span class="t-err">' + esc(d.error || t('al.fail')) + '</span>';
+        return;
+    }
+    if (lastQuota) lastQuota.want_match_followup = !!el.checked;
+    st.innerHTML = '<span class="t-ok">' + t('pace.followupSaved') + '</span>';
+}
+
+var EXIT_REASONS = ['busy', 'found_someone', 'need_break', 'match_quality', 'privacy', 'other'];
+
+function openExitSurvey() {
+    var list = document.getElementById('exit-reason-list');
+    var html = '';
+    for (var i = 0; i < EXIT_REASONS.length; i++) {
+        var code = EXIT_REASONS[i];
+        html += '<label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:0.95em;">'
+            + '<input type="radio" name="exit-reason" value="' + code + '" onchange="onExitReasonChange()">'
+            + '<span>' + t('exit.' + code) + '</span></label>';
+    }
+    list.innerHTML = html;
+    document.getElementById('exit-reason-note').value = '';
+    document.getElementById('exit-other-wrap').style.display = 'none';
+    var modal = document.getElementById('exit-survey-modal');
+    modal.style.display = 'flex';
+    modal.setAttribute('aria-hidden', 'false');
+}
+
+function onExitReasonChange() {
+    var picked = document.querySelector('input[name="exit-reason"]:checked');
+    document.getElementById('exit-other-wrap').style.display =
+        (picked && picked.value === 'other') ? '' : 'none';
+}
+
+function closeExitSurvey(skipped) {
+    var modal = document.getElementById('exit-survey-modal');
+    modal.style.display = 'none';
+    modal.setAttribute('aria-hidden', 'true');
+    if (skipped) alert(t('al.openOff'));
+}
+
+async function submitExitSurvey() {
+    var picked = document.querySelector('input[name="exit-reason"]:checked');
+    if (!picked) {
+        alert(t('exit.needPick'));
+        return;
+    }
+    var note = (document.getElementById('exit-reason-note').value || '').trim();
+    var d = await api('POST', '/api/me/exit-feedback', {
+        reason_code: picked.value,
+        reason_note: note
+    });
+    if (!d.ok) { alert(d.error || t('al.fail')); return; }
+    closeExitSurvey(false);
+    alert(d.message || t('exit.thanks'));
+}
+
+function openDeleteDialog() {
+    document.getElementById('delete-confirm-email').value = '';
+    var err = document.getElementById('delete-error');
+    err.style.display = 'none';
+    err.textContent = '';
+    var modal = document.getElementById('delete-account-modal');
+    modal.style.display = 'flex';
+    modal.setAttribute('aria-hidden', 'false');
+}
+
+function closeDeleteDialog() {
+    var modal = document.getElementById('delete-account-modal');
+    modal.style.display = 'none';
+    modal.setAttribute('aria-hidden', 'true');
+}
+
+async function confirmDeleteAccount() {
+    var email = (document.getElementById('delete-confirm-email').value || '').trim();
+    var err = document.getElementById('delete-error');
+    if (!email) {
+        err.textContent = t('del.needEmail');
+        err.style.display = '';
+        return;
+    }
+    var d = await api('DELETE', '/api/me', { confirm_email: email });
+    if (!d.ok) {
+        err.textContent = d.error || t('al.fail');
+        err.style.display = '';
+        return;
+    }
+    alert(d.message || t('del.done'));
+    location.href = '/';
+}
+
+async function toggleOpenMatch() {
+    // 兼容旧调用：改走节奏区主按钮
+    return onPacePrimary();
 }
 
 async function saveCrossSchools() {

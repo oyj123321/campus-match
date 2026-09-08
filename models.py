@@ -7,6 +7,15 @@ import secrets, json
 db = SQLAlchemy()
 EXPRESS_BIO_MIN = 30
 EDUCATION_LEVELS = ("bachelor", "master", "doctorate")
+# 关闭参与匹配时的可选原因码（前端选择题）
+EXIT_REASON_CODES = (
+    "busy",           # 最近太忙 / 学业压力
+    "found_someone",  # 已经有对象了
+    "need_break",     # 暂时不想认识新人
+    "match_quality",  # 配对体验一般
+    "privacy",        # 隐私顾虑
+    "other",          # 其他（可填备注）
+)
 
 
 class User(db.Model):
@@ -62,6 +71,12 @@ class User(db.Model):
     cross_schools_json = db.Column(db.Text)
     # 总开关：关则不进匹配池、不能预约/提前揭晓；历史配对仍可看
     open_to_match = db.Column(db.Boolean, default=True)
+    # 配对成功后是否愿意收「双方都同意才发」的回访邮件；默认关
+    want_match_followup = db.Column(db.Boolean, default=False)
+    # 关闭参与匹配时的可选退出原因（code + 备注）
+    exit_reason_code = db.Column(db.String(32))
+    exit_reason_note = db.Column(db.String(280))
+    exit_reason_at = db.Column(db.DateTime, nullable=True)
     # 问卷推演 MBTI 报告 JSON（娱乐向，不参与匹配）
     mbti_json = db.Column(db.Text)
     # 上次「未完成问卷」催填邮件时间（UTC）
@@ -275,6 +290,7 @@ class User(db.Model):
             "allow_cross_school": bool(self.get_cross_schools()),
             "cross_schools": self.get_cross_schools(),
             "open_to_match": self.is_open_to_match(),
+            "want_match_followup": bool(self.want_match_followup),
             "mbti": self.mbti_report,
             "profile_mode": "privacy" if self.is_express() else "full",
             "invite_code": self.invite_code,

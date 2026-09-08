@@ -34,7 +34,7 @@ from config import (
     SESSION_REMEMBER_DAYS, DEVICE_COOKIE_NAME,
     CROSS_DEGREE_LEGACY_BEFORE,
 )
-from models import db, User, UserTag, Match, Blocklist, EXPRESS_BIO_MIN, EDUCATION_LEVELS
+from models import db, User, UserTag, Match, Blocklist, EXPRESS_BIO_MIN, EDUCATION_LEVELS, EXIT_REASON_CODES
 from questionnaire import QUESTIONS, build_feature_vector, build_express_vector, get_compatibility_insight, get_open_letter
 from personality import build_love_personality
 from matcher import real_time_match, batch_match_school
@@ -472,6 +472,7 @@ def match_quota_status(user):
         "education_level": user.education_level if (user.education_level or "") in EDUCATION_LEVELS else None,
         "allow_cross_degree": bool(user.allow_cross_degree),
         "open_to_match": user.is_open_to_match(),
+        "want_match_followup": bool(getattr(user, "want_match_followup", False)),
         "explain": _match_explain_text(mode),
     }
 
@@ -1531,13 +1532,25 @@ def api_get_matches():
 # 用户信息 API
 # ============================================================
 
-@app.route("/api/me", methods=["GET", "PUT"])
+@app.route("/api/me", methods=["GET", "PUT", "DELETE"])
 @login_required
 def api_me():
     user = get_current_user()
 
     if request.method == "GET":
         return jsonify({"ok": True, "user": user.to_dict()})
+
+    if request.method == "DELETE":
+        data = request.get_json(silent=True) or {}
+        confirm = (data.get("confirm_email") or "").strip().lower()
+        if not confirm or confirm != (user.email or "").lower():
+            return api_err("err.delete_confirm")
+        email = user.email
+        _purge_user_account(user)
+        db.session.commit()
+        session.clear()
+        print(f"[CampusMatch] self-delete account: {email}")
+        return jsonify({"ok": True, "message": t_api("ok.deleted")})
 
     # PUT: 更新基本信息（不含问卷）
     data = request.get_json() or {}
@@ -1584,10 +1597,68 @@ def api_me():
         user.open_to_match = bool(data.get("open_to_match"))
         if not user.open_to_match:
             user.opt_in_week = None
+    if "want_match_followup" in data:
+        user.want_match_followup = bool(data.get("want_match_followup"))
     from invite import try_redeem_invite
     try_redeem_invite(user)
     db.session.commit()
     return jsonify({"ok": True, "user": user.to_dict()})
+
+
+def _purge_user_account(user):
+    """删除用户及其配对、拉黑、标签。调用方负责 commit / 清 session。"""
+    uid = user.id
+    Match.query.filter((Match.user1_id == uid) | (Match.user2_id == uid)).delete(synchronize_session=False)
+    Blocklist.query.filter(
+        (Blocklist.user_id == uid) | (Blocklist.blocked_user_id == uid)
+    ).delete(synchronize_session=False)
+    UserTag.query.filter_by(user_id=uid).delete(synchronize_session=False)
+    db.session.delete(user)
+
+
+@app.route("/api/me/pause", methods=["POST"])
+@login_required
+def api_me_pause():
+    """关闭参与匹配（先暂停）。可选附带退出原因。"""
+    user = get_current_user()
+    data = request.get_json(silent=True) or {}
+    user.open_to_match = False
+    user.opt_in_week = None
+
+    code = (data.get("reason_code") or "").strip()
+    note = (data.get("reason_note") or "").strip()[:280]
+    if code:
+        if code not in EXIT_REASON_CODES:
+            return api_err("err.exit_reason")
+        user.exit_reason_code = code
+        user.exit_reason_note = note or None
+        user.exit_reason_at = datetime.utcnow()
+    db.session.commit()
+    return jsonify({
+        "ok": True,
+        "open_to_match": False,
+        "message": t_api("ok.paused"),
+        "quota": match_quota_status(user),
+    })
+
+
+@app.route("/api/me/exit-feedback", methods=["POST"])
+@login_required
+def api_me_exit_feedback():
+    """暂停后可选提交退出原因（可跳过）。"""
+    user = get_current_user()
+    data = request.get_json(silent=True) or {}
+    code = (data.get("reason_code") or "").strip()
+    note = (data.get("reason_note") or "").strip()[:280]
+    if not code:
+        return api_err("err.exit_reason")
+    if code not in EXIT_REASON_CODES:
+        return api_err("err.exit_reason")
+    user.exit_reason_code = code
+    user.exit_reason_note = note or None
+    user.exit_reason_at = datetime.utcnow()
+    db.session.commit()
+    return jsonify({"ok": True, "message": t_api("ok.exit_feedback")})
 
 
 @app.route("/api/users/search", methods=["GET"])
@@ -1897,6 +1968,27 @@ def ensure_schema():
         db.session.execute(text("ALTER TABLE users ADD COLUMN allow_cross_degree BOOLEAN DEFAULT 0"))
         db.session.commit()
         print("[CampusMatch] migrated: users.allow_cross_degree")
+
+    if "want_match_followup" not in user_cols:
+        db.session.execute(text("ALTER TABLE users ADD COLUMN want_match_followup BOOLEAN DEFAULT 0"))
+        db.session.execute(text("UPDATE users SET want_match_followup = 0 WHERE want_match_followup IS NULL"))
+        db.session.commit()
+        print("[CampusMatch] migrated: users.want_match_followup")
+
+    if "exit_reason_code" not in user_cols:
+        db.session.execute(text("ALTER TABLE users ADD COLUMN exit_reason_code VARCHAR(32)"))
+        db.session.commit()
+        print("[CampusMatch] migrated: users.exit_reason_code")
+
+    if "exit_reason_note" not in user_cols:
+        db.session.execute(text("ALTER TABLE users ADD COLUMN exit_reason_note VARCHAR(280)"))
+        db.session.commit()
+        print("[CampusMatch] migrated: users.exit_reason_note")
+
+    if "exit_reason_at" not in user_cols:
+        db.session.execute(text("ALTER TABLE users ADD COLUMN exit_reason_at DATETIME"))
+        db.session.commit()
+        print("[CampusMatch] migrated: users.exit_reason_at")
 
     if "icebreaker_followup_sent" not in match_cols:
         db.session.execute(text("ALTER TABLE matches ADD COLUMN icebreaker_followup_sent BOOLEAN DEFAULT 0"))

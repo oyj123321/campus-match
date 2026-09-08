@@ -287,6 +287,36 @@ M = {
         "en": "{name} is blocked and will not be matched again",
         "pt": "{name} foi bloqueado e não voltará a fazer match",
     },
+    "ok.paused": {
+        "zh": "已暂停参与匹配。历史配对仍可查看，资料不会删除。",
+        "tw": "已暫停參與配對。歷史配對仍可查看，資料不會刪除。",
+        "en": "Matching paused. History stays; your profile is kept.",
+        "pt": "Matching em pausa. O histórico fica; o perfil mantém-se.",
+    },
+    "ok.exit_feedback": {
+        "zh": "谢谢反馈，我们会用来改进。",
+        "tw": "謝謝回饋，我們會用來改進。",
+        "en": "Thanks — that helps us improve.",
+        "pt": "Obrigado — ajuda-nos a melhorar.",
+    },
+    "ok.deleted": {
+        "zh": "账号已删除。欢迎以后再用学校邮箱重新注册。",
+        "tw": "帳號已刪除。歡迎以後再用學校信箱重新註冊。",
+        "en": "Account deleted. You can register again later with your school email.",
+        "pt": "Conta eliminada. Podes voltar a registar-te mais tarde com o email escolar.",
+    },
+    "err.exit_reason": {
+        "zh": "请选择一个退出原因，或点「跳过」",
+        "tw": "請選擇一個退出原因，或點「跳過」",
+        "en": "Pick a reason, or tap Skip",
+        "pt": "Escolhe um motivo, ou toca em Saltar",
+    },
+    "err.delete_confirm": {
+        "zh": "请输入你注册时的完整学校邮箱以确认删号",
+        "tw": "請輸入你註冊時的完整學校信箱以確認刪號",
+        "en": "Type your full school email to confirm deletion",
+        "pt": "Escreve o teu email escolar completo para confirmar",
+    },
     "match.none_orient": {
         "zh": "当前暂无符合你择偶取向的可匹配用户",
         "tw": "目前暫無符合你擇偶取向的可配對用戶",
