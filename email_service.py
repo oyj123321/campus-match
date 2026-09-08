@@ -87,6 +87,13 @@ def send_match_result_email(to_email, matches, mail_config, insight=None, reason
             if reason_line else ""
         )
         subject = "CampusMatch - 本次暂未配对"
+        reason_text = f"\n本轮情况：{reason_line}" if reason_line else ""
+        text_body = f"""CampusMatch 本轮匹配结果
+
+这一轮暂时没有合适人选。{reason_text}
+
+你可以下周再参加，或在网站上完善问卷：
+{site_url}/matches"""
         body = f"""<!DOCTYPE html>
 <html lang="zh-CN">
 <head><meta charset="utf-8"></head>
@@ -123,9 +130,10 @@ def send_match_result_email(to_email, matches, mail_config, insight=None, reason
                 print(f"[DEV] reason: {reason_line}")
             print(f"{'='*60}\n")
             return True, "dev-printed"
-        return _dispatch_email(to_email, subject, body, mail_config)
+        return _dispatch_email(to_email, subject, body, mail_config, text_body)
 
     rows = ""
+    text_rows = []
     any_privacy = False
     for i, (m_user, score) in enumerate(matches, 1):
         extra = _html_esc(m_user.wechat_id or "")
@@ -148,6 +156,11 @@ def send_match_result_email(to_email, matches, mail_config, insight=None, reason
             if is_privacy else ""
         )
         display_name = _html_esc(m_user.name or "(匿名)")
+        text_rows.append(
+            f"#{i} {m_user.name or '(匿名)'}\n"
+            f"学校邮箱：{m_user.email}\n"
+            f"附加联系方式：{m_user.wechat_id or '未填写'}"
+        )
         rows += f"""
             <tr>
                 <td style="padding:10px 8px;border-bottom:1px solid #e2e8f0;text-align:center;">#{i}</td>
@@ -257,6 +270,14 @@ def send_match_result_email(to_email, matches, mail_config, insight=None, reason
 </html>"""
 
     subject = "CampusMatch - 你的匹配结果"
+    text_body = f"""CampusMatch 匹配结果
+
+系统为你找到新的匹配：
+
+{chr(10).join(text_rows)}
+
+请友善、真诚地联系对方。谨防索要转账或验证码的诈骗行为。
+详情：{site_url}/matches"""
 
     if not mail_config.get("enabled"):
         print(f"\n{'='*60}")
@@ -269,7 +290,7 @@ def send_match_result_email(to_email, matches, mail_config, insight=None, reason
         print(f"{'='*60}\n")
         return True, "dev-printed"
 
-    return _dispatch_email(to_email, subject, body, mail_config)
+    return _dispatch_email(to_email, subject, body, mail_config, text_body)
 
 
 def send_icebreaker_followup_email(to_email, partner_name, mail_config):
@@ -281,6 +302,12 @@ def send_icebreaker_followup_email(to_email, partner_name, mail_config):
         .replace('"', "&quot;")
     )
     subject = "CampusMatch - 和 TA 打个招呼了吗？"
+    text_body = f"""CampusMatch 配对提醒
+
+你好，你和 {name} 已经配对几天了。如果还没联系，不妨先打个招呼。
+
+请友善、真诚；聊不来也没关系，礼貌收尾即可。
+打开匹配页：{site_url}/matches"""
     body = f"""<!DOCTYPE html>
 <html lang="zh-CN">
 <head><meta charset="utf-8"></head>
@@ -308,7 +335,7 @@ def send_icebreaker_followup_email(to_email, partner_name, mail_config):
     if not mail_config.get("enabled"):
         print(f"[DEV] 破冰随访 → {to_email} · partner={name}")
         return True, "dev-printed"
-    return _dispatch_email(to_email, subject, body, mail_config)
+    return _dispatch_email(to_email, subject, body, mail_config, text_body)
 
 
 def send_incomplete_nudge_email(to_email, mail_config, name=None):
@@ -321,6 +348,12 @@ def send_incomplete_nudge_email(to_email, mail_config, name=None):
         .replace('"', "&quot;")
     )
     subject = "CampusMatch - 问卷还没填完，回来继续？"
+    text_body = f"""CampusMatch 问卷提醒
+
+你好，{display}！你的资料问卷还没答完，未完成时无法参与每周匹配。
+
+继续填写：{continue_url}
+填完问卷不代表一定能配上，结果取决于本轮匹配池与双方偏好。"""
     body = f"""<!DOCTYPE html>
 <html lang="zh-CN">
 <head><meta charset="utf-8"></head>
@@ -350,7 +383,7 @@ def send_incomplete_nudge_email(to_email, mail_config, name=None):
     if not mail_config.get("enabled"):
         print(f"[DEV] 未完成问卷催填 → {to_email} · link={continue_url}")
         return True, "dev-printed"
-    return _dispatch_email(to_email, subject, body, mail_config)
+    return _dispatch_email(to_email, subject, body, mail_config, text_body)
 
 
 def send_incomplete_nudges(mail_config, cooldown_days=None, limit=200, dry_run=True):
