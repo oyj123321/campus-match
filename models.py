@@ -315,7 +315,8 @@ class Match(db.Model):
 
 
 class Blocklist(db.Model):
-    """不想再匹配的人（双向生效：任一方拉黑则不再配对）。"""
+    """不想再匹配的人（双向生效：任一方拉黑则不再配对）。
+    历史上配过的人由匹配算法硬排除，不必再进黑名单；拉黑主要用于尚未配过的人，或立刻失效当前配对。"""
     __tablename__ = "blocklist"
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)

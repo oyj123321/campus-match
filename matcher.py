@@ -60,11 +60,13 @@ def _is_express_user(u):
 _TIER_BOTH_QUESTIONNAIRE = 6.0
 _TIER_MIXED = 4.0
 _TIER_BOTH_PRIVACY = 2.0
-_PREVIOUS_MATCH_PENALTY = 1.0
 
 
 def pair_priority(user_a, user_b, previously_matched=False):
-    """匹配优先级：双方问卷 > 一方问卷 > 双方隐私；曾配过再降一档；最后才看 pair_score。"""
+    """匹配优先级：双方问卷 > 一方问卷 > 双方隐私；最后才看 pair_score。
+    previously_matched 保留参数兼容；历史配对已在候选池硬排除，此处若仍传入则跳过用 0 分档。"""
+    if previously_matched:
+        return 0.0
     ea, eb = _is_express_user(user_a), _is_express_user(user_b)
     if not ea and not eb:
         tier = _TIER_BOTH_QUESTIONNAIRE
@@ -72,8 +74,6 @@ def pair_priority(user_a, user_b, previously_matched=False):
         tier = _TIER_MIXED
     else:
         tier = _TIER_BOTH_PRIVACY
-    if previously_matched:
-        tier -= _PREVIOUS_MATCH_PENALTY
     return round(tier + pair_score(user_a, user_b), 4)
 
 
@@ -155,7 +155,8 @@ def pick_without_dealbreaker(user, scored_pairs, max_n=1):
 
 def real_time_match(user, candidates, top_n=5, min_score=0.15, previous_partner_ids=None):
     """
-    实时匹配：先按问卷/隐私档位与是否配过排序，同档再比相似度。
+    实时匹配：先按问卷/隐私档位排序，同档再比相似度。
+    历史配对（previous_partner_ids）硬跳过，不再降权重配。
 
     user/candidates 必须有 .feature_vector 属性（list of float）
     不在此过滤硬性底线：由调用方按序跳过，避免 Top-1 冲突就放弃更低分可配人选。
@@ -170,7 +171,7 @@ def real_time_match(user, candidates, top_n=5, min_score=0.15, previous_partner_
     prev = set(previous_partner_ids or ())
     scored = []
     for c in candidates:
-        if c.id == user.id:
+        if c.id == user.id or c.id in prev:
             continue
         if not c.feature_vector:
             continue
@@ -178,7 +179,7 @@ def real_time_match(user, candidates, top_n=5, min_score=0.15, previous_partner_
             continue
         sim = pair_score(user, c)
         if sim >= min_score:
-            rank = pair_priority(user, c, c.id in prev)
+            rank = pair_priority(user, c, False)
             scored.append((c, round(sim, 4), rank))
 
     scored.sort(key=lambda x: x[2], reverse=True)
@@ -292,7 +293,7 @@ def batch_match_school(users, filter_same_gender=True, previous_pairs=None):
 
     - 默认按择偶取向双向过滤后贪心配对（支持同性/双性取向）
     - filter_same_gender=True 且全部为「异性取向」时，仍可用匈牙利二部图
-    - previous_pairs: {(min_id, max_id), ...} 历史配对，用于降权
+    - previous_pairs: {(min_id, max_id), ...} 历史配对，硬排除
 
     Returns:
         list of (user1, user2, score)  score 为原始 pair_score
@@ -317,22 +318,24 @@ def batch_match_school(users, filter_same_gender=True, previous_pairs=None):
             raw_matrix = [[0.0] * m for _ in range(n)]
             for i in range(n):
                 for j in range(m):
+                    if _was_matched_before(group_a[i], group_b[j], prev):
+                        continue  # 配过永不再配：保持 0
                     if not orientation_compatible(group_a[i], group_b[j]):
                         continue
                     if _dealbreaker_conflict(group_a[i], group_b[j]):
                         continue  # 一票否决：保持 0，不当作可配边
                     raw = pair_score(group_a[i], group_b[j])
                     raw_matrix[i][j] = raw
-                    rank_matrix[i][j] = pair_priority(
-                        group_a[i], group_b[j],
-                        _was_matched_before(group_a[i], group_b[j], prev),
-                    )
+                    rank_matrix[i][j] = pair_priority(group_a[i], group_b[j], False)
             ranked = hungarian_match(group_a, group_b, rank_matrix)
             out = []
             for ua, ub, _rank in ranked:
                 i = group_a.index(ua)
                 j = group_b.index(ub)
-                out.append((ua, ub, round(raw_matrix[i][j], 4)))
+                raw = raw_matrix[i][j]
+                if raw <= 0:
+                    continue  # 历史配对 / 一票否决等零边，不当作结果
+                out.append((ua, ub, round(raw, 4)))
             out.sort(key=lambda x: x[2], reverse=True)
             return out
 
@@ -346,11 +349,14 @@ def greedy_match_all(users, min_score=0.15, require_orientation=True, previous_p
 
     对所有用户两两计算相似度，按优先级从高到低贪心配对。
     每人只能匹配一次。require_orientation 时要求双向择偶兼容。
+    previous_pairs 内的历史对直接跳过。
     """
     prev = set(previous_pairs or ())
     pairs = []
     for u1, u2 in combinations(users, 2):
         if not u1.feature_vector or not u2.feature_vector:
+            continue
+        if _was_matched_before(u1, u2, prev):
             continue
         if require_orientation and not orientation_compatible(u1, u2):
             continue
@@ -358,7 +364,7 @@ def greedy_match_all(users, min_score=0.15, require_orientation=True, previous_p
             continue
         sim = pair_score(u1, u2)
         if sim >= min_score:
-            rank = pair_priority(u1, u2, _was_matched_before(u1, u2, prev))
+            rank = pair_priority(u1, u2, False)
             pairs.append((u1, u2, sim, rank))
 
     pairs.sort(key=lambda x: x[3], reverse=True)

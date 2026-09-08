@@ -1,4 +1,4 @@
-"""匹配池过滤：学校规则 + 黑名单 + 取向 + 是否进池。"""
+"""匹配池过滤：学校规则 + 黑名单 + 历史配对 + 取向 + 是否进池。"""
 
 from config import CROSS_SCHOOL_MATCHING_ENABLED
 from models import EDUCATION_LEVELS, User, Blocklist, Match
@@ -24,6 +24,19 @@ def is_blocked_pair(a_id, b_id):
             (Blocklist.user_id == a_id) & (Blocklist.blocked_user_id == b_id)
         ) | (
             (Blocklist.user_id == b_id) & (Blocklist.blocked_user_id == a_id)
+        )
+    ).first() is not None
+
+
+def was_matched_pair(a_id, b_id):
+    """历史上是否配过（含已失效）。配过则双向永不再配，也不复活旧卡。"""
+    if a_id == b_id:
+        return True
+    return Match.query.filter(
+        (
+            (Match.user1_id == a_id) & (Match.user2_id == b_id)
+        ) | (
+            (Match.user1_id == b_id) & (Match.user2_id == a_id)
         )
     ).first() is not None
 
@@ -97,7 +110,7 @@ def pair_key(a_id, b_id):
 
 
 def previous_partner_ids(user_id):
-    """曾与该用户配过对的对方 ID（含已失效，不含拉黑过滤）。"""
+    """曾与该用户配过对的对方 ID（含已失效）。配过则永不再进彼此的候选池。"""
     rows = Match.query.filter(
         (Match.user1_id == user_id) | (Match.user2_id == user_id)
     ).all()
@@ -108,7 +121,7 @@ def previous_partner_ids(user_id):
 
 
 def previous_pair_keys(user_ids=None):
-    """历史配对 (min_id, max_id)。传入 user_ids 时只收两端都在集合内的对。"""
+    """历史配对 (min_id, max_id)。传入 user_ids 时只收两端都在集合内的对。用于硬排除。"""
     q = Match.query
     if user_ids is not None:
         ids = set(user_ids)
@@ -122,10 +135,11 @@ def previous_pair_keys(user_ids=None):
 
 
 def eligible_candidates(user, exclude_ids=None):
-    """即时匹配候选：进池 + 学校规则 + 黑名单 + 取向 + 向量 + 对方本周额度。"""
+    """即时匹配候选：进池 + 学校规则 + 黑名单 + 历史配对 + 取向 + 向量 + 对方本周额度。"""
     exclude_ids = set(exclude_ids or ())
     exclude_ids.add(user.id)
     blocked = blocked_partner_ids(user.id)
+    prev = previous_partner_ids(user.id)
 
     q = User.query.filter(
         User.email_verified == True,
@@ -142,7 +156,7 @@ def eligible_candidates(user, exclude_ids=None):
 
     out = []
     for c in q.all():
-        if c.id in exclude_ids or c.id in blocked:
+        if c.id in exclude_ids or c.id in blocked or c.id in prev:
             continue
         if not c.in_match_pool():
             continue

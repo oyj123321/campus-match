@@ -350,10 +350,10 @@ M = {
         "pt": "Um-para-um: só vês o match ativo. Os emails escolares já estão partilhados — começa por aí.",
     },
     "explain.one": {
-        "zh": "一对一：在取向互相接受、本周仍有额度的人里算问卷/自我介绍相似度，只给你得分最高的 1 人；页面不展示匹配度分数，只给契合点与破冰话题",
-        "tw": "一對一：在取向互相接受、本週仍有額度的人裡算問卷／自我介紹相似度，只給你得分最高的 1 人；頁面不展示分數，只給契合點與破冰話題",
-        "en": "One-to-one: among people who accept each other's gender preference and still have weekly quota, we rank survey/intro similarity and keep the top 1. The page shows fit notes, not a score",
-        "pt": "Um-para-um: entre quem aceita a preferência de género e ainda tem quota, ordenamos por similaridade e ficamos com o 1.º. A página mostra notas de afinidade, não uma pontuação",
+        "zh": "一对一：在取向互相接受、本周仍有额度的人里排序（问卷优先于隐私），只给你优先级最高的 1 人；历史上配过的人双向永不再配；页面不展示匹配度分数，只给契合点与破冰话题",
+        "tw": "一對一：在取向互相接受、本週仍有額度的人裡排序（問卷優先於隱私），只給你優先級最高的 1 人；歷史上配過的人雙向永不再配；頁面不展示分數，只給契合點與破冰話題",
+        "en": "One-to-one: among people who accept each other's gender preference and still have weekly quota, we rank questionnaire users above privacy users and keep the top 1. Anyone you matched before is never rematched. The page shows fit notes, not a score",
+        "pt": "Um-para-um: entre quem aceita a preferência de género e ainda tem quota, priorizamos o questionário face à privacidade e ficamos com o 1.º. Quem já fez match nunca volta. A página mostra notas de afinidade, não uma pontuação",
     },
     "explain.cross_on": {
         "zh": "；默认同校，跨校需双方互相勾选对方学校（双向白名单）。",

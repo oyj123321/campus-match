@@ -26,7 +26,7 @@ from matcher import batch_match_school, orientation_compatible, _dealbreaker_con
 from questionnaire import get_compatibility_insight
 from email_service import send_match_result_email
 from match_pool import (
-    is_blocked_pair, school_compatible, degree_compatible, vectors_aligned,
+    is_blocked_pair, was_matched_pair, school_compatible, degree_compatible, vectors_aligned,
     previous_pair_keys, deactivate_filled_degree_violations,
 )
 
@@ -134,25 +134,20 @@ def enforce_one_to_one_active(user_a, user_b, match_row):
 
 
 def _get_or_create_pair(user_a, user_b, score, insight, mode="batch"):
-    """写入或更新一对匹配。返回 (match, is_new)。"""
+    """写入新配对。历史上已有记录则返回 (None, False)，永不复活旧卡。"""
     existing = Match.query.filter(
         ((Match.user1_id == user_a.id) & (Match.user2_id == user_b.id)) |
         ((Match.user1_id == user_b.id) & (Match.user2_id == user_a.id))
     ).first()
-    payload = json.dumps(insight, ensure_ascii=False)
     if existing:
-        existing.score = score
-        existing.mode = mode
-        existing.insight_json = payload
-        existing.active = True
-        return existing, False
+        return None, False
 
     m = Match(
         user1_id=user_a.id,
         user2_id=user_b.id,
         score=score,
         mode=mode,
-        insight_json=payload,
+        insight_json=json.dumps(insight, ensure_ascii=False),
         active=True,
         notified=False,
     )
@@ -166,6 +161,7 @@ def persist_user_matches(user, scored_pairs, mode, mail_cfg, weekly_new_limit=No
     weekly_new_limit: 本周新建匹配上限（发起方与被配方都计）；None 表示不限制。
     max_save: 最多成功落库条数（one_to_one 传 1）；None 表示不额外截断。
     硬性底线冲突会 skip 并继续试下一个候选。
+    历史上配过的人跳过，不复活旧卡。
     返回结果摘要 dict。
     """
     saved = []
@@ -175,6 +171,7 @@ def persist_user_matches(user, scored_pairs, mode, mail_cfg, weekly_new_limit=No
     skipped_quota = 0
     skipped_partner_quota = 0
     skipped_low_score = 0
+    skipped_previous = 0
 
     new_this_week = count_new_matches_this_week(user.id) if weekly_new_limit is not None else 0
     save_limit = None if max_save is None else max(1, int(max_save))
@@ -186,6 +183,9 @@ def persist_user_matches(user, scored_pairs, mode, mail_cfg, weekly_new_limit=No
             skipped_low_score += 1
             continue
         if is_blocked_pair(user.id, other.id):
+            continue
+        if was_matched_pair(user.id, other.id):
+            skipped_previous += 1
             continue
         if not school_compatible(user, other) or not degree_compatible(user, other):
             continue
@@ -205,23 +205,6 @@ def persist_user_matches(user, scored_pairs, mode, mail_cfg, weekly_new_limit=No
             seed=(user.id, other.id),
             my_school=user.school, their_school=other.school,
         )
-
-        existing = Match.query.filter(
-            ((Match.user1_id == user.id) & (Match.user2_id == other.id)) |
-            ((Match.user1_id == other.id) & (Match.user2_id == user.id))
-        ).first()
-
-        if existing:
-            existing.score = score
-            existing.mode = mode
-            existing.insight_json = json.dumps(insight, ensure_ascii=False)
-            existing.active = True
-            updated_existing += 1
-            saved.append((other, score, insight, existing))
-            # 用户主动点「开始匹配」时再次尝试发信（冷却限制频率）
-            to_notify.append((other, score, insight, existing))
-            enforce_one_to_one_active(user, other, existing)
-            continue
 
         if weekly_new_limit is not None and new_this_week >= weekly_limit_for(user):
             skipped_quota += 1
@@ -284,6 +267,7 @@ def persist_user_matches(user, scored_pairs, mode, mail_cfg, weekly_new_limit=No
         "quota_skipped": skipped_quota,
         "partner_quota_skipped": skipped_partner_quota,
         "low_score_skipped": skipped_low_score,
+        "previous_skipped": skipped_previous,
         "mail_ok_count": mail_ok_count,
         "mail_fail_count": mail_fail_count,
         "mail_details": mail_details,
@@ -346,6 +330,8 @@ def run_batch_school(school, mail_cfg, require_opt_in=False, exclude_ids=None):
             continue
         if is_blocked_pair(a.id, b.id):
             continue
+        if was_matched_pair(a.id, b.id):
+            continue
         if not vectors_aligned(a, b):
             continue
         if _dealbreaker_conflict(a, b):
@@ -361,6 +347,8 @@ def run_batch_school(school, mail_cfg, require_opt_in=False, exclude_ids=None):
             seed=(a.id, b.id),
         )
         m, is_new = _get_or_create_pair(a, b, score, insight, mode="batch")
+        if m is None:
+            continue
         enforce_one_to_one_active(a, b, m)
         matched_ids.add(a.id)
         matched_ids.add(b.id)
@@ -439,6 +427,8 @@ def run_batch_cross(mail_cfg, require_opt_in=False, exclude_ids=None):
             continue
         if is_blocked_pair(a.id, b.id):
             continue
+        if was_matched_pair(a.id, b.id):
+            continue
         if not orientation_compatible(a, b):
             continue
         if not vectors_aligned(a, b):
@@ -456,6 +446,8 @@ def run_batch_cross(mail_cfg, require_opt_in=False, exclude_ids=None):
             seed=(a.id, b.id),
         )
         m, is_new = _get_or_create_pair(a, b, score, insight, mode="batch")
+        if m is None:
+            continue
         enforce_one_to_one_active(a, b, m)
         matched_ids.add(a.id)
         matched_ids.add(b.id)
