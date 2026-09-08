@@ -554,8 +554,7 @@ def privacy_page():
 
 # 赞助二维码：放 static/support/<name>.<png|jpg|jpeg|webp>；缺哪个就不显示哪个
 SUPPORT_QR_CANDIDATES = (
-    ("wechat", "sup.wechat", "微信"),
-    ("alipay", "sup.alipay", "支付宝"),
+    ("wechat", "sup.wechat", "微信赞赏"),
     ("mpay", "sup.mpay", "MPay 澳门钱包"),
 )
 
