@@ -22,6 +22,7 @@ def datetime_for_macau_today():
 
 class AdminDashboardTests(unittest.TestCase):
     def setUp(self):
+        admin_dashboard._login_attempts.clear()
         self.app = Flask(
             __name__,
             template_folder=str(ROOT / "templates"),
@@ -83,6 +84,39 @@ class AdminDashboardTests(unittest.TestCase):
         response = self._login("wrong-password")
         self.assertEqual(response.status_code, 401)
         self.assertNotIn("strong-admin-password", response.get_data(as_text=True))
+
+    def test_unicode_password_is_rejected_without_server_error(self):
+        self.assertEqual(self._login("\u5bc6\u7801").status_code, 401)
+
+    def test_expired_or_rotated_admin_session_is_rejected(self):
+        self._login()
+        with self.client.session_transaction() as saved:
+            saved["admin_signed_at"] = admin_dashboard.time.time() - 8 * 3600 - 1
+        self.assertEqual(self.client.get("/admin").status_code, 302)
+        self._login()
+        with patch.object(admin_dashboard, "ADMIN_SECRET", "changed-password"):
+            self.assertEqual(self.client.get("/admin").status_code, 302)
+
+    def test_login_requires_csrf_and_limits_attempts(self):
+        self.assertEqual(self.client.post("/admin/login", data={"password": "strong-admin-password"}).status_code, 400)
+        for _ in range(6):
+            self.assertEqual(self._login("wrong").status_code, 401)
+        self.assertEqual(self._login().status_code, 429)
+
+    def test_logout_revokes_admin_session(self):
+        self._login()
+        with self.client.session_transaction() as saved:
+            csrf = saved["admin_csrf"]
+        self.client.post("/admin/logout", data={"csrf": csrf})
+        self.assertEqual(self.client.get("/admin").status_code, 302)
+
+    def test_unavailable_email_does_not_claim_unused_quota(self):
+        self._login()
+        with patch.object(admin_dashboard, "MAIL_ENABLED", False):
+            response = self.client.get("/admin")
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("暂未取得邮件数据", response.get_data(as_text=True))
+        self.assertNotIn("剩余约 100", response.get_data(as_text=True))
 
     def test_traffic_counts_page_views_and_daily_unique_browser(self):
         self.client.get("/", headers={"User-Agent": "Mozilla/5.0"})

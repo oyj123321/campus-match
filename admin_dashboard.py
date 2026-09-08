@@ -1,6 +1,7 @@
 """Private, read-only operations dashboard and anonymous traffic counters."""
 
 import hashlib
+import hmac
 import json
 import re
 import secrets
@@ -13,7 +14,8 @@ from datetime import date, datetime, time as dt_time, timedelta
 from functools import wraps
 
 from flask import Blueprint, g, redirect, render_template, request, session, url_for
-from sqlalchemy import func
+from sqlalchemy import update
+from sqlalchemy.exc import IntegrityError
 
 from batch_job import current_week_key, next_batch_datetime, week_window_start
 from config import (
@@ -54,7 +56,7 @@ def _macau_today():
 
 
 def _admin_fingerprint():
-    return hashlib.sha256((ADMIN_SECRET or "").encode("utf-8")).hexdigest()
+    return hmac.new(SECRET_KEY.encode("utf-8"), (ADMIN_SECRET or "").encode("utf-8"), hashlib.sha256).hexdigest()
 
 
 def _admin_signed_in():
@@ -66,7 +68,7 @@ def _admin_signed_in():
         age = time.time() - float(signed_at or 0)
     except (TypeError, ValueError):
         return False
-    if age > 8 * 3600:
+    if not 0 <= age <= 8 * 3600 or not isinstance(saved, str) or not saved.isascii():
         return False
     return secrets.compare_digest(saved, _admin_fingerprint())
 
@@ -81,7 +83,7 @@ def _csrf_token():
 
 def _valid_csrf(value):
     expected = session.get("admin_csrf") or ""
-    return bool(expected and value and secrets.compare_digest(expected, value))
+    return bool(expected and value and secrets.compare_digest(expected.encode("utf-8"), value.encode("utf-8")))
 
 
 def admin_required(view):
@@ -108,15 +110,25 @@ def record_public_traffic():
     today = _macau_today()
     digest = hashlib.sha256(f"{SECRET_KEY}|{today.isoformat()}|{visitor_id}".encode("utf-8")).hexdigest()
     try:
-        traffic = db.session.get(TrafficDay, today)
-        if traffic is None:
-            traffic = TrafficDay(day=today, page_views=0, unique_visitors=0)
-            db.session.add(traffic)
-        traffic.page_views = int(traffic.page_views or 0) + 1
-        seen = TrafficVisitor.query.filter_by(day=today, visitor_hash=digest).first()
-        if seen is None:
-            db.session.add(TrafficVisitor(day=today, visitor_hash=digest))
-            traffic.unique_visitors = int(traffic.unique_visitors or 0) + 1
+        # Savepoints tolerate simultaneous inserts; SQL increments avoid lost updates.
+        try:
+            with db.session.begin_nested():
+                db.session.add(TrafficDay(day=today, page_views=0, unique_visitors=0))
+                db.session.flush()
+        except IntegrityError:
+            pass
+        new_visitor = 0
+        try:
+            with db.session.begin_nested():
+                db.session.add(TrafficVisitor(day=today, visitor_hash=digest))
+                db.session.flush()
+            new_visitor = 1
+        except IntegrityError:
+            pass
+        db.session.execute(update(TrafficDay).where(TrafficDay.day == today).values(
+            page_views=TrafficDay.page_views + 1,
+            unique_visitors=TrafficDay.unique_visitors + new_visitor,
+        ))
         db.session.commit()
     except Exception as exc:
         db.session.rollback()
@@ -167,7 +179,7 @@ def login():
             error, status = "页面已过期，请刷新后重试。", 400
         elif not _login_allowed():
             error, status = "尝试次数过多，请 15 分钟后再试。", 429
-        elif not secrets.compare_digest(request.form.get("password") or "", ADMIN_SECRET):
+        elif not secrets.compare_digest((request.form.get("password") or "").encode("utf-8"), ADMIN_SECRET.encode("utf-8")):
             error, status = "管理员密码不正确。", 401
         else:
             session["admin_fingerprint"] = _admin_fingerprint()

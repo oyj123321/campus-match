@@ -29,7 +29,7 @@
             <article class="metric"><span>当前匹配池</span><strong>{{ data.metrics.open_pool }}</strong><small>本周报名 {{ data.metrics.opted_week }}</small></article>
             <article class="metric"><span>本周新配对</span><strong>{{ data.metrics.matches_week }}</strong><small>已通知 {{ data.metrics.notified_week }}</small></article>
             <article class="metric"><span>有效配对</span><strong>{{ data.metrics.active_matches }}</strong><small>当前仍有效</small></article>
-            <article class="metric metric-mail"><span>今日邮件</span><strong>{{ data.email.used_today }}</strong><small>剩余约 {{ data.email.remaining }} / {{ data.email.daily_limit }}</small></article>
+            <article class="metric metric-mail"><span>今日邮件（抽样）</span><strong>{{ data.email.used_today if data.email.available else '-' }}</strong><small>{{ '最近 100 封中的今日记录，非官方额度' if data.email.available else '暂未取得邮件数据' }}</small></article>
         </section>
 
         <section class="admin-band">
