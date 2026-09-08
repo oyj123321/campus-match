@@ -19,13 +19,13 @@ def _html_esc(s):
     )
 
 
-def _dispatch_email(to_email, subject, html_body, mail_config):
+def _dispatch_email(to_email, subject, html_body, mail_config, text_body=None):
     """按 MAIL_PROVIDER 选择 Resend API 或 SMTP。"""
     try:
         provider = (mail_config.get("provider") or "smtp").strip().lower()
         if provider == "resend":
-            return _send_resend(to_email, subject, html_body, mail_config)
-        return _send_smtp(to_email, subject, html_body, mail_config)
+            return _send_resend(to_email, subject, html_body, mail_config, text_body)
+        return _send_smtp(to_email, subject, html_body, mail_config, text_body)
     except Exception as e:
         print(f"[ERROR] 发信异常 → {to_email}: {e}")
         return False, str(e)
@@ -33,26 +33,33 @@ def _dispatch_email(to_email, subject, html_body, mail_config):
 
 def send_verification_email(to_email, token, mail_config):
     """发送验证码邮件"""
-    site_url = mail_config.get("public_url", "#")
-    subject = "CampusMatch - 验证你的学校邮箱"
+    subject = f"{token} 是你的 CampusMatch 验证码"
+    text_body = f"""CampusMatch 学校邮箱验证
+
+你的验证码：{token}
+验证码 10 分钟内有效，请勿转发或告诉他人。
+
+如果不是你本人操作，可以忽略这封邮件。
+campusmatch.com.cn"""
 
     body = f"""<!DOCTYPE html>
 <html lang="zh-CN">
 <head><meta charset="utf-8"></head>
-<body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Noto Sans SC',sans-serif;max-width:480px;margin:0 auto;padding:24px;color:#1e293b;">
-    <div style="text-align:center;padding:24px 0;">
-        <h1 style="color:#2563eb;margin:0;">CampusMatch</h1>
-        <p style="color:#64748b;font-size:14px;">校园恋爱匹配 · 深度问卷 · 每周二晚匹配</p>
+<body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Noto Sans SC',sans-serif;max-width:480px;margin:0 auto;padding:32px 24px;color:#18201c;line-height:1.7;">
+    <div style="font-family:Arial,sans-serif;font-size:26px;font-weight:800;color:#145f53;">CampusMatch</div>
+    <div style="width:42px;height:4px;background:#d8ec68;margin:16px 0 28px;"></div>
+    <p style="font-size:16px;margin:0 0 20px;">你好，你正在验证 CampusMatch 学校邮箱。</p>
+    <p style="font-size:13px;color:#52605a;margin:0 0 8px;">验证码</p>
+    <div style="border:1px solid #cfd7d3;background:#f7f9f7;padding:18px 20px;text-align:center;">
+        <span style="font-family:Arial,sans-serif;font-size:36px;font-weight:700;letter-spacing:8px;color:#18201c;">{token}</span>
     </div>
-    <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:24px;">
-        <p style="font-size:16px;">你好！有人在 <a href="{site_url}" style="color:#2563eb;">CampusMatch</a> 用这个邮箱注册了账号。</p>
-        <p style="font-size:16px;margin-top:16px;">你的验证码是：</p>
-        <div style="text-align:center;margin:24px 0;">
-            <span style="font-size:36px;font-weight:800;letter-spacing:8px;color:#2563eb;background:#eff6ff;padding:12px 24px;border-radius:8px;">{token}</span>
-        </div>
-        <p style="color:#64748b;font-size:13px;">验证码 10 分钟内有效。如果不是你本人操作，请忽略此邮件。</p>
+    <p style="font-size:13px;color:#52605a;margin:18px 0 0;">
+        验证码 10 分钟内有效，请勿转发或告诉他人。<br>
+        如果不是你本人操作，可以忽略这封邮件。
+    </p>
+    <div style="border-top:1px solid #e1e6e3;margin-top:30px;padding-top:16px;color:#748078;font-size:12px;">
+        CampusMatch · campusmatch.com.cn
     </div>
-    <p style="text-align:center;color:#94a3b8;font-size:12px;margin-top:24px;">CampusMatch · 用算法连接校园里有缘的人</p>
 </body>
 </html>"""
 
@@ -63,7 +70,7 @@ def send_verification_email(to_email, token, mail_config):
         print(f"{'='*60}\n")
         return True, "dev-printed"
 
-    return _dispatch_email(to_email, subject, body, mail_config)
+    return _dispatch_email(to_email, subject, body, mail_config, text_body)
 
 
 def send_match_result_email(to_email, matches, mail_config, insight=None, reason=None):
@@ -458,7 +465,7 @@ def send_due_icebreaker_followups(mail_config):
     return handled
 
 
-def _send_resend(to_email, subject, html_body, mail_config):
+def _send_resend(to_email, subject, html_body, mail_config, text_body=None):
     api_key = (mail_config.get("resend_api_key") or "").strip()
     if not api_key:
         print(f"[ERROR] Resend 未配置 RESEND_API_KEY → {to_email}")
@@ -470,6 +477,8 @@ def _send_resend(to_email, subject, html_body, mail_config):
         "subject": subject,
         "html": html_body,
     }
+    if text_body:
+        payload["text"] = text_body
     data = json.dumps(payload).encode("utf-8")
     req = urllib.request.Request(
         "https://api.resend.com/emails",
@@ -495,11 +504,13 @@ def _send_resend(to_email, subject, html_body, mail_config):
         return False, str(e)
 
 
-def _send_smtp(to_email, subject, html_body, mail_config):
+def _send_smtp(to_email, subject, html_body, mail_config, text_body=None):
     msg = MIMEMultipart("alternative")
     msg["Subject"] = subject
     msg["From"] = mail_config["mail_from"]
     msg["To"] = to_email
+    if text_body:
+        msg.attach(MIMEText(text_body, "plain", "utf-8"))
     msg.attach(MIMEText(html_body, "html", "utf-8"))
 
     try:
