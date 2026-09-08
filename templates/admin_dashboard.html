@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="robots" content="noindex,nofollow">
+    <title>运营总览 · CampusMatch</title>
+    <link rel="stylesheet" href="/static/admin.css">
+</head>
+<body>
+    <header class="admin-topbar">
+        <div><strong>CampusMatch</strong><span>运营总览</span></div>
+        <div class="admin-actions">
+            <span>更新于 {{ data.generated_at }}</span>
+            <a href="/admin" title="刷新数据" aria-label="刷新数据">刷新</a>
+            <form method="post" action="/admin/logout"><input type="hidden" name="csrf" value="{{ admin_csrf }}"><button type="submit">退出</button></form>
+        </div>
+    </header>
+
+    <main class="admin-shell">
+        <section class="admin-heading">
+            <div><h1>今天网站怎么样</h1><p>注册、匹配与邮件送达集中查看。数据按澳门时间统计。</p></div>
+            <div class="status-dot"><span></span>数据库正常</div>
+        </section>
+
+        <section class="metric-grid" aria-label="关键指标">
+            <article class="metric"><span>已验证用户</span><strong>{{ data.metrics.verified_total }}</strong><small>今日新增 {{ data.metrics.verified_today }}</small></article>
+            <article class="metric"><span>资料完整</span><strong>{{ data.metrics.questionnaire_ready }}</strong><small>可进入算法筛选</small></article>
+            <article class="metric"><span>当前匹配池</span><strong>{{ data.metrics.open_pool }}</strong><small>本周报名 {{ data.metrics.opted_week }}</small></article>
+            <article class="metric"><span>本周新配对</span><strong>{{ data.metrics.matches_week }}</strong><small>已通知 {{ data.metrics.notified_week }}</small></article>
+            <article class="metric"><span>有效配对</span><strong>{{ data.metrics.active_matches }}</strong><small>当前仍有效</small></article>
+            <article class="metric metric-mail"><span>今日邮件</span><strong>{{ data.email.used_today }}</strong><small>剩余约 {{ data.email.remaining }} / {{ data.email.daily_limit }}</small></article>
+        </section>
+
+        <section class="admin-band">
+            <div class="section-title"><div><h2>近 7 日流量</h2><p>上线本功能后开始记录；访客标识每天匿名散列。</p></div></div>
+            <div class="traffic-chart">
+                {% for row in data.traffic %}
+                <div class="traffic-row">
+                    <span>{{ row.day }}</span>
+                    <div class="bar-track"><i style="width:{{ (row.page_views * 100 / data.traffic_max)|round|int }}%"></i></div>
+                    <strong>{{ row.page_views }} PV</strong><small>{{ row.visitors }} UV</small>
+                </div>
+                {% endfor %}
+            </div>
+        </section>
+
+        <div class="admin-columns">
+            <section class="admin-band">
+                <div class="section-title"><div><h2>学校与匹配池</h2><p>仅显示汇总，不展示个人资料。</p></div></div>
+                <div class="table-wrap"><table><thead><tr><th>学校</th><th>已验证</th><th>资料完整</th><th>本周报名</th></tr></thead><tbody>
+                {% for row in data.schools %}<tr><td>{{ row.school }}</td><td>{{ row.verified }}</td><td>{{ row.ready }}</td><td>{{ row.opted }}</td></tr>{% else %}<tr><td colspan="4">暂无数据</td></tr>{% endfor %}
+                </tbody></table></div>
+            </section>
+
+            <section class="admin-band">
+                <div class="section-title"><div><h2>系统状态</h2><p>配置状态与下一批次。</p></div></div>
+                <dl class="system-list">
+                    <div><dt>数据库</dt><dd>{{ data.system.database }}</dd></div>
+                    <div><dt>邮件</dt><dd>{{ data.system.mail }} · {{ data.system.mail_provider }}</dd></div>
+                    <div><dt>自动批次</dt><dd>{{ data.system.scheduler }}</dd></div>
+                    <div><dt>下一批次</dt><dd>{{ data.system.next_batch }}</dd></div>
+                </dl>
+            </section>
+        </div>
+
+        <section class="admin-band">
+            <div class="section-title"><div><h2>邮件送达</h2><p>读取 Resend 最近 100 封；不显示完整收件地址和验证码。</p></div></div>
+            {% if data.email.error %}<div class="admin-alert">{{ data.email.error }}</div>{% endif %}
+            {% if data.email.available %}
+            <div class="status-strip">
+                <span>送达 {{ data.email.statuses.get('delivered', 0) }}</span><span>发送中 {{ data.email.statuses.get('sent', 0) + data.email.statuses.get('queued', 0) }}</span><span>延迟 {{ data.email.statuses.get('delivery_delayed', 0) }}</span><span class="bad">退信 {{ data.email.statuses.get('bounced', 0) }}</span><span class="bad">拦截 {{ data.email.statuses.get('suppressed', 0) }}</span><span class="bad">失败 {{ data.email.statuses.get('failed', 0) }}</span><span class="bad">投诉 {{ data.email.statuses.get('complained', 0) }}</span>
+            </div>
+            <div class="table-wrap"><table><thead><tr><th>时间</th><th>类型</th><th>收件域名</th><th>状态</th></tr></thead><tbody>
+                {% for row in data.email.recent %}<tr><td>{{ row.time }}</td><td>{{ row.category }}</td><td>{{ row.domain }}</td><td><span class="mail-status mail-{{ row.status }}">{{ row.status_label }}</span></td></tr>{% else %}<tr><td colspan="4">暂无邮件记录</td></tr>{% endfor %}
+            </tbody></table></div>
+            {% endif %}
+        </section>
+    </main>
+</body>
+</html>

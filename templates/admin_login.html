@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="robots" content="noindex,nofollow">
+    <title>管理员登录 · CampusMatch</title>
+    <link rel="stylesheet" href="/static/admin.css">
+</head>
+<body class="admin-login-page">
+    <main class="admin-login-panel">
+        <div class="admin-brand">CampusMatch</div>
+        <h1>管理员登录</h1>
+        <p>这是私有运营后台。</p>
+        {% if error %}<div class="admin-alert" role="alert">{{ error }}</div>{% endif %}
+        <form method="post" action="/admin/login">
+            <input type="hidden" name="csrf" value="{{ admin_csrf }}">
+            <label for="password">管理员密码</label>
+            <input id="password" name="password" type="password" autocomplete="current-password" required autofocus>
+            <button type="submit">登录</button>
+        </form>
+        <a class="admin-back" href="/">返回网站</a>
+    </main>
+</body>
+</html>

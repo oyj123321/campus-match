@@ -45,6 +45,7 @@ MAIL_FROM = os.environ.get(
 )
 # Resend：https://resend.com → API Keys；发信域名需先在 Resend 验证
 RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "")
+RESEND_DAILY_LIMIT = int(os.environ.get("RESEND_DAILY_LIMIT", "100"))
 
 
 def _extract_email(raw: str) -> str:

@@ -62,6 +62,8 @@ app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(days=SESSION_REMEMBER_DAYS)
 if PUBLIC_URL.startswith("https://"):
     app.config["SESSION_COOKIE_SECURE"] = True
 db.init_app(app)
+from admin_dashboard import bp as admin_dashboard_bp
+app.register_blueprint(admin_dashboard_bp)
 _DEVICE_SERIALIZER = URLSafeTimedSerializer(SECRET_KEY, salt="cm-device-v1")
 
 

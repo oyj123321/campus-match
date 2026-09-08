@@ -345,3 +345,25 @@ class Blocklist(db.Model):
     __table_args__ = (
         db.UniqueConstraint("user_id", "blocked_user_id", name="uq_block_pair"),
     )
+
+
+class TrafficDay(db.Model):
+    """Anonymous daily page and visitor totals for the private admin dashboard."""
+    __tablename__ = "traffic_days"
+
+    day = db.Column(db.Date, primary_key=True)
+    page_views = db.Column(db.Integer, nullable=False, default=0)
+    unique_visitors = db.Column(db.Integer, nullable=False, default=0)
+
+
+class TrafficVisitor(db.Model):
+    """One irreversible browser identifier hash per Macau calendar day."""
+    __tablename__ = "traffic_visitors"
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    day = db.Column(db.Date, nullable=False, index=True)
+    visitor_hash = db.Column(db.String(64), nullable=False)
+
+    __table_args__ = (
+        db.UniqueConstraint("day", "visitor_hash", name="uq_traffic_day_visitor"),
+    )
