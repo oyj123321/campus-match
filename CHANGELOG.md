@@ -4,6 +4,21 @@ All notable changes to CampusMatch.
 
 ---
 
+## [1.9.56] — 2026-09-08
+
+### 问题（上次）
+- 学校邮箱（尤其 Microsoft 365）常把验证码邮件扔进隔离区/垃圾箱，用户找不到码
+- 部分客户端只读纯文本时，事务邮件几乎空白
+- `i18n.js` 已加隔离区文案，但 `base.html` 缓存参数仍停在 1992，老缓存看不到新提示
+
+### 改动
+- **Improved / 验证码可投递性**：主题改为「`{码} 是你的 CampusMatch 验证码」；正文缩短并去掉易进隔离的营销向措辞；附纯文本（`email_service.py`）
+- **Added / 事务邮件纯文本**：匹配结果、未配对、破冰回访、催填问卷均带 `text` fallback（Resend / SMTP multipart）
+- **Added / 隔离区指引**：首页与 `/verify` 提示查学校邮箱隔离区，并链到 Microsoft 365 quarantine
+- **Fixed / i18n 缓存**：`i18n.js?v=1993`，确保隔离区文案对已缓存用户生效
+
+---
+
 ## [1.9.55] — 2026-09-08
 
 ### 问题（上次）
