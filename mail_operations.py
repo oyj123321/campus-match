@@ -7,7 +7,7 @@ from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
 
-from config import BASE_DIR, RESEND_DAILY_LIMIT
+from config import BASE_DIR, MAIL_DAILY_LIMIT
 
 LEDGER_PATH = Path(BASE_DIR) / 'instance' / 'mail_operations.db'
 WINDOW = 86400
@@ -41,7 +41,7 @@ def reserve(kind, domain):
     with database() as conn:
         conn.execute('BEGIN IMMEDIATE')
         used = conn.execute('SELECT COUNT(*) FROM sends WHERE created > ?', (time.time() - WINDOW,)).fetchone()[0]
-        ceiling = max(0, RESEND_DAILY_LIMIT)
+        ceiling = max(0, MAIL_DAILY_LIMIT)
         if kind != 'verification':
             ceiling = int(ceiling * .85)
         if used >= ceiling:
@@ -96,7 +96,7 @@ def dispatch(to_email, subject, html, config, text, sender, kind):
 
 
 def drain(config, sender, limit=10):
-    if not config.get('enabled') or config.get('provider') != 'resend':
+    if not config.get('enabled') or config.get('provider') not in ('resend', 'aliyun'):
         return
     from models import User
     from html import escape
@@ -137,7 +137,7 @@ def summary():
         stalled = conn.execute("SELECT COUNT(*) FROM pending WHERE state='failed' OR (state='processing' AND created < ?)", (now - 300,)).fetchone()[0]
     used = len(rows)
     failed = sum(row['state'] == 'failed' or (row['state'] == 'sending' and row['created'] < now - 300) for row in rows)
-    return dict(used=used, remaining=max(0, RESEND_DAILY_LIMIT-used), limit=RESEND_DAILY_LIMIT,
+    return dict(used=used, remaining=max(0, MAIL_DAILY_LIMIT-used), limit=MAIL_DAILY_LIMIT,
                 pending=pending, failed=failed, stalled=stalled,
-                warning=used >= int(RESEND_DAILY_LIMIT * .7),
-                protected=used >= int(RESEND_DAILY_LIMIT * .85), recent=[dict(row) for row in rows[:12]])
+                warning=used >= int(MAIL_DAILY_LIMIT * .7),
+                protected=used >= int(MAIL_DAILY_LIMIT * .85), recent=[dict(row) for row in rows[:12]])

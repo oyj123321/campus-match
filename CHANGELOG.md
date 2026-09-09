@@ -2,6 +2,15 @@
 
 All notable changes to CampusMatch.
 
+## [1.9.58] — 2026-09-09
+
+### 阿里云 DirectMail
+- **Added / 新发送器**：新增 `MAIL_PROVIDER=aliyun`，支持华东 1 `smtpdm.aliyun.com:465` 的隐式 SSL；SMTP 信封地址会从带名称的 `MAIL_FROM` 中正确提取。
+- **Changed / 通用额度保护**：发送台账和延迟匹配通知同时支持 Resend 与阿里云，使用 `MAIL_DAILY_LIMIT`；阿里云默认按日额度 2000 保护，并继续预留 15% 给验证码。
+- **Changed / 管理员后台**：邮件主指标改为本地近 24 小时发送尝试和剩余额度，同时标明当前发送器。
+- **Deployment**：服务器需配置阿里云发信地址、SMTP 密码与 `MAIL_DAILY_LIMIT=2000`，测试成功后再停用 Resend。
+- **Added / 安全切换脚本**：`scripts/configure-aliyun-mail.sh` 隐藏读取 SMTP 密码、备份并更新 `.env`；`scripts/test_mail_delivery.py` 可在重启正式服务前发送一封明确的测试邮件。
+
 ## [1.9.57] — 2026-09-09
 
 ### 邮件额度保护

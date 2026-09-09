@@ -278,7 +278,8 @@ def _dashboard_data():
     from mail_operations import summary
     try:
         mail_budget = summary()
-        mail_budget['enabled'] = MAIL_ENABLED and MAIL_PROVIDER == 'resend'
+        mail_budget['enabled'] = MAIL_ENABLED and MAIL_PROVIDER in ('resend', 'aliyun')
+        mail_budget['provider'] = MAIL_PROVIDER
     except Exception:
         mail_budget = None
     now = datetime.utcnow()

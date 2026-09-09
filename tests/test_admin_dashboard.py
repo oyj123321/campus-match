@@ -115,8 +115,25 @@ class AdminDashboardTests(unittest.TestCase):
         with patch.object(admin_dashboard, "MAIL_ENABLED", False):
             response = self.client.get("/admin")
         self.assertEqual(response.status_code, 200)
-        self.assertIn("暂未取得邮件数据", response.get_data(as_text=True))
+        self.assertIn("当前 SMTP 通道没有接入远端投递详情", response.get_data(as_text=True))
         self.assertNotIn("剩余约 100", response.get_data(as_text=True))
+
+    def test_aliyun_dashboard_uses_local_budget_and_points_to_directmail(self):
+        self._login()
+        budget = {
+            "used": 12, "remaining": 1988, "limit": 2000, "pending": 0,
+            "failed": 0, "stalled": 0, "warning": False, "protected": False,
+            "recent": [],
+        }
+        with patch.multiple(admin_dashboard, MAIL_ENABLED=True, MAIL_PROVIDER="aliyun"), \
+                patch("mail_operations.summary", return_value=budget):
+            response = self.client.get("/admin")
+        html = response.get_data(as_text=True)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("本地剩余 1988 / 2000", html)
+        self.assertIn("已启用 · aliyun", html)
+        self.assertIn("阿里云的送达、退信与无效地址详情", html)
+        self.assertNotIn("Resend 未启用", html)
 
     def test_traffic_counts_page_views_and_daily_unique_browser(self):
         self.client.get("/", headers={"User-Agent": "Mozilla/5.0"})

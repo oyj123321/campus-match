@@ -2,9 +2,11 @@
 
 import json
 import smtplib
+import ssl
 import urllib.error
 import urllib.request
 from datetime import datetime
+from email.utils import parseaddr
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
@@ -23,9 +25,10 @@ def _dispatch_email(to_email, subject, html_body, mail_config, text_body=None, *
     """按 MAIL_PROVIDER 选择 Resend API 或 SMTP。"""
     try:
         provider = (mail_config.get("provider") or "smtp").strip().lower()
-        if provider == "resend":
+        if provider in ("resend", "aliyun"):
             from mail_operations import dispatch
-            return dispatch(to_email, subject, html_body, mail_config, text_body, _send_resend, kind)
+            sender = _send_resend if provider == "resend" else _send_smtp
+            return dispatch(to_email, subject, html_body, mail_config, text_body, sender, kind)
         return _send_smtp(to_email, subject, html_body, mail_config, text_body)
     except Exception as e:
         print(f"[ERROR] 发信异常 → {to_email}: {e}")
@@ -549,11 +552,21 @@ def _send_smtp(to_email, subject, html_body, mail_config, text_body=None):
     msg.attach(MIMEText(html_body, "html", "utf-8"))
 
     try:
-        server = smtplib.SMTP(mail_config["server"], mail_config["port"], timeout=10)
-        server.starttls()
-        server.login(mail_config["username"], mail_config["password"])
-        server.sendmail(mail_config["mail_from"], [to_email], msg.as_string())
-        server.quit()
+        port = int(mail_config["port"])
+        context = ssl.create_default_context()
+        if port == 465:
+            server = smtplib.SMTP_SSL(mail_config["server"], port, timeout=15, context=context)
+        else:
+            server = smtplib.SMTP(mail_config["server"], port, timeout=15)
+            server.ehlo()
+            server.starttls(context=context)
+            server.ehlo()
+        with server:
+            server.login(mail_config["username"], mail_config["password"])
+            envelope_from = parseaddr(mail_config["mail_from"])[1] or mail_config["username"]
+            refused = server.sendmail(envelope_from, [to_email], msg.as_string())
+            if refused:
+                return False, "recipient refused"
         return True, "sent"
     except Exception as e:
         print(f"[ERROR] 邮件发送失败 → {to_email}: {e}")

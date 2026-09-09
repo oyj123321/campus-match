@@ -3,10 +3,11 @@ import unittest
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from types import SimpleNamespace
-from unittest.mock import Mock, patch
+from unittest.mock import ANY, Mock, patch
 
 from flask import Flask
 import mail_operations as ops
+import email_service
 from models import db, User
 
 
@@ -25,7 +26,7 @@ class MailOperationsTests(unittest.TestCase):
         return ops.dispatch('user@example.edu', 'subject', 'body', self.config, 'text', self.sender, kind)
 
     def test_concurrent_requests_cannot_exceed_budget(self):
-        with patch.object(ops, 'RESEND_DAILY_LIMIT', 10):
+        with patch.object(ops, 'MAIL_DAILY_LIMIT', 10):
             with ThreadPoolExecutor(max_workers=8) as pool:
                 results = list(pool.map(lambda _: self.send()[0], range(30)))
             self.assertEqual(sum(results), 10)
@@ -33,7 +34,7 @@ class MailOperationsTests(unittest.TestCase):
             self.assertEqual(ops.summary()['remaining'], 0)
 
     def test_reserved_capacity_only_accepts_verification(self):
-        with patch.object(ops, 'RESEND_DAILY_LIMIT', 20):
+        with patch.object(ops, 'MAIL_DAILY_LIMIT', 20):
             for _ in range(17):
                 self.assertTrue(self.send()[0])
             self.assertEqual(self.send('optional'), (False, 'mail_quota_exhausted'))
@@ -67,7 +68,7 @@ class MailOperationsTests(unittest.TestCase):
         self.assertEqual(self.sender.call_count, 2)
 
     def test_failed_queue_does_not_claim_to_be_waiting(self):
-        with patch.object(ops, 'RESEND_DAILY_LIMIT', 0):
+        with patch.object(ops, 'MAIL_DAILY_LIMIT', 0):
             self.send('match')
         with ops.database() as conn:
             conn.execute("UPDATE pending SET state='failed'")
@@ -91,7 +92,7 @@ class MailOperationsTests(unittest.TestCase):
                 self.assertEqual(response.get_json()['error'], website.t_api('err.mail_quota'))
 
     def test_window_recovers_and_verification_is_never_queued(self):
-        with patch.object(ops, 'RESEND_DAILY_LIMIT', 1):
+        with patch.object(ops, 'MAIL_DAILY_LIMIT', 1):
             self.assertTrue(self.send()[0])
             self.assertFalse(self.send()[0])
             self.assertEqual(ops.summary()['pending'], 0)
@@ -113,7 +114,7 @@ class MailOperationsTests(unittest.TestCase):
             db.create_all()
             db.session.add(User(email='user@example.edu', school='test', email_verified=True))
             db.session.commit()
-            with patch.object(ops, 'RESEND_DAILY_LIMIT', 0):
+            with patch.object(ops, 'MAIL_DAILY_LIMIT', 0):
                 self.assertEqual(self.send('match'), (False, 'mail_queued'))
                 self.assertEqual(self.send('match'), (False, 'mail_queued'))
             ops.drain(self.config, self.sender)
@@ -135,6 +136,38 @@ class MailOperationsTests(unittest.TestCase):
         self.assertEqual(status, 503)
         self.assertFalse(response.get_json()['ok'])
         self.assertNotIn('SECRET-CODE', response.get_data(as_text=True))
+
+    def test_aliyun_dispatch_uses_ledger_and_smtp_transport(self):
+        config = dict(self.config, provider='aliyun')
+        with patch.object(ops, 'dispatch', return_value=(True, 'sent')) as protected:
+            result = email_service._dispatch_email(
+                'user@example.edu', 'subject', '<p>body</p>', config, 'body', kind='verification')
+        self.assertEqual(result, (True, 'sent'))
+        self.assertIs(protected.call_args.args[5], email_service._send_smtp)
+        self.assertEqual(protected.call_args.args[6], 'verification')
+
+    def test_smtp_465_uses_implicit_ssl_and_clean_envelope_sender(self):
+        config = dict(
+            server='smtpdm.aliyun.com', port=465,
+            username='no-reply@notify.campusmatch.com.cn', password='secret',
+            mail_from='CampusMatch <no-reply@notify.campusmatch.com.cn>',
+        )
+        with patch.object(email_service.smtplib, 'SMTP_SSL') as smtp_ssl:
+            server = smtp_ssl.return_value
+            server.sendmail.return_value = {}
+            result = email_service._send_smtp('student@example.edu', 'subject', '<p>body</p>', config, 'body')
+        self.assertEqual(result, (True, 'sent'))
+        smtp_ssl.assert_called_once_with('smtpdm.aliyun.com', 465, timeout=15, context=ANY)
+        server.login.assert_called_once_with('no-reply@notify.campusmatch.com.cn', 'secret')
+        self.assertEqual(server.sendmail.call_args.args[0], 'no-reply@notify.campusmatch.com.cn')
+
+    def test_smtp_recipient_refusal_is_failure(self):
+        config = dict(server='smtpdm.aliyun.com', port=465, username='sender@example.edu',
+                      password='secret', mail_from='sender@example.edu')
+        with patch.object(email_service.smtplib, 'SMTP_SSL') as smtp_ssl:
+            smtp_ssl.return_value.sendmail.return_value = {'student@example.edu': (550, b'rejected')}
+            result = email_service._send_smtp('student@example.edu', 'subject', '<p>body</p>', config)
+        self.assertEqual(result, (False, 'recipient refused'))
 
 
 if __name__ == '__main__':

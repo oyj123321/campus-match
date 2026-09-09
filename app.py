@@ -2090,16 +2090,17 @@ def start_batch_scheduler():
 
     def _mail_queue_loop():
         from mail_operations import drain
-        from email_service import _send_resend
+        from email_service import _send_resend, _send_smtp
         while True:
             try:
                 with app.app_context():
-                    drain(get_mail_config(), _send_resend)
+                    sender = _send_resend if MAIL_PROVIDER == 'resend' else _send_smtp
+                    drain(get_mail_config(), sender)
             except Exception as exc:
                 print(f'[mail-queue] worker failed: {type(exc).__name__}')
             time.sleep(60)
 
-    if MAIL_ENABLED and MAIL_PROVIDER == 'resend':
+    if MAIL_ENABLED and MAIL_PROVIDER in ('resend', 'aliyun'):
         threading.Thread(target=_mail_queue_loop, name='mail-queue', daemon=True).start()
 
     if ICEBREAKER_FOLLOWUP_ENABLED:
