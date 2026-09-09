@@ -33,6 +33,20 @@
         </section>
 
         <section class="admin-band">
+            <div class="section-title"><div><h2>邮件额度保护</h2><p>本机最近 24 小时发送尝试；失败也占预留，非服务商官方余额。</p></div></div>
+            {% set budget = data.mail_budget %}
+            {% if budget %}
+            <p>保护状态：{{ '已启用' if budget.enabled else '未启用（仅对已开启的 Resend 发信生效）' }}</p>
+            <p>已使用 {{ budget.used }} / {{ budget.limit }} · 本地可用 {{ budget.remaining }} · 排队 {{ budget.pending }} · 发送异常 {{ budget.failed }} · 队列异常 {{ budget.stalled }}</p>
+            {% if budget.warning %}<div class="admin-alert">邮件用量接近上限。{% if budget.protected %}已暂停非验证码邮件，匹配通知进入延迟队列。{% endif %}</div>{% endif %}
+            {% if budget.failed or budget.stalled %}<div class="admin-alert">有发送失败或结果不明的记录，请到 Resend 核对后处理；系统不会盲目重发。</div>{% endif %}
+            <div class="table-wrap"><table><thead><tr><th>类型</th><th>收件域名</th><th>提交状态</th></tr></thead><tbody>
+            {% for row in budget.recent %}<tr><td>{{ {'verification':'验证码','match':'匹配通知','optional':'提醒邮件'}.get(row.kind, row.kind) }}</td><td>{{ row.domain }}</td><td>{{ {'accepted':'服务商已接受','failed':'失败 / 结果待核对','sending':'提交中 / 结果待核对'}.get(row.state, row.state) }}</td></tr>{% else %}<tr><td colspan="3">暂无本地发送记录</td></tr>{% endfor %}
+            </tbody></table></div>
+            {% else %}<div class="admin-alert">无法读取邮件台账，额度保护将阻止新的 Resend 发送，请检查磁盘与文件权限。</div>{% endif %}
+        </section>
+
+        <section class="admin-band">
             <div class="section-title"><div><h2>近 7 日流量</h2><p>上线本功能后开始记录；访客标识每天匿名散列。</p></div></div>
             <div class="traffic-chart">
                 {% for row in data.traffic %}

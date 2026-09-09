@@ -257,7 +257,10 @@ def _seconds_since_code(user):
 
 
 def _code_json(user, email, *, mail_ok=False, already=False, rate_limited=False, wait=False, info=None):
-    """发码接口统一成功体：始终让前端打开验证码输入框。"""
+    """Report actual send outcomes; production responses never expose codes."""
+    if MAIL_ENABLED and not (mail_ok or already or rate_limited or wait):
+        message = t_api('err.mail_quota' if info == 'mail_quota_exhausted' else 'err.mail_unavailable')
+        return jsonify(ok=False, mail_sent=False, error=message, message=message), 503
     if rate_limited:
         msg = t_api("err.rate_enter", mins=REGISTER_RATE_WINDOW // 60)
     elif wait:
@@ -268,7 +271,7 @@ def _code_json(user, email, *, mail_ok=False, already=False, rate_limited=False,
         msg = t_api("ok.code_sent", email=email)
     else:
         msg = t_api("ok.code_fail", info=info or "")
-    show_dev = (not MAIL_ENABLED) or (not mail_ok and not already and not wait and not rate_limited)
+    show_dev = FLASK_DEBUG and not MAIL_ENABLED
     return jsonify({
         "ok": True,
         "mail_sent": bool(mail_ok),
@@ -288,9 +291,13 @@ def _send_or_reuse_verification(user, email):
         if not ok_rate:
             return _code_json(user, email, already=True, rate_limited=True)
         token = user.verification_token
+        previous_sent_at = user.verification_sent_at
         user.verification_sent_at = datetime.utcnow()
         db.session.commit()
         mail_ok, info = send_verification_email(email, token, get_mail_config())
+        if not mail_ok:
+            user.verification_sent_at = previous_sent_at
+            db.session.commit()
         return _code_json(user, email, mail_ok=mail_ok, info=info)
 
     ok_rate, _ = check_register_rate(email)
@@ -302,6 +309,10 @@ def _send_or_reuse_verification(user, email):
     token = user.generate_token()
     db.session.commit()
     mail_ok, info = send_verification_email(email, token, get_mail_config())
+    if not mail_ok:
+        user.verification_token = None
+        user.verification_sent_at = None
+        db.session.commit()
     return _code_json(user, email, mail_ok=mail_ok, info=info)
 
 
@@ -2076,6 +2087,20 @@ def start_batch_scheduler():
     # Flask debug 重载会起两个进程，只在主进程开调度
     if FLASK_DEBUG and not os_environ_is_reloader_main():
         return
+
+    def _mail_queue_loop():
+        from mail_operations import drain
+        from email_service import _send_resend
+        while True:
+            try:
+                with app.app_context():
+                    drain(get_mail_config(), _send_resend)
+            except Exception as exc:
+                print(f'[mail-queue] worker failed: {type(exc).__name__}')
+            time.sleep(60)
+
+    if MAIL_ENABLED and MAIL_PROVIDER == 'resend':
+        threading.Thread(target=_mail_queue_loop, name='mail-queue', daemon=True).start()
 
     if ICEBREAKER_FOLLOWUP_ENABLED:
         from email_service import send_due_icebreaker_followups

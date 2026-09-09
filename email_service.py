@@ -19,12 +19,13 @@ def _html_esc(s):
     )
 
 
-def _dispatch_email(to_email, subject, html_body, mail_config, text_body=None):
+def _dispatch_email(to_email, subject, html_body, mail_config, text_body=None, *, kind='optional'):
     """按 MAIL_PROVIDER 选择 Resend API 或 SMTP。"""
     try:
         provider = (mail_config.get("provider") or "smtp").strip().lower()
         if provider == "resend":
-            return _send_resend(to_email, subject, html_body, mail_config, text_body)
+            from mail_operations import dispatch
+            return dispatch(to_email, subject, html_body, mail_config, text_body, _send_resend, kind)
         return _send_smtp(to_email, subject, html_body, mail_config, text_body)
     except Exception as e:
         print(f"[ERROR] 发信异常 → {to_email}: {e}")
@@ -70,7 +71,7 @@ campusmatch.com.cn"""
         print(f"{'='*60}\n")
         return True, "dev-printed"
 
-    return _dispatch_email(to_email, subject, body, mail_config, text_body)
+    return _dispatch_email(to_email, subject, body, mail_config, text_body, kind='verification')
 
 
 def send_match_result_email(to_email, matches, mail_config, insight=None, reason=None):
@@ -290,7 +291,7 @@ def send_match_result_email(to_email, matches, mail_config, insight=None, reason
         print(f"{'='*60}\n")
         return True, "dev-printed"
 
-    return _dispatch_email(to_email, subject, body, mail_config, text_body)
+    return _dispatch_email(to_email, subject, body, mail_config, text_body, kind='match')
 
 
 def send_icebreaker_followup_email(to_email, partner_name, mail_config):
@@ -489,10 +490,11 @@ def send_due_icebreaker_followups(mail_config):
             m.icebreaker_followup_sent = True
             handled += 1
             continue
-        send_icebreaker_followup_email(a.email, b.name or "对方", mail_config)
-        send_icebreaker_followup_email(b.email, a.name or "对方", mail_config)
-        m.icebreaker_followup_sent = True
-        handled += 1
+        ok_a, _ = send_icebreaker_followup_email(a.email, b.name or "对方", mail_config)
+        ok_b, _ = send_icebreaker_followup_email(b.email, a.name or "对方", mail_config)
+        if ok_a and ok_b:
+            m.icebreaker_followup_sent = True
+            handled += 1
     if handled:
         db.session.commit()
     return handled

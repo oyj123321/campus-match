@@ -275,6 +275,12 @@ def _resend_summary():
 
 
 def _dashboard_data():
+    from mail_operations import summary
+    try:
+        mail_budget = summary()
+        mail_budget['enabled'] = MAIL_ENABLED and MAIL_PROVIDER == 'resend'
+    except Exception:
+        mail_budget = None
     now = datetime.utcnow()
     today = _macau_today()
     today_start = datetime.combine(today, dt_time.min) - timedelta(hours=8)
@@ -326,6 +332,7 @@ def _dashboard_data():
         "traffic_max": max([row["page_views"] for row in traffic_rows] + [1]),
         "schools": school_rows,
         "email": _resend_summary(),
+        "mail_budget": mail_budget,
         "system": {
             "database": "正常",
             "mail": "已启用" if MAIL_ENABLED else "未启用",

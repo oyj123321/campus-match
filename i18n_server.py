@@ -5,6 +5,18 @@ from flask import jsonify, request
 LANGS = ("zh", "tw", "en", "pt")
 
 M = {
+    'err.mail_quota': {
+        'zh': '邮件发送额度暂时不足，请稍后重试。',
+        'tw': '郵件發送額度暫時不足，請稍後再試。',
+        'en': 'Email sending capacity is temporarily unavailable. Please try again later.',
+        'pt': 'A capacidade de envio de emails está temporariamente esgotada. Tenta novamente mais tarde.',
+    },
+    'err.mail_unavailable': {
+        'zh': '验证码暂未发送成功，请稍后重试。',
+        'tw': '驗證碼暫未發送成功，請稍後再試。',
+        'en': 'The verification code could not be sent. Please try again later.',
+        'pt': 'Não foi possível enviar o código de verificação. Tenta novamente mais tarde.',
+    },
     "err.login": {
         "zh": "请先登录", "tw": "請先登入",
         "en": "Please sign in first", "pt": "Inicia sessão primeiro",
