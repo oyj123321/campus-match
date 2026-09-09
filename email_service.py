@@ -25,9 +25,12 @@ def _dispatch_email(to_email, subject, html_body, mail_config, text_body=None, *
     """按 MAIL_PROVIDER 选择 Resend API 或 SMTP。"""
     try:
         provider = (mail_config.get("provider") or "smtp").strip().lower()
-        if provider in ("resend", "aliyun"):
+        if provider in ("resend", "aliyun", "hybrid"):
             from mail_operations import dispatch
             sender = _send_resend if provider == "resend" else _send_smtp
+            if provider == 'hybrid':
+                from hybrid_mail import send
+                sender = send
             return dispatch(to_email, subject, html_body, mail_config, text_body, sender, kind)
         return _send_smtp(to_email, subject, html_body, mail_config, text_body)
     except Exception as e:

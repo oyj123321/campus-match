@@ -1121,3 +1121,9 @@ MAJOR: 不兼容的架构变更
 MINOR: 新功能、新学校、新算法
 PATCH: Bug 修复、样式调整
 ```
+# Unreleased
+
+- Add opt-in `MAIL_PROVIDER=hybrid`: Resend first, then Aliyun when its local rolling 24-hour allowance is consumed. Attempts are atomically counted, including failures; transport failures are never automatically resent.
+- Set separate `RESEND_FROM` and `ALIYUN_FROM`, retain both credentials, and point SMTP settings to Aliyun. Limits default to 100 and 2000 respectively.
+- Pre-upgrade attempts conservatively count against both providers for up to 24 hours. Counters cover this installation only; provider-side rejections and other senders are not automatically reconciled.
+- Ignore mail configuration backups to prevent accidental credential commits.

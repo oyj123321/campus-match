@@ -35,11 +35,16 @@
         <section class="admin-band">
             <div class="section-title"><div><h2>邮件额度保护</h2><p>本机最近 24 小时发送尝试；失败也占预留，非服务商官方余额。</p></div></div>
             {% set budget = data.mail_budget %}
+            {% if budget and budget.providers %}
+            <p>Resend 优先，达到本地额度后使用阿里云；按最近 24 小时滚动恢复。</p>
+            {% for provider in budget.providers %}<p>{{ provider.provider }}：已尝试 {{ provider.used }} / {{ provider.limit }}</p>{% endfor %}
+            <p>升级前未区分渠道的记录会临时占用两边预算；送达详情请分别到 Resend 和阿里云控制台核对。</p>
+            {% endif %}
             {% if budget %}
             <p>保护状态：{{ ('已启用 · ' ~ budget.provider) if budget.enabled else '未启用（适用于 Resend 与阿里云发信）' }}</p>
             <p>已使用 {{ budget.used }} / {{ budget.limit }} · 本地可用 {{ budget.remaining }} · 排队 {{ budget.pending }} · 发送异常 {{ budget.failed }} · 队列异常 {{ budget.stalled }}</p>
             {% if budget.warning %}<div class="admin-alert">邮件用量接近上限。{% if budget.protected %}已暂停非验证码邮件，匹配通知进入延迟队列。{% endif %}</div>{% endif %}
-            {% if budget.failed or budget.stalled %}<div class="admin-alert">有发送失败或结果不明的记录，请到 Resend 核对后处理；系统不会盲目重发。</div>{% endif %}
+            {% if budget.failed or budget.stalled %}<div class="admin-alert">有发送失败或结果不明的记录，请到对应邮件服务商后台核对后处理；系统不会盲目重发。</div>{% endif %}
             <div class="table-wrap"><table><thead><tr><th>类型</th><th>收件域名</th><th>提交状态</th></tr></thead><tbody>
             {% for row in budget.recent %}<tr><td>{{ {'verification':'验证码','match':'匹配通知','optional':'提醒邮件'}.get(row.kind, row.kind) }}</td><td>{{ row.domain }}</td><td>{{ {'accepted':'服务商已接受','failed':'失败 / 结果待核对','sending':'提交中 / 结果待核对'}.get(row.state, row.state) }}</td></tr>{% else %}<tr><td colspan="3">暂无本地发送记录</td></tr>{% endfor %}
             </tbody></table></div>
@@ -79,7 +84,7 @@
         </div>
 
         <section class="admin-band">
-            <div class="section-title"><div><h2>邮件投递详情</h2><p>{% if data.system.mail_provider == 'resend' %}读取 Resend 最近 100 封；不显示完整收件地址和验证码。{% elif data.system.mail_provider == 'aliyun' %}阿里云的送达、退信与无效地址详情请在 DirectMail 控制台查看。{% else %}当前 SMTP 通道没有接入远端投递详情。{% endif %}</p></div></div>
+            <div class="section-title"><div><h2>邮件投递详情</h2><p>{% if data.system.mail_provider == 'resend' %}读取 Resend 最近 100 封；不显示完整收件地址和验证码。{% elif data.system.mail_provider == 'hybrid' %}当前使用 Resend 与阿里云双通道，最终送达状态请分别到两家控制台查看。{% elif data.system.mail_provider == 'aliyun' %}阿里云的送达、退信与无效地址详情请在 DirectMail 控制台查看。{% else %}当前 SMTP 通道没有接入远端投递详情。{% endif %}</p></div></div>
             {% if data.system.mail_provider == 'resend' %}
             {% if data.email.error %}<div class="admin-alert">{{ data.email.error }}</div>{% endif %}
             {% if data.email.available %}

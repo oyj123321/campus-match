@@ -96,7 +96,7 @@ def dispatch(to_email, subject, html, config, text, sender, kind):
 
 
 def drain(config, sender, limit=10):
-    if not config.get('enabled') or config.get('provider') not in ('resend', 'aliyun'):
+    if not config.get('enabled') or config.get('provider') not in ('resend', 'aliyun', 'hybrid'):
         return
     from models import User
     from html import escape

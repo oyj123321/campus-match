@@ -46,10 +46,15 @@ MAIL_FROM = os.environ.get(
 # Resend：https://resend.com → API Keys；发信域名需先在 Resend 验证
 RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "")
 RESEND_DAILY_LIMIT = int(os.environ.get("RESEND_DAILY_LIMIT", "100"))
+RESEND_FROM = os.environ.get("RESEND_FROM", MAIL_FROM)
+ALIYUN_FROM = os.environ.get("ALIYUN_FROM", MAIL_USERNAME)
+ALIYUN_DAILY_LIMIT = int(os.environ.get("ALIYUN_DAILY_LIMIT", "2000"))
 MAIL_DAILY_LIMIT = int(os.environ.get(
     "MAIL_DAILY_LIMIT",
     "2000" if MAIL_PROVIDER == "aliyun" else str(RESEND_DAILY_LIMIT),
 ))
+if MAIL_PROVIDER == "hybrid":
+    MAIL_DAILY_LIMIT = max(0, RESEND_DAILY_LIMIT) + max(0, ALIYUN_DAILY_LIMIT)
 
 
 def _extract_email(raw: str) -> str:

@@ -17,6 +17,8 @@ instance/
 
 # Environment
 .env
+.env.backup.*
+.env.aliyun.*
 .env.local
 
 # OS

@@ -2095,12 +2095,15 @@ def start_batch_scheduler():
             try:
                 with app.app_context():
                     sender = _send_resend if MAIL_PROVIDER == 'resend' else _send_smtp
+                    if MAIL_PROVIDER == 'hybrid':
+                        from hybrid_mail import send
+                        sender = send
                     drain(get_mail_config(), sender)
             except Exception as exc:
                 print(f'[mail-queue] worker failed: {type(exc).__name__}')
             time.sleep(60)
 
-    if MAIL_ENABLED and MAIL_PROVIDER in ('resend', 'aliyun'):
+    if MAIL_ENABLED and MAIL_PROVIDER in ('resend', 'aliyun', 'hybrid'):
         threading.Thread(target=_mail_queue_loop, name='mail-queue', daemon=True).start()
 
     if ICEBREAKER_FOLLOWUP_ENABLED:
