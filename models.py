@@ -355,6 +355,28 @@ class Blocklist(db.Model):
     )
 
 
+class ProductJourney(db.Model):
+    """First observed milestones for new registrations; no answers/contact data."""
+    __tablename__ = "product_journeys"
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), primary_key=True)
+    school = db.Column(db.String(64), nullable=False)
+    registered_at = db.Column(db.DateTime, nullable=False, index=True)
+    verified_at = db.Column(db.DateTime)
+    profile_at = db.Column(db.DateTime)
+    participated_at = db.Column(db.DateTime)
+    viewed_at = db.Column(db.DateTime)
+
+
+class MatchingRound(db.Model):
+    """Aggregate-only batch diagnostics; no participant IDs or profile snapshots."""
+    __tablename__ = "matching_rounds"
+    id = db.Column(db.Integer, primary_key=True)
+    started_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    finished_at = db.Column(db.DateTime)
+    status = db.Column(db.String(16), default="running", nullable=False)
+    report_json = db.Column(db.Text, default="{}", nullable=False)
+
+
 class TrafficDay(db.Model):
     """Anonymous daily page and visitor totals for the private admin dashboard."""
     __tablename__ = "traffic_days"

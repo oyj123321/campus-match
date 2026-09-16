@@ -85,6 +85,24 @@ class AdminDashboardTests(unittest.TestCase):
         self.assertEqual(response.status_code, 401)
         self.assertNotIn("strong-admin-password", response.get_data(as_text=True))
 
+    def test_matching_report_renders_for_admin_only(self):
+        from models import MatchingRound
+        with self.app.app_context():
+            db.session.add(MatchingRound(status='completed', report_json=json.dumps({
+                'participants': 3, 'matched': 2, 'unmatched': 1, 'rate': 66.7,
+                'quota_excluded': 0, 'age_missing': 0, 'no_candidates': 1,
+                'reasons': {'age': 1}, 'schools': []})))
+            db.session.commit()
+        self.assertEqual(self.client.get('/admin').status_code, 302)
+        self._login()
+        with patch.object(admin_dashboard, '_resend_summary', return_value={}):
+            response = self.client.get('/admin')
+        self.assertEqual(response.status_code, 200)
+        text = response.get_data(as_text=True)
+        self.assertIn('66.7%', text)
+        self.assertIn('仅放宽年龄即可出现候选', text)
+        self.assertNotIn('student@um.edu.mo', text)
+
     def test_unicode_password_is_rejected_without_server_error(self):
         self.assertEqual(self._login("\u5bc6\u7801").status_code, 401)
 

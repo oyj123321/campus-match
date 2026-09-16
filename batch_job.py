@@ -489,6 +489,55 @@ def run_batch_cross(mail_cfg, require_opt_in=False, exclude_ids=None):
 
 
 def run_batch_all(mail_cfg, require_opt_in=None):
+    """Record one aggregate report per full batch, including failed runs."""
+    from flask import current_app
+    from config import REVEAL_REQUIRE_OPT_IN
+    from models import MatchingRound
+    from matching_analytics import capture, aggregate
+    if require_opt_in is None:
+        require_opt_in = REVEAL_REQUIRE_OPT_IN
+    snapshot = None
+    round_id = None
+    try:
+        snapshot = capture(require_opt_in)
+        from product_analytics import record_batch_participation
+        record_batch_participation([u.id for u in snapshot[0]])
+        row = MatchingRound(report_json=json.dumps(snapshot[2]))
+        db.session.add(row)
+        db.session.commit()
+        round_id = row.id
+    except Exception:
+        db.session.rollback()
+        current_app.logger.exception('Matching analytics capture failed')
+    try:
+        results = _run_batch_all(mail_cfg, require_opt_in)
+    except Exception:
+        db.session.rollback()
+        if round_id is not None:
+            try:
+                row = db.session.get(MatchingRound, round_id)
+                row.status = 'failed'
+                row.finished_at = datetime.utcnow()
+                db.session.commit()
+            except Exception:
+                db.session.rollback()
+                current_app.logger.exception('Matching analytics failure status unavailable')
+        raise
+    if round_id is not None:
+        try:
+            matched = set().union(*(r.get('matched_ids', set()) for r in results))
+            row = db.session.get(MatchingRound, round_id)
+            row.report_json = json.dumps(aggregate(*snapshot[:2], matched, snapshot[2]), ensure_ascii=False)
+            row.status = 'completed'
+            row.finished_at = datetime.utcnow()
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+            current_app.logger.exception('Matching analytics report failed')
+    return results
+
+
+def _run_batch_all(mail_cfg, require_opt_in=None):
     from config import REVEAL_REQUIRE_OPT_IN
     if require_opt_in is None:
         require_opt_in = REVEAL_REQUIRE_OPT_IN

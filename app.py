@@ -65,6 +65,8 @@ if PUBLIC_URL.startswith("https://"):
 db.init_app(app)
 from admin_dashboard import bp as admin_dashboard_bp
 app.register_blueprint(admin_dashboard_bp)
+from product_analytics import enroll_new_user, observe_response
+app.after_request(observe_response)
 _DEVICE_SERIALIZER = URLSafeTimedSerializer(SECRET_KEY, salt="cm-device-v1")
 
 
@@ -904,6 +906,7 @@ def api_register():
             user = User(email=email, school=school)
             db.session.add(user)
             db.session.flush()
+            enroll_new_user(user)
 
         from invite import bind_invite, ensure_invite_code
         ensure_invite_code(user)
@@ -1632,6 +1635,8 @@ def api_me():
 def _purge_user_account(user):
     """删除用户及其配对、拉黑、标签。调用方负责 commit / 清 session。"""
     uid = user.id
+    from models import ProductJourney
+    ProductJourney.query.filter_by(user_id=uid).delete(synchronize_session=False)
     Match.query.filter((Match.user1_id == uid) | (Match.user2_id == uid)).delete(synchronize_session=False)
     Blocklist.query.filter(
         (Blocklist.user_id == uid) | (Blocklist.blocked_user_id == uid)

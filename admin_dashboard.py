@@ -275,6 +275,8 @@ def _resend_summary():
 
 
 def _dashboard_data():
+    from matching_analytics import dashboard_reports
+    from product_analytics import cohort_summary
     from mail_operations import summary
     try:
         mail_budget = summary()
@@ -335,6 +337,11 @@ def _dashboard_data():
         "traffic": traffic_rows,
         "traffic_max": max([row["page_views"] for row in traffic_rows] + [1]),
         "schools": school_rows,
+        "matching_analysis": dashboard_reports(
+            days=request.args.get('days', 90, type=int),
+            school=request.args.get('school', ''),
+            round_id=request.args.get('round', type=int)),
+        "cohort": cohort_summary(request.args.get('days', 90, type=int), request.args.get('school', '')),
         "email": _resend_summary(),
         "mail_budget": mail_budget,
         "system": {
