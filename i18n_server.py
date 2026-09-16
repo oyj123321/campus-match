@@ -5,6 +5,25 @@ from flask import jsonify, request
 LANGS = ("zh", "tw", "en", "pt")
 
 M = {
+    'age.requiredLabel': {'zh': '当前周岁 *', 'tw': '目前周歲 *', 'en': 'Current age *', 'pt': 'Idade atual *'},
+    'age.optionalLabel': {'zh': '当前周岁（选填）', 'tw': '目前周歲（選填）', 'en': 'Current age (optional)', 'pt': 'Idade atual (opcional)'},
+    'age.fullHint': {'zh': '请如实填写当前周岁，生日后记得更新。仅向匹配对象展示年龄。', 'tw': '請如實填寫目前周歲，生日後記得更新。僅向配對對象展示年齡。', 'en': 'Enter your current age and update it after your birthday. Only your matches see it.', 'pt': 'Indica a tua idade atual e atualiza-a após o aniversário. Só os teus pares a veem.'},
+    'age.optionalHint': {'zh': '不填也可参与匹配，但不能设置年龄范围，也不会匹配给设置了年龄范围的人。清空年龄会同时清除你的范围要求。', 'tw': '不填也可參與配對，但不能設定年齡範圍，也不會配對給設定了年齡範圍的人。清空年齡會同時清除你的範圍要求。', 'en': 'You can leave this blank, but cannot set an age range or match with someone who sets one. Clearing your age also clears your age limits.', 'pt': 'Podes deixar em branco, mas não definir limites nem corresponder a quem os define. Apagar a idade também apaga os teus limites.'},
+    'age.preference': {'zh': '希望匹配的年龄', 'tw': '希望配對的年齡', 'en': 'Preferred partner age', 'pt': 'Idade preferida do par'},
+    'age.any': {'zh': '不限（默认）', 'tw': '不限（預設）', 'en': 'Any age (default)', 'pt': 'Sem limites (predefinido)'},
+    'age.limit': {'zh': '指定年龄范围', 'tw': '指定年齡範圍', 'en': 'Set an age range', 'pt': 'Definir intervalo'},
+    'age.min': {'zh': '最小周岁', 'tw': '最小周歲', 'en': 'Minimum age', 'pt': 'Idade mínima'},
+    'age.max': {'zh': '最大周岁', 'tw': '最大周歲', 'en': 'Maximum age', 'pt': 'Idade máxima'},
+    'age.limitHint': {'zh': '设置范围可能减少匹配机会；双方须互相满足，未填年龄者会被跳过。', 'tw': '設定範圍可能減少配對機會；雙方須互相滿足，未填年齡者會被跳過。', 'en': 'Limits may reduce matches. Both people must meet each other’s limits; unknown ages are excluded.', 'pt': 'Os limites podem reduzir os pares. Ambos devem respeitar os limites mútuos; idades desconhecidas são excluídas.'},
+    'age.required': {'zh': '请填写当前周岁后提交完整问卷。', 'tw': '請填寫目前周歲後提交完整問卷。', 'en': 'Enter your age before submitting the full questionnaire.', 'pt': 'Indica a idade antes de enviar o questionário completo.'},
+    'age.invalid': {'zh': '年龄须为 18～100 的整数。', 'tw': '年齡須為 18～100 的整數。', 'en': 'Age must be a whole number from 18 to 100.', 'pt': 'A idade deve ser um número inteiro entre 18 e 100.'},
+    'age.needOwn': {'zh': '请先填写自己的年龄，再设置对方年龄范围。', 'tw': '請先填寫自己的年齡，再設定對方年齡範圍。', 'en': 'Enter your own age before setting partner age limits.', 'pt': 'Indica a tua idade antes de definir limites para o par.'},
+    'age.rangeInvalid': {'zh': '请填写完整年龄范围，最小年龄不能大于最大年龄。', 'tw': '請填寫完整年齡範圍，最小年齡不能大於最大年齡。', 'en': 'Enter both limits; minimum age cannot exceed maximum age.', 'pt': 'Indica ambos os limites; o mínimo não pode exceder o máximo.'},
+    'age.legacy': {'zh': '年龄资料待补充：你仍可参与匹配；补填后才能通过他人的年龄筛选。', 'tw': '年齡資料待補充：你仍可參與配對；補填後才能通過他人的年齡篩選。', 'en': 'Age not provided: you can still match, but cannot pass someone’s age limits until you add it.', 'pt': 'Idade por preencher: continuas a participar, mas só passas os limites de outros após a preencher.'},
+    'age.edit': {'zh': '填写／更新年龄与偏好', 'tw': '填寫／更新年齡與偏好', 'en': 'Update age and preferences', 'pt': 'Atualizar idade e preferências'},
+    'age.years': {'zh': '{n} 岁', 'tw': '{n} 歲', 'en': 'Age {n}', 'pt': '{n} anos'},
+    'age.privacy': {'zh': '我们会保存你填写的年龄及可选年龄范围，用于双向筛选；配对对象可看到你的年龄，不展示你的筛选范围。', 'tw': '我們會儲存你填寫的年齡及可選年齡範圍，用於雙向篩選；配對對象可看到你的年齡，不展示你的篩選範圍。', 'en': 'We store your stated age and optional limits for mutual filtering. Matches can see your age, but not your limits.', 'pt': 'Guardamos a idade indicada e os limites opcionais para filtragem mútua. Os pares veem a tua idade, mas não os limites.'},
+
     'err.mail_quota': {
         'zh': '邮件发送额度暂时不足，请稍后重试。',
         'tw': '郵件發送額度暫時不足，請稍後再試。',

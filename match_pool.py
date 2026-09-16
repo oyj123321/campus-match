@@ -1,5 +1,6 @@
 """匹配池过滤：学校规则 + 黑名单 + 历史配对 + 取向 + 是否进池。"""
 
+from age_rules import age_compatible
 from config import CROSS_SCHOOL_MATCHING_ENABLED
 from models import EDUCATION_LEVELS, User, Blocklist, Match
 from matcher import orientation_compatible
@@ -162,6 +163,8 @@ def eligible_candidates(user, exclude_ids=None):
             continue
         if not school_compatible(user, c):
             continue
+        if not age_compatible(user, c):
+            continue
         if not degree_compatible(user, c):
             continue
         if not orientation_compatible(user, c):
@@ -174,3 +177,10 @@ def eligible_candidates(user, exclude_ids=None):
     from batch_job import users_without_weekly_quota
     busy = users_without_weekly_quota([c.id for c in out])
     return [c for c in out if c.id not in busy]
+
+
+def allocation_compatible(a, b):
+    """Filter pair constraints before allocation, not only after choosing partners."""
+    return (age_compatible(a, b) and school_compatible(a, b)
+            and degree_compatible(a, b) and vectors_aligned(a, b)
+            and not is_blocked_pair(a.id, b.id))

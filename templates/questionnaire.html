@@ -53,6 +53,21 @@
         </select>
         <p class="hint" data-i18n="qn.edu.hint">须如实填写：本科生选本科，硕士生（含研一）选硕士，博士生选博士。默认只配同学历。</p>
     </div>
+    <div class="form-group" id="age-section" style="padding:18px;border:1px solid var(--border, #e5d9e7);border-radius:12px;margin:16px 0;">
+        <label for="age" id="age-label">当前周岁 *</label>
+        <input type="number" id="age" min="18" max="100" step="1" inputmode="numeric" value="{{ user.age if user.age is not none else '' }}" style="max-width:180px;" oninput="syncAgeFields()">
+        <p class="hint" id="age-hint"></p>
+        <label for="age-preference" data-i18n="age.preference">希望匹配的年龄</label>
+        <select id="age-preference" onchange="syncAgeFields()">
+            <option value="any" data-i18n="age.any">不限（默认）</option>
+            <option value="range" {% if user.preferred_age_min is not none %}selected{% endif %} data-i18n="age.limit">指定年龄范围</option>
+        </select>
+        <div id="age-range" class="form-row" style="margin-top:12px;" hidden>
+            <div class="form-group" style="flex:1;min-width:0;"><label for="preferred_age_min" data-i18n="age.min">最小周岁</label><input type="number" id="preferred_age_min" min="18" max="100" step="1" inputmode="numeric" value="{{ user.preferred_age_min if user.preferred_age_min is not none else '' }}"></div>
+            <div class="form-group" style="flex:1;min-width:0;"><label for="preferred_age_max" data-i18n="age.max">最大周岁</label><input type="number" id="preferred_age_max" min="18" max="100" step="1" inputmode="numeric" value="{{ user.preferred_age_max if user.preferred_age_max is not none else '' }}"></div>
+        </div>
+        <p class="hint" data-i18n="age.limitHint">设置范围可能减少匹配机会；双方须互相满足，未填年龄者会被跳过。</p>
+    </div>
     <div class="form-row">
         <div class="form-group" style="flex:1;">
             <label for="wechat_id" id="wechat-label" data-i18n="qn.wechat">附加联系方式（必填）</label>
@@ -480,6 +495,8 @@ async function submitAll() {
         document.getElementById('looking_for').focus();
         return;
     }
+    var ageData = readAgeFields(window.CM_PROFILE_UI !== 'express');
+    if (!ageData) return;
     var education = document.getElementById('education_level').value;
     if (!education) {
         alert(t('qn.needEdu'));
@@ -509,6 +526,7 @@ async function submitAll() {
 
     var r1 = await api('PUT', '/api/me', {
         name: name, gender: gender, looking_for: lookingFor, wechat_id: wechat, bio: bio,
+        ...ageData,
         education_level: education,
         allow_cross_degree: document.getElementById('allow_cross_degree').checked,
         open_to_match: document.getElementById('open_to_match').checked,
@@ -522,6 +540,7 @@ async function submitAll() {
     }
 
     var r2 = await api('POST', '/api/questionnaire', {
+        ...ageData,
         answers: answers,
         important_qids: Array.from(important).map(Number),
     });
@@ -611,8 +630,43 @@ async function shareModalPersonality() {
 var EXPRESS_BIO_MIN = 30;
 window.CM_PROFILE_UI = {{ ('express' if user.is_express() else 'full') | tojson }};
 
+function syncAgeFields() {
+    var privacy = window.CM_PROFILE_UI === 'express';
+    var own = document.getElementById('age');
+    document.getElementById('age-label').textContent = t(privacy ? 'age.optionalLabel' : 'age.requiredLabel');
+    document.getElementById('age-hint').textContent = t(privacy ? 'age.optionalHint' : 'age.fullHint');
+    own.required = !privacy;
+    var pref = document.getElementById('age-preference');
+    pref.disabled = !own.value;
+    if (!own.value) {
+        pref.value = 'any';
+        document.getElementById('preferred_age_min').value = '';
+        document.getElementById('preferred_age_max').value = '';
+    }
+    var range = pref.value === 'range';
+    document.getElementById('age-range').hidden = !range;
+    document.getElementById('age-range').style.display = range ? 'flex' : 'none';
+}
+
+function readAgeFields(required) {
+    var raw = document.getElementById('age').value;
+    var age = raw === '' ? null : Number(raw);
+    var range = document.getElementById('age-preference').value === 'range';
+    var lowRaw = document.getElementById('preferred_age_min').value;
+    var highRaw = document.getElementById('preferred_age_max').value;
+    var low = range && lowRaw !== '' ? Number(lowRaw) : null;
+    var high = range && highRaw !== '' ? Number(highRaw) : null;
+    var error = required && age === null ? 'age.required' : null;
+    if ([age, low, high].some(function(v) { return v !== null && (!Number.isInteger(v) || v < 18 || v > 100); })) error = 'age.invalid';
+    if (range && (low === null || high === null || low > high)) error = 'age.rangeInvalid';
+    if (range && age === null) error = 'age.needOwn';
+    if (error) { alert(t(error)); document.getElementById('age-section').scrollIntoView({block:'center'}); return null; }
+    return {age: age, preferred_age_min: low, preferred_age_max: high};
+}
+
 function setProfileUi(mode) {
     window.CM_PROFILE_UI = mode === 'express' ? 'express' : 'full';
+    syncAgeFields();
     var qForm = document.getElementById('q-form');
     var progress = document.getElementById('progress-card');
     var expressCard = document.getElementById('express-submit-card');
@@ -653,6 +707,8 @@ async function submitExpress() {
     if (!name) { alert(t('qn.needName')); document.getElementById('name').focus(); return; }
     if (!gender) { alert(t('qn.needGender')); return; }
     if (!lookingFor) { alert(t('qn.needLf')); return; }
+    var ageData = readAgeFields(window.CM_PROFILE_UI !== 'express');
+    if (!ageData) return;
     var education = document.getElementById('education_level').value;
     if (!education) {
         alert(t('qn.needEdu'));
@@ -668,6 +724,7 @@ async function submitExpress() {
     btn.textContent = t('qn.saving');
     var r = await api('POST', '/api/express-profile', {
         name: name, gender: gender, looking_for: lookingFor, wechat_id: wechat, bio: bio,
+        ...ageData,
         education_level: education,
         allow_cross_degree: document.getElementById('allow_cross_degree').checked,
         open_to_match: document.getElementById('open_to_match').checked,

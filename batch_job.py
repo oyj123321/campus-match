@@ -22,6 +22,8 @@ from config import (
     MAIL_NO_MATCH_ENABLED, ICEBREAKER_FOLLOWUP_ENABLED,
 )
 from models import db, User, Match
+from age_rules import age_compatible
+from match_pool import allocation_compatible
 from matcher import batch_match_school, orientation_compatible, _dealbreaker_conflict
 from questionnaire import get_compatibility_insight
 from email_service import send_match_result_email
@@ -187,6 +189,8 @@ def persist_user_matches(user, scored_pairs, mode, mail_cfg, weekly_new_limit=No
         if was_matched_pair(user.id, other.id):
             skipped_previous += 1
             continue
+        if not age_compatible(user, other):
+            continue
         if not school_compatible(user, other) or not degree_compatible(user, other):
             continue
         if _dealbreaker_conflict(user, other):
@@ -309,6 +313,7 @@ def run_batch_school(school, mail_cfg, require_opt_in=False, exclude_ids=None):
     pairs = batch_match_school(
         users, filter_same_gender=True,
         previous_pairs=previous_pair_keys([u.id for u in users]),
+        pair_filter=allocation_compatible, min_score=MATCH_MIN_SCORE,
     )
     created = 0
     updated = 0
@@ -325,6 +330,8 @@ def run_batch_school(school, mail_cfg, require_opt_in=False, exclude_ids=None):
         if not orientation_compatible(a, b):
             continue
         if not school_compatible(a, b):
+            continue
+        if not age_compatible(a, b):
             continue
         if not degree_compatible(a, b):
             continue
@@ -409,6 +416,8 @@ def run_batch_cross(mail_cfg, require_opt_in=False, exclude_ids=None):
     pairs = batch_match_school(
         users, filter_same_gender=True,
         previous_pairs=previous_pair_keys([u.id for u in users]),
+        pair_filter=lambda a, b: a.school != b.school and allocation_compatible(a, b),
+        min_score=MATCH_MIN_SCORE,
     )
     created = updated = notified = 0
     matched_ids = set()
@@ -422,6 +431,8 @@ def run_batch_cross(mail_cfg, require_opt_in=False, exclude_ids=None):
         if a.id in matched_ids or b.id in matched_ids:
             continue
         if not school_compatible(a, b):
+            continue
+        if not age_compatible(a, b):
             continue
         if not degree_compatible(a, b):
             continue

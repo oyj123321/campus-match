@@ -28,6 +28,11 @@ class User(db.Model):
     verification_token = db.Column(db.String(64), unique=True)
     verification_sent_at = db.Column(db.DateTime, nullable=True)
 
+    age = db.Column(db.Integer, nullable=True)
+    preferred_age_min = db.Column(db.Integer, nullable=True)
+    preferred_age_max = db.Column(db.Integer, nullable=True)
+    age_confirmed_at = db.Column(db.DateTime, nullable=True)
+
     # 基本信息
     name = db.Column(db.String(32))
     gender = db.Column(db.String(16))       # male / female
@@ -277,6 +282,9 @@ class User(db.Model):
             "email_verified": self.email_verified,
             "name": self.name,
             "gender": self.gender,
+            "age": self.age,
+            "preferred_age_min": self.preferred_age_min,
+            "preferred_age_max": self.preferred_age_max,
             "looking_for": self.effective_looking_for(),
             "education_level": self.education_level if (self.education_level or "") in EDUCATION_LEVELS else None,
             "allow_cross_degree": bool(self.allow_cross_degree),
