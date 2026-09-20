@@ -1,0 +1,68 @@
+{% set analysis = data.matching_analysis %}
+<section class="admin-band analytics-panel" id="matching-analysis">
+    <div class="section-title"><div><span class="eyebrow">MATCHING INSIGHTS</span><h2>匹配分析工作台</h2><p>自动汇总每轮结果，找到值得行动的变化。筛选仅影响本工作台；上方网站总览保持实时。</p></div><span class="scope-badge">仅汇总数据</span></div>
+    <form class="analysis-filters" method="get" action="/admin#matching-analysis">
+        <label>时间范围<select name="days">{% for n in [30,90,365] %}<option value="{{ n }}" {% if analysis.days == n %}selected{% endif %}>最近 {{ n }} 天</option>{% endfor %}</select></label>
+        <label>学校<select name="school"><option value="">全部学校</option>{% for s in analysis.schools %}<option {% if analysis.school == s %}selected{% endif %}>{{ s }}</option>{% endfor %}</select></label>
+        <label>分析轮次<select name="round"><option value="">最近完成轮次</option>{% for row in analysis.rounds %}<option value="{{ row.id }}" {% if analysis.round_id == row.id %}selected{% endif %}>#{{ row.id }} · {{ row.time }}</option>{% endfor %}</select></label>
+        <button type="submit">应用筛选</button><a href="/admin#matching-analysis">重置</a>
+    </form>
+    <p class="analysis-note">当前范围：{{ analysis.school or '全部学校' }} · 最近 {{ analysis.days }} 天，最多 100 轮。跨校候选按完整池计算，学校筛选统计该校参与者；不是重新在校内运行算法。</p>
+    {% for alert in analysis.alerts %}<div class="analysis-notice {{ alert.level }}" role="status">{{ alert.text }}</div>{% endfor %}
+    {% if analysis.latest %}
+    {% set latest = analysis.latest %}
+    <div class="insight-brief"><span class="eyebrow">本轮简报 · #{{ latest.id }} · {{ latest.time }}</span>
+        <h3>{{ latest.participants }} 人参与，{{ latest.matched }} 人配上</h3>
+        <p>未配上 {{ latest.unmatched }} 人。{% if analysis.comparison %}匹配率较上一可比轮次 #{{ analysis.comparison.previous_id }} 变化 {{ '%+.1f'|format(analysis.comparison.delta) }} 个百分点。{% else %}暂无可比的上一轮数据。{% endif %}</p>
+        <a href="#analysis-reasons">查看原因依据 ↓</a>
+    </div>
+    <div class="analysis-metrics">
+        <article><span>参与人数</span><strong>{{ latest.participants }}</strong><small>本轮去重人数</small></article>
+        <article><span>匹配率</span><strong>{{ latest.rate }}<em>%</em></strong><small>配上人数 / 参与人数</small></article>
+        <article><span>未配上</span><strong>{{ latest.unmatched }}</strong><small>包含无候选与分配竞争</small></article>
+        <article><span>历史加权基准</span><strong>{{ analysis.comparison.baseline if analysis.comparison else '—' }}{% if analysis.comparison %}<em>%</em>{% endif %}</strong><small>{% if analysis.comparison %}此前 {{ analysis.comparison.baseline_rounds }} 轮 · {{ analysis.comparison.baseline_n }} 参与人次{% else %}等待可比轮次{% endif %}</small></article>
+    </div>
+    <div class="analysis-grid">
+        <div id="analysis-reasons"><h3>未匹配原因</h3><p class="analysis-note">互斥分类，合计 {{ latest.unmatched }} 人。单项放宽只代表出现候选，不保证配上。</p>
+            {% if latest.get('diagnosis_unavailable') %}<p>该历史轮次尚未记录学校原因明细。</p>{% else %}
+            {% for key,label in analysis.labels.items() %}{% set count = latest.reasons.get(key,0) %}
+            <div class="reason-row"><div><span>{{ label }}</span><strong>{{ count }} 人 · {{ (100 * count / latest.unmatched)|round(1) if latest.unmatched else 0 }}%</strong></div><div class="bar-track"><i style="width:{{ 100 * count / latest.unmatched if latest.unmatched else 0 }}%"></i></div></div>
+            {% endfor %}{% endif %}
+        </div>
+        <div><h3>供需结构</h3><p class="analysis-note">轮次开始时的全部参与者；下方竞争和历史排除指标可重叠。</p>
+            <dl class="system-list">
+            {% for key,label in [('no_candidates','无合适候选'),('one_candidate','仅有一个候选'),('many_candidates','至少两个候选'),('contested_sole','多人共用唯一候选'),('history_exhausted','历史配对排除后无候选'),('age_missing','年龄未填写')] %}
+                <div><dt>{{ label }}</dt><dd>{{ latest.get(key, '未记录') }}{% if key in latest %} 人{% endif %}</dd></div>
+            {% endfor %}
+            {% if not analysis.school %}<div><dt>周额度不足，未参与</dt><dd>{{ latest.get('quota_excluded','未记录') }}</dd></div>{% endif %}
+            </dl>
+            <h3>建议关注</h3>{% for tip in analysis.tips %}<p class="action-tip">{{ tip }}</p>{% else %}<p class="analysis-note">暂无明确阻塞信号，继续观察。</p>{% endfor %}
+        </div>
+    </div>
+    {% if not analysis.school %}<h3>学校对比 <small>点击学校查看该校简报</small></h3><div class="table-wrap"><table><thead><tr><th>学校</th><th>参与</th><th>配上</th><th>未配上</th><th>匹配率</th><th>无候选</th></tr></thead><tbody>
+    {% for s in latest.schools %}<tr><td><a href="{{ url_for('admin_dashboard.dashboard',days=analysis.days,school=s.school,round=latest.id) }}#matching-analysis">{{ s.school }}</a></td><td>{{ s.participants }}</td><td>{{ s.matched }}</td><td>{{ s.participants-s.matched }}</td><td>{{ (100*s.matched/s.participants)|round(1) if s.participants else 0 }}%</td><td>{{ s.get('no_candidates','未记录') }}</td></tr>{% endfor %}
+    </tbody></table></div>{% endif %}
+    {% elif analysis.selected %}<div class="analysis-empty">所选轮次未完成，或缺少所选学校的数据。不会将缺失结果计为零。</div>
+    {% else %}<div class="analysis-empty">此筛选范围内暂无可展示报告。完整批量匹配结束后自动生成；旧轮次不补算。</div>{% endif %}
+    <h3>轮次趋势</h3><p class="analysis-note">最近 20 个有数据的完成轮次。每行分别显示人数与匹配率；点击切换分析轮次。失败、缺失数据不进入趋势。</p>
+    <div class="trend-legend"><span>■ 参与人数（相对最大轮次）</span><span>■ 匹配率（0–100%）</span></div>
+    <div class="round-trends">
+    {% for row in analysis.trend %}<a class="round-trend {% if analysis.latest and analysis.latest.id == row.id %}is-selected{% endif %}" href="{{ url_for('admin_dashboard.dashboard',days=analysis.days,school=analysis.school,round=row.id) }}#matching-analysis" aria-label="查看轮次 {{ row.id }}，参与 {{ row.participants }} 人，匹配率 {{ row.rate }}%">
+        <span>#{{ row.id }}<small>{{ row.time[5:10] }}</small></span><div><div class="bar-track volume"><i style="width:{{ 100*row.participants/analysis.max_participants }}%"></i></div><div class="bar-track"><i style="width:{{ row.rate }}%"></i></div></div><strong>{{ row.participants }} 人<small>{{ row.rate }}%</small></strong>
+    </a>{% else %}<p class="analysis-note">尚无趋势数据。</p>{% endfor %}
+    </div>
+    <details class="round-history"><summary>查看执行记录与统计口径（{{ analysis.rounds|length }} 轮）</summary>
+        <p class="analysis-note">每轮统计的是参与人次；重复执行另记一轮。对比仅使用分析版本、报名要求和记录的匹配配置相同的轮次，历史基准最多取此前 5 轮。自动下降提醒另行排除最近两轮计算基准，要求这两轮及至少 3 轮历史各有 20 人，且两轮均比历史加权基准低至少 10 个百分点。它是运营提示，不是统计显著性或因果判断。</p>
+        <div class="table-wrap"><table><thead><tr><th>轮次 / 澳门时间</th><th>状态</th><th>参与</th><th>配上</th><th>未配上</th></tr></thead><tbody>
+        {% for row in analysis.rounds %}<tr><td>#{{ row.id }} · {{ row.time }}</td><td>{{ '数据缺失' if row.get('unavailable') else {'completed':'完成','failed':'失败（可能部分完成）','running':'执行中 / 中断待核查'}.get(row.status,row.status) }}</td><td>{{ row.get('participants','—') if not row.get('unavailable') else '—' }}</td><td>{{ row.matched if row.status == 'completed' and not row.get('unavailable') else '—' }}</td><td>{{ row.unmatched if row.status == 'completed' and not row.get('unavailable') else '—' }}</td></tr>{% endfor %}
+        </tbody></table></div>
+    </details>
+    <div class="cohort-panel">
+        <h3>新用户转化漏斗</h3>
+        <p class="analysis-note">{{ data.cohort.school or '全部学校' }} · 最近 {{ data.cohort.days }} 天注册、且上线后开始记录的同一批用户，累计进展截至现在。轮次选择不影响此漏斗。老用户不补算；删除账号后移除其漏斗记录。</p>
+        {% if data.cohort.total %}
+        {% for step in data.cohort.rows %}<div class="reason-row"><div><span>{{ loop.index }} · {{ step.label }}</span><strong>{{ step.count }} 人 · {{ step.percent }}%</strong></div><div class="bar-track"><i style="width:{{ step.percent }}%"></i></div>{% if not loop.first %}<small class="analysis-note">上一阶段尚未到达此步 {{ step.drop }} 人</small>{% endif %}</div>{% endfor %}
+        {% else %}<p class="analysis-empty">暂无新用户漏斗数据，后续注册会自动开始记录。</p>{% endif %}
+        <p class="analysis-note">“获取结果”指接口成功返回有效配对，不代表用户已阅读或双方已联系。新注册用户仍需等待匹配，不把等待中直接判为流失。</p>
+    </div>
+</section>

@@ -21,11 +21,11 @@ def check_dashboard(browser, viewport, filename):
     page.wait_for_url(f"{base_url}/admin")
     assert page.locator('[aria-label="关键指标"] .metric').count() == 6
     assert page.get_by_role("heading", name="当前状态漏斗").is_visible()
-    assert page.locator('#operations select[name="gender"]').count() == 1
-    page.locator('#operations select[name="gender"]').select_option("female")
+    assert page.locator('#operations select[name="ops_gender"]').count() == 1
+    page.locator('#operations select[name="ops_gender"]').select_option("female")
     page.get_by_role("button", name="查看", exact=True).click()
-    page.wait_for_url("**/admin?school=&gender=female#operations")
-    assert page.locator('#operations select[name="gender"]').input_value() == "female"
+    page.wait_for_url("**/admin?ops_school=&ops_gender=female#operations")
+    assert page.locator('#operations select[name="ops_gender"]').input_value() == "female"
     assert page.locator("body").evaluate("el => el.scrollWidth <= window.innerWidth")
     assert not errors, errors
     page.screenshot(path=str(output / filename), full_page=True)

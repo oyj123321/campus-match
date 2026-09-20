@@ -37,6 +37,8 @@ from config import (
 from models import db, User, UserTag, Match, Blocklist, AccountDeletion, EXPRESS_BIO_MIN, EDUCATION_LEVELS, EXIT_REASON_CODES
 from models import PoolEvent, WeeklyParticipation
 from operations_analytics import set_pool_participation, record_exit_feedback
+
+from age_rules import apply_age_fields
 from questionnaire import QUESTIONS, build_feature_vector, build_express_vector, get_compatibility_insight, get_open_letter
 from personality import build_love_personality
 from matcher import real_time_match, batch_match_school
@@ -50,7 +52,7 @@ from batch_job import (
 )
 from match_pool import (
     eligible_candidates, previous_partner_ids, previous_pair_keys,
-    deactivate_filled_degree_violations,
+    deactivate_filled_degree_violations, allocation_compatible,
 )
 
 # ---- App Factory ----
@@ -66,6 +68,8 @@ if PUBLIC_URL.startswith("https://"):
 db.init_app(app)
 from admin_dashboard import bp as admin_dashboard_bp
 app.register_blueprint(admin_dashboard_bp)
+from product_analytics import enroll_new_user, observe_response
+app.after_request(observe_response)
 _DEVICE_SERIALIZER = URLSafeTimedSerializer(SECRET_KEY, salt="cm-device-v1")
 
 
@@ -500,6 +504,7 @@ def serialize_match_payload(other, score, insight, active=True):
         "id": other.id if active else None,
         "name": other.name if active else "（已失效的配对）",
         "gender": other.gender if active else None,
+        "age": other.age if active else None,
         "school": getattr(other, "school", None) if active else None,
         "education_level": (
             other.education_level
@@ -904,6 +909,7 @@ def api_register():
             user = User(email=email, school=school)
             db.session.add(user)
             db.session.flush()
+            enroll_new_user(user)
 
         from invite import bind_invite, ensure_invite_code
         ensure_invite_code(user)
@@ -1080,6 +1086,9 @@ def api_express_profile():
         return api_err("err.need_gender")
     if len(bio) < EXPRESS_BIO_MIN:
         return api_err("err.express_bio", n=EXPRESS_BIO_MIN)
+    age_error = apply_age_fields(user, data)
+    if age_error:
+        return api_err(age_error)
     edu_err = apply_education_fields(user, data, required=True)
     if edu_err:
         return edu_err
@@ -1126,6 +1135,9 @@ def api_questionnaire():
 
     # POST: 提交答案 + 生成特征向量
     data = request.get_json() or {}
+    age_error = apply_age_fields(user, data, required=True)
+    if age_error:
+        return api_err(age_error)
     answers_raw = data.get("answers", {})
     if not isinstance(answers_raw, dict):
         return api_err("err.answers_format")
@@ -1351,6 +1363,7 @@ def api_match():
             all_users,
             filter_same_gender=True,
             previous_pairs=previous_pair_keys([u.id for u in all_users]),
+            pair_filter=allocation_compatible, min_score=MATCH_MIN_SCORE,
         )
         my_matches = [
             (a if b.id == user.id else b, s)
@@ -1567,6 +1580,9 @@ def api_me():
 
     # PUT: 更新基本信息（不含问卷）
     data = request.get_json() or {}
+    age_error = apply_age_fields(user, data, required=("age" in data and not user.is_express()))
+    if age_error:
+        return api_err(age_error)
     user.name = (data.get("name") or "").strip() or user.name
     gender = (data.get("gender") or "").strip()
     if gender in ("male", "female"):
@@ -1621,6 +1637,9 @@ def _purge_user_account(user):
     uid = user.id
     PoolEvent.query.filter_by(user_id=uid).delete(synchronize_session=False)
     WeeklyParticipation.query.filter_by(user_id=uid).delete(synchronize_session=False)
+
+    from models import ProductJourney
+    ProductJourney.query.filter_by(user_id=uid).delete(synchronize_session=False)
     Match.query.filter((Match.user1_id == uid) | (Match.user2_id == uid)).delete(synchronize_session=False)
     Blocklist.query.filter(
         (Blocklist.user_id == uid) | (Blocklist.blocked_user_id == uid)
@@ -1888,6 +1907,11 @@ def ensure_schema():
         match_cols = {c["name"] for c in inspect(db.engine).get_columns("matches")}
     except Exception:
         return
+
+    for column, sql_type in (("age", "INTEGER"), ("preferred_age_min", "INTEGER"), ("preferred_age_max", "INTEGER"), ("age_confirmed_at", "DATETIME")):
+        if column not in user_cols:
+            db.session.execute(text(f"ALTER TABLE users ADD COLUMN {column} {sql_type}"))
+    db.session.commit()
 
     if "looking_for" not in user_cols:
         db.session.execute(text("ALTER TABLE users ADD COLUMN looking_for VARCHAR(16)"))

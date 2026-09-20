@@ -11,6 +11,8 @@ CampusMatch 匹配引擎 v2
   - 同性/不限 → 一般图最大权匹配，用贪心近似
 """
 
+from age_rules import age_compatible
+
 import math
 from itertools import combinations
 
@@ -175,6 +177,8 @@ def real_time_match(user, candidates, top_n=5, min_score=0.15, previous_partner_
             continue
         if not c.feature_vector:
             continue
+        if not age_compatible(user, c):
+            continue
         if not orientation_compatible(user, c):
             continue
         sim = pair_score(user, c)
@@ -287,7 +291,7 @@ def hungarian_match(group_a, group_b, score_matrix):
     return matches
 
 
-def batch_match_school(users, filter_same_gender=True, previous_pairs=None):
+def batch_match_school(users, filter_same_gender=True, previous_pairs=None, pair_filter=None, min_score=0.0):
     """
     对学校内用户做全局匹配。
 
@@ -318,6 +322,10 @@ def batch_match_school(users, filter_same_gender=True, previous_pairs=None):
             raw_matrix = [[0.0] * m for _ in range(n)]
             for i in range(n):
                 for j in range(m):
+                    if not age_compatible(group_a[i], group_b[j]):
+                        continue
+                    if pair_filter and not pair_filter(group_a[i], group_b[j]):
+                        continue
                     if _was_matched_before(group_a[i], group_b[j], prev):
                         continue  # 配过永不再配：保持 0
                     if not orientation_compatible(group_a[i], group_b[j]):
@@ -325,6 +333,8 @@ def batch_match_school(users, filter_same_gender=True, previous_pairs=None):
                     if _dealbreaker_conflict(group_a[i], group_b[j]):
                         continue  # 一票否决：保持 0，不当作可配边
                     raw = pair_score(group_a[i], group_b[j])
+                    if raw < min_score:
+                        continue
                     raw_matrix[i][j] = raw
                     rank_matrix[i][j] = pair_priority(group_a[i], group_b[j], False)
             ranked = hungarian_match(group_a, group_b, rank_matrix)
@@ -340,10 +350,10 @@ def batch_match_school(users, filter_same_gender=True, previous_pairs=None):
             return out
 
     # 含同性/不限取向：贪心最大权匹配
-    return greedy_match_all(pool, min_score=0.0, require_orientation=True, previous_pairs=prev)
+    return greedy_match_all(pool, min_score=min_score, require_orientation=True, previous_pairs=prev, pair_filter=pair_filter)
 
 
-def greedy_match_all(users, min_score=0.15, require_orientation=True, previous_pairs=None):
+def greedy_match_all(users, min_score=0.15, require_orientation=True, previous_pairs=None, pair_filter=None):
     """
     贪心匹配。
 
@@ -354,6 +364,8 @@ def greedy_match_all(users, min_score=0.15, require_orientation=True, previous_p
     prev = set(previous_pairs or ())
     pairs = []
     for u1, u2 in combinations(users, 2):
+        if not age_compatible(u1, u2) or (pair_filter and not pair_filter(u1, u2)):
+            continue
         if not u1.feature_vector or not u2.feature_vector:
             continue
         if _was_matched_before(u1, u2, prev):

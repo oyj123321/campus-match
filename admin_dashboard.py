@@ -315,6 +315,8 @@ def _retention_data(users, today_start, week_start):
 
 
 def _dashboard_data():
+    from matching_analytics import dashboard_reports
+    from product_analytics import cohort_summary
     from mail_operations import summary
     try:
         mail_budget = summary()
@@ -332,8 +334,8 @@ def _dashboard_data():
     week_key = current_week_key(now)
     users = User.query.order_by(User.id).all()
     school_options = sorted({u.school for u in users})
-    selected_school = request.args.get("school", "")
-    selected_gender = request.args.get("gender", "")
+    selected_school = request.args.get("ops_school", "")
+    selected_gender = request.args.get("ops_gender", "")
     scoped_users = [u for u in users if (not selected_school or u.school == selected_school)
                     and (not selected_gender or (u.gender == selected_gender if selected_gender != "unknown"
                                                 else u.gender not in ("male", "female")))]
@@ -388,6 +390,12 @@ def _dashboard_data():
         "operations": operations_data(scoped_users, week_key, now),
         "operations_filters": dict(schools=school_options, school=selected_school, gender=selected_gender),
         "exit_reason_labels": EXIT_REASON_LABELS,
+
+        "matching_analysis": dashboard_reports(
+            days=request.args.get('days', 90, type=int),
+            school=request.args.get('school', ''),
+            round_id=request.args.get('round', type=int)),
+        "cohort": cohort_summary(request.args.get('days', 90, type=int), request.args.get('school', '')),
         "email": _resend_summary(),
         "mail_budget": mail_budget,
         "system": {

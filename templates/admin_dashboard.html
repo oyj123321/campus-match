@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <meta name="robots" content="noindex,nofollow">
     <title>运营总览 · CampusMatch</title>
-    <link rel="stylesheet" href="/static/admin.css">
+    <link rel="stylesheet" href="/static/admin.css?v=analytics-20260916">
 </head>
 <body>
     <header class="admin-topbar">
@@ -33,6 +33,8 @@
             <article class="metric"><span>有效配对</span><strong>{{ data.metrics.active_matches }}</strong><small>当前仍有效</small></article>
             <article class="metric metric-mail"><span>近 24 小时邮件</span><strong>{{ data.mail_budget.used if data.mail_budget else '-' }}</strong><small>{{ ('本地剩余 ' ~ data.mail_budget.remaining ~ ' / ' ~ data.mail_budget.limit) if data.mail_budget else '暂未取得邮件数据' }}</small></article>
         </section>
+
+        {% include "admin_matching_analysis.html" %}
 
         <section class="admin-band">
             <div class="section-title"><div><h2>用户男女比例</h2><p>占比以各行总人数为分母；未填写或其他值单列。已注销账号不计入现存账号。</p></div></div>

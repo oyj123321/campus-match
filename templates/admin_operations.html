@@ -3,8 +3,8 @@
 <section class="admin-band" id="operations">
     <div class="section-title"><div><h2>参与转化与留存</h2><p>定位资料填写、报名和匹配环节的问题。</p></div></div>
     <form method="get" action="/admin#operations" style="display:flex;gap:12px;flex-wrap:wrap;align-items:center">
-        <label>学校 <select name="school" style="padding:8px"><option value="">全部学校</option>{% for school in filters.schools %}<option value="{{ school }}" {% if filters.school == school %}selected{% endif %}>{{ school }}</option>{% endfor %}</select></label>
-        <label>性别 <select name="gender" style="padding:8px">{% for key, label in [('', '全部性别'), ('male', '男'), ('female', '女'), ('unknown', '未填写 / 其他')] %}<option value="{{ key }}" {% if filters.gender == key %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
+        <label>学校 <select name="ops_school" style="padding:8px"><option value="">全部学校</option>{% for school in filters.schools %}<option value="{{ school }}" {% if filters.school == school %}selected{% endif %}>{{ school }}</option>{% endfor %}</select></label>
+        <label>性别 <select name="ops_gender" style="padding:8px">{% for key, label in [('', '全部性别'), ('male', '男'), ('female', '女'), ('unknown', '未填写 / 其他')] %}<option value="{{ key }}" {% if filters.gender == key %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
         <button type="submit" style="padding:8px 18px">查看</button><a href="/admin#operations">重置</a>
     </form>
     <p>筛选仅作用于本区的漏斗、参与事件与等待统计；下方运营总览保持全站口径。</p>
