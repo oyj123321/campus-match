@@ -1,0 +1,39 @@
+{% set ops = data.operations %}
+{% set filters = data.operations_filters %}
+<section class="admin-band" id="operations">
+    <div class="section-title"><div><h2>参与转化与留存</h2><p>定位资料填写、报名和匹配环节的问题。</p></div></div>
+    <form method="get" action="/admin#operations" style="display:flex;gap:12px;flex-wrap:wrap;align-items:center">
+        <label>学校 <select name="school" style="padding:8px"><option value="">全部学校</option>{% for school in filters.schools %}<option value="{{ school }}" {% if filters.school == school %}selected{% endif %}>{{ school }}</option>{% endfor %}</select></label>
+        <label>性别 <select name="gender" style="padding:8px">{% for key, label in [('', '全部性别'), ('male', '男'), ('female', '女'), ('unknown', '未填写 / 其他')] %}<option value="{{ key }}" {% if filters.gender == key %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
+        <button type="submit" style="padding:8px 18px">查看</button><a href="/admin#operations">重置</a>
+    </form>
+    <p>筛选仅作用于本区的漏斗、参与事件与等待统计；下方运营总览保持全站口径。</p>
+
+    <h3>当前状态漏斗</h3>
+    <p>按现存账号当前状态逐层筛选；相邻阶段占比不是历史同期转化率。</p>
+    <div class="table-wrap"><table><thead><tr><th>阶段</th><th>人数</th><th>占上一阶段</th></tr></thead><tbody>
+        {% for row in ops.stages %}<tr><td>{{ row.label }}</td><td>{{ row.count }}</td><td>{% if loop.first or row.rate is none %}—{% else %}{{ row.rate }}%{% endif %}</td></tr>{% endfor %}
+    </tbody></table></div>
+
+    <h3>最近完成批次的每周结果</h3>
+    {% if ops.latest_week %}
+    <p>统计周起始：{{ ops.latest_week }}（UTC 周一，沿用匹配额度口径） · 批次完成于 {{ ops.latest_completed }}（澳门时间）。同周重复执行合并统计。</p>
+    <div class="status-strip"><span>实际参与 {{ ops.participants }} 人</span><span>当周配对 {{ ops.matched }} 人</span><span>配对占比 {% if ops.match_rate is not none %}{{ ops.match_rate }}%{% else %}—{% endif %}</span></div>
+    <p>配对按人数去重，含当周提前揭晓；报名模式下仅记录实际进入批次的报名用户。不开启报名限制时记录所有进入批次的用户。</p>
+    {% else %}<p>尚无已完成批次记录。启用本功能后的下一次完整批量匹配将开始记录，历史参与情况不会推算补齐。</p>{% endif %}
+
+    <h3>连续未匹配关注</h3>
+    <p>当前匹配池中，连续参与至少 2 个自然周且未匹配：<strong>{{ ops.waiting_total }} 人</strong>。以最近完成批次所在周为终点；未参与、中断一周或成功配对即中断连续计数。</p>
+    <div class="status-strip">{% for row in ops.distribution %}<span>连续 {{ row.weeks }} 周：{{ row.count }} 人</span>{% endfor %}</div>
+    <div class="table-wrap"><table><thead><tr><th>学校</th><th>性别</th><th>连续至少 2 周未匹配</th></tr></thead><tbody>
+        {% for row in ops.waiting %}<tr><td>{{ row.school }}</td><td>{{ {'male':'男','female':'女'}.get(row.gender, '未填写 / 其他') }}</td><td>{{ row.count }}</td></tr>{% else %}<tr><td colspan="3">{% if ops.latest_week %}当前记录中暂无需关注的人群{% else %}等待批次数据积累{% endif %}</td></tr>{% endfor %}
+    </tbody></table></div>
+    <p>可据此优先检查对应学校的候选供给与匹配条件；该统计不推断未配对的具体原因。</p>
+
+    <h3>参与事件</h3>
+    <div class="status-strip"><span>近 7 天退出 {{ ops.pauses }} 次</span><span>近 7 天恢复 {{ ops.resumes }} 次</span></div>
+    <p>仅从本功能启用后记录真实开关变化；重复暂停不累计次数。下面显示最近 50 条事件，时间为澳门时间。账号注销后其个人事件和参与历史一并删除。</p>
+    <div class="table-wrap"><table><thead><tr><th>时间</th><th>事件</th><th>退出原因</th><th>备注</th></tr></thead><tbody>
+        {% for row in ops.events %}<tr><td>{{ row.time }}</td><td>{{ row.kind }}</td><td>{{ data.exit_reason_labels.get(row.reason, '—') }}</td><td style="white-space:pre-wrap;overflow-wrap:anywhere;max-width:32rem">{{ row.note }}</td></tr>{% else %}<tr><td colspan="4">暂无参与事件；现有退出反馈仍可在下方查看。</td></tr>{% endfor %}
+    </tbody></table></div>
+</section>

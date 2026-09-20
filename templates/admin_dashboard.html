@@ -23,6 +23,8 @@
             <div class="status-dot"><span></span>数据库正常</div>
         </section>
 
+        {% include 'admin_operations.html' %}
+
         <section class="metric-grid" aria-label="关键指标">
             <article class="metric"><span>已验证用户</span><strong>{{ data.metrics.verified_total }}</strong><small>今日新增 {{ data.metrics.verified_today }}</small></article>
             <article class="metric"><span>资料完整</span><strong>{{ data.metrics.questionnaire_ready }}</strong><small>可进入算法筛选</small></article>
@@ -30,6 +32,30 @@
             <article class="metric"><span>本周新配对</span><strong>{{ data.metrics.matches_week }}</strong><small>已通知 {{ data.metrics.notified_week }}</small></article>
             <article class="metric"><span>有效配对</span><strong>{{ data.metrics.active_matches }}</strong><small>当前仍有效</small></article>
             <article class="metric metric-mail"><span>近 24 小时邮件</span><strong>{{ data.mail_budget.used if data.mail_budget else '-' }}</strong><small>{{ ('本地剩余 ' ~ data.mail_budget.remaining ~ ' / ' ~ data.mail_budget.limit) if data.mail_budget else '暂未取得邮件数据' }}</small></article>
+        </section>
+
+        <section class="admin-band">
+            <div class="section-title"><div><h2>用户男女比例</h2><p>占比以各行总人数为分母；未填写或其他值单列。已注销账号不计入现存账号。</p></div></div>
+            <div class="table-wrap"><table><thead><tr><th>统计范围</th><th>总人数</th><th>男</th><th>女</th><th>男 : 女</th><th>未填写 / 其他</th></tr></thead><tbody>
+            {% for row in data.genders %}<tr><td>{{ row.label }}</td><td>{{ row.total }}</td><td>{{ row.male }}（{{ row.male_pct }}%）</td><td>{{ row.female }}（{{ row.female_pct }}%）</td><td>{{ row.male }} : {{ row.female }}</td><td>{{ row.unknown }}</td></tr>{% endfor %}
+            </tbody></table></div>
+        </section>
+
+        <section class="admin-band">
+            <div class="section-title"><div><h2>退出匹配池与注销</h2><p>暂停人数为当前关闭参与匹配的现存账号，不等同于历史累计退出人数。</p></div></div>
+            <div class="metric-grid">
+                <article class="metric"><span>当前暂停参与</span><strong>{{ data.retention.paused }}</strong><small>其中资料完整 {{ data.retention.paused_ready }}</small></article>
+                <article class="metric"><span>留有退出反馈</span><strong>{{ data.retention.feedback_total }}</strong><small>每个现存账号的最新反馈</small></article>
+                <article class="metric"><span>累计注销（记录以来）</span><strong>{{ data.retention.deleted_total }}</strong><small>今日 {{ data.retention.deleted_today }} · 本周 {{ data.retention.deleted_week }}</small></article>
+            </div>
+            <p>注销计数从本功能上线后开始，仅记录匿名注销时间，不保留账号资料。此前已删除账号无法补算。</p>
+            <h3>退出原因分布</h3>
+            <div class="status-strip">{% for row in data.retention.reasons %}<span>{{ row.label }} {{ row.count }}</span>{% else %}<span>暂无退出反馈</span>{% endfor %}</div>
+            <h3>最近退出反馈</h3>
+            <p>最近 50 条，按澳门时间排序；包含重新开启参与后的历史反馈。注销后对应反馈随账号删除。</p>
+            <div class="table-wrap"><table><thead><tr><th>反馈时间</th><th>原因</th><th>备注</th><th>当前参与状态</th></tr></thead><tbody>
+            {% for row in data.retention.recent %}<tr><td>{{ row.time }}</td><td>{{ row.reason }}</td><td style="white-space:pre-wrap;overflow-wrap:anywhere;max-width:32rem">{{ row.note }}</td><td>{{ '已暂停' if row.paused else '已开启' }}</td></tr>{% else %}<tr><td colspan="4">暂无退出反馈</td></tr>{% endfor %}
+            </tbody></table></div>
         </section>
 
         <section class="admin-band">

@@ -28,7 +28,8 @@ from config import (
     RESEND_DAILY_LIMIT,
     SECRET_KEY,
 )
-from models import Match, TrafficDay, TrafficVisitor, User, db
+from models import AccountDeletion, Match, TrafficDay, TrafficVisitor, User, db
+from operations_analytics import operations_data
 
 
 bp = Blueprint("admin_dashboard", __name__)
@@ -274,6 +275,45 @@ def _resend_summary():
     return result
 
 
+EXIT_REASON_LABELS = {
+    "busy": "最近太忙 / 学业压力", "found_someone": "已经有对象了",
+    "need_break": "暂时不想认识新人", "match_quality": "配对体验一般",
+    "privacy": "隐私顾虑", "other": "其他",
+}
+
+
+def _gender_summary(label, users):
+    counts = Counter(user.gender for user in users)
+    total = len(users)
+    male, female = counts["male"], counts["female"]
+    return dict(label=label, total=total, male=male, female=female,
+                unknown=total - male - female,
+                male_pct=round(male * 100 / total, 1) if total else 0,
+                female_pct=round(female * 100 / total, 1) if total else 0)
+
+
+def _retention_data(users, today_start, week_start):
+    paused = [u for u in users if not u.is_open_to_match()]
+    feedback = sorted([u for u in users if u.exit_reason_code],
+                      key=lambda u: u.exit_reason_at or datetime.min, reverse=True)
+    reasons = Counter(u.exit_reason_code for u in feedback)
+    return {
+        "paused": len(paused),
+        "paused_ready": sum(u.ready_to_match() for u in paused),
+        "feedback_total": len(feedback),
+        "reasons": [{"label": EXIT_REASON_LABELS.get(code, "其他 / 历史原因"), "count": count}
+                    for code, count in reasons.most_common()],
+        "recent": [{"time": (u.exit_reason_at + timedelta(hours=8)).strftime("%Y-%m-%d %H:%M")
+                    if u.exit_reason_at else "时间未知",
+                    "reason": EXIT_REASON_LABELS.get(u.exit_reason_code, "其他 / 历史原因"),
+                    "note": u.exit_reason_note or "—", "paused": not u.is_open_to_match()}
+                   for u in feedback[:50]],
+        "deleted_total": AccountDeletion.query.count(),
+        "deleted_today": AccountDeletion.query.filter(AccountDeletion.created_at >= today_start).count(),
+        "deleted_week": AccountDeletion.query.filter(AccountDeletion.created_at >= week_start).count(),
+    }
+
+
 def _dashboard_data():
     from mail_operations import summary
     try:
@@ -291,6 +331,12 @@ def _dashboard_data():
     week_start = week_window_start(now)
     week_key = current_week_key(now)
     users = User.query.order_by(User.id).all()
+    school_options = sorted({u.school for u in users})
+    selected_school = request.args.get("school", "")
+    selected_gender = request.args.get("gender", "")
+    scoped_users = [u for u in users if (not selected_school or u.school == selected_school)
+                    and (not selected_gender or (u.gender == selected_gender if selected_gender != "unknown"
+                                                else u.gender not in ("male", "female")))]
     verified = [user for user in users if user.email_verified]
     ready = [user for user in verified if user.ready_to_match()]
     pool = [user for user in ready if user.is_open_to_match()]
@@ -335,6 +381,13 @@ def _dashboard_data():
         "traffic": traffic_rows,
         "traffic_max": max([row["page_views"] for row in traffic_rows] + [1]),
         "schools": school_rows,
+        "genders": [_gender_summary("全部现存账号", users),
+                    _gender_summary("已验证用户", verified),
+                    _gender_summary("当前匹配池", pool)],
+        "retention": _retention_data(users, today_start, week_start),
+        "operations": operations_data(scoped_users, week_key, now),
+        "operations_filters": dict(schools=school_options, school=selected_school, gender=selected_gender),
+        "exit_reason_labels": EXIT_REASON_LABELS,
         "email": _resend_summary(),
         "mail_budget": mail_budget,
         "system": {

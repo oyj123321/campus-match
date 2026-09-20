@@ -19,8 +19,13 @@ def check_dashboard(browser, viewport, filename):
     page.locator("#password").fill(password)
     page.locator("button[type=submit]").click()
     page.wait_for_url(f"{base_url}/admin")
-    assert page.locator(".metric").count() == 6
-    assert page.locator(".admin-alert").filter(has_text="API Key").count() == 1
+    assert page.locator('[aria-label="关键指标"] .metric').count() == 6
+    assert page.get_by_role("heading", name="当前状态漏斗").is_visible()
+    assert page.locator('#operations select[name="gender"]').count() == 1
+    page.locator('#operations select[name="gender"]').select_option("female")
+    page.get_by_role("button", name="查看", exact=True).click()
+    page.wait_for_url("**/admin?school=&gender=female#operations")
+    assert page.locator('#operations select[name="gender"]').input_value() == "female"
     assert page.locator("body").evaluate("el => el.scrollWidth <= window.innerWidth")
     assert not errors, errors
     page.screenshot(path=str(output / filename), full_page=True)
@@ -28,7 +33,7 @@ def check_dashboard(browser, viewport, filename):
 
 
 with sync_playwright() as playwright:
-    browser = playwright.chromium.launch()
+    browser = playwright.chromium.launch(channel=os.environ.get("ADMIN_BROWSER_CHANNEL") or None)
     check_dashboard(browser, {"width": 1440, "height": 1000}, "admin-desktop.png")
     check_dashboard(browser, {"width": 390, "height": 844}, "admin-mobile.png")
     browser.close()

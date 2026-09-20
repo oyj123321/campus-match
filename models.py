@@ -18,6 +18,39 @@ EXIT_REASON_CODES = (
 )
 
 
+class AccountDeletion(db.Model):
+    """Anonymous deletion receipts; no identity, contact or free-text data."""
+    __tablename__ = "account_deletions"
+    id = db.Column(db.Integer, primary_key=True)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, index=True)
+
+
+class PoolEvent(db.Model):
+    """User-owned participation history, removed on account deletion."""
+    __tablename__ = "pool_events"
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
+    kind = db.Column(db.String(24), nullable=False)
+    reason_code = db.Column(db.String(32))
+    reason_note = db.Column(db.String(280))
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, index=True)
+
+
+class ParticipationWeek(db.Model):
+    __tablename__ = "participation_weeks"
+    week_start = db.Column(db.Date, primary_key=True)
+    completed_at = db.Column(db.DateTime, nullable=False)
+
+
+class WeeklyParticipation(db.Model):
+    __tablename__ = "weekly_participation"
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
+    week_start = db.Column(db.Date, nullable=False, index=True)
+    matched = db.Column(db.Boolean, nullable=False, default=False)
+    __table_args__ = (db.UniqueConstraint("user_id", "week_start"),)
+
+
 class User(db.Model):
     __tablename__ = "users"
 

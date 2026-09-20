@@ -22,6 +22,7 @@ from config import (
     MAIL_NO_MATCH_ENABLED, ICEBREAKER_FOLLOWUP_ENABLED,
 )
 from models import db, User, Match
+from operations_analytics import record_match_success
 from matcher import batch_match_school, orientation_compatible, _dealbreaker_conflict
 from questionnaire import get_compatibility_insight
 from email_service import send_match_result_email
@@ -152,6 +153,8 @@ def _get_or_create_pair(user_a, user_b, score, insight, mode="batch"):
         notified=False,
     )
     db.session.add(m)
+    db.session.flush()
+    record_match_success(m)
     return m, True
 
 
@@ -219,6 +222,7 @@ def persist_user_matches(user, scored_pairs, mode, mail_cfg, weekly_new_limit=No
         )
         db.session.add(m)
         db.session.flush()
+        record_match_success(m)
         enforce_one_to_one_active(user, other, m)
         saved.append((other, score, insight, m))
         to_notify.append((other, score, insight, m))
@@ -481,6 +485,9 @@ def run_batch_all(mail_cfg, require_opt_in=None):
     from config import REVEAL_REQUIRE_OPT_IN
     if require_opt_in is None:
         require_opt_in = REVEAL_REQUIRE_OPT_IN
+    # Snapshot participation before matching; only a fully completed run is recorded.
+    analytics_week = week_window_start().date()
+    analytics_ids = [u.id for u in ready_users(require_opt_in=require_opt_in)]
     schools = list(SCHOOL_DOMAINS.keys())
     results = []
     already = set()
@@ -499,6 +506,9 @@ def run_batch_all(mail_cfg, require_opt_in=None):
         f"  [跨校] users={cross['users']} pairs={cross.get('pairs', 0)} "
         f"created={cross.get('created', 0)} updated={cross.get('updated', 0)}"
     )
+
+    from operations_analytics import record_completed_week
+    record_completed_week(analytics_ids, analytics_week)
 
     # 预约了本周但未配上的人：可选发「暂未配对」邮件（省额度时默认关）
     no_match_sent = 0

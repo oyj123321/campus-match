@@ -34,7 +34,9 @@ from config import (
     SESSION_REMEMBER_DAYS, DEVICE_COOKIE_NAME,
     CROSS_DEGREE_LEGACY_BEFORE,
 )
-from models import db, User, UserTag, Match, Blocklist, EXPRESS_BIO_MIN, EDUCATION_LEVELS, EXIT_REASON_CODES
+from models import db, User, UserTag, Match, Blocklist, AccountDeletion, EXPRESS_BIO_MIN, EDUCATION_LEVELS, EXIT_REASON_CODES
+from models import PoolEvent, WeeklyParticipation
+from operations_analytics import set_pool_participation, record_exit_feedback
 from questionnaire import QUESTIONS, build_feature_vector, build_express_vector, get_compatibility_insight, get_open_letter
 from personality import build_love_personality
 from matcher import real_time_match, batch_match_school
@@ -1096,9 +1098,7 @@ def api_express_profile():
         else:
             user.set_cross_schools([])
     if "open_to_match" in data:
-        user.open_to_match = bool(data.get("open_to_match"))
-        if not user.open_to_match:
-            user.opt_in_week = None
+        set_pool_participation(user, bool(data.get("open_to_match")))
     vec, _ = build_express_vector(user.bio)
     user.feature_vector = vec
     user.profile_mode = "privacy"
@@ -1558,6 +1558,7 @@ def api_me():
         if not confirm or confirm != (user.email or "").lower():
             return api_err("err.delete_confirm")
         email = user.email
+        db.session.add(AccountDeletion())
         _purge_user_account(user)
         db.session.commit()
         session.clear()
@@ -1606,9 +1607,7 @@ def api_me():
         else:
             user.set_cross_schools([])
     if "open_to_match" in data:
-        user.open_to_match = bool(data.get("open_to_match"))
-        if not user.open_to_match:
-            user.opt_in_week = None
+        set_pool_participation(user, bool(data.get("open_to_match")))
     if "want_match_followup" in data:
         user.want_match_followup = bool(data.get("want_match_followup"))
     from invite import try_redeem_invite
@@ -1620,6 +1619,8 @@ def api_me():
 def _purge_user_account(user):
     """删除用户及其配对、拉黑、标签。调用方负责 commit / 清 session。"""
     uid = user.id
+    PoolEvent.query.filter_by(user_id=uid).delete(synchronize_session=False)
+    WeeklyParticipation.query.filter_by(user_id=uid).delete(synchronize_session=False)
     Match.query.filter((Match.user1_id == uid) | (Match.user2_id == uid)).delete(synchronize_session=False)
     Blocklist.query.filter(
         (Blocklist.user_id == uid) | (Blocklist.blocked_user_id == uid)
@@ -1634,17 +1635,16 @@ def api_me_pause():
     """关闭参与匹配（先暂停）。可选附带退出原因。"""
     user = get_current_user()
     data = request.get_json(silent=True) or {}
-    user.open_to_match = False
-    user.opt_in_week = None
-
     code = (data.get("reason_code") or "").strip()
     note = (data.get("reason_note") or "").strip()[:280]
+    if code and code not in EXIT_REASON_CODES:
+        return api_err("err.exit_reason")
+    set_pool_participation(user, False)
     if code:
-        if code not in EXIT_REASON_CODES:
-            return api_err("err.exit_reason")
         user.exit_reason_code = code
         user.exit_reason_note = note or None
         user.exit_reason_at = datetime.utcnow()
+        record_exit_feedback(user, code, note)
     db.session.commit()
     return jsonify({
         "ok": True,
@@ -1669,6 +1669,7 @@ def api_me_exit_feedback():
     user.exit_reason_code = code
     user.exit_reason_note = note or None
     user.exit_reason_at = datetime.utcnow()
+    record_exit_feedback(user, code, note)
     db.session.commit()
     return jsonify({"ok": True, "message": t_api("ok.exit_feedback")})
 
