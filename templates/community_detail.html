@@ -1,0 +1,25 @@
+{% extends "community_layout.html" %}
+{% macro delete_form(entry) %}
+<details><summary>删除</summary><form method="post" action="{{ url_for('community.delete',entry_id=entry.id) }}"><input type="hidden" name="csrf" value="{{ community_csrf }}"><p>确定删除？{% if not entry.parent_id %}评论也会一并删除。{% endif %}</p><button type="submit">确认删除</button></form></details>
+{% endmacro %}
+{% macro report_form(entry) %}
+<details><summary>举报</summary><form method="post" data-community-action="report" action="{{ url_for('community.report',entry_id=entry.id) }}" class="community-form"><input type="hidden" name="csrf" value="{{ community_csrf }}"><label>举报原因<textarea name="reason" minlength="2" maxlength="280" required rows="2" placeholder="请说明涉及骚扰、个人信息或其他问题"></textarea></label><button type="submit">提交举报</button></form></details>
+{% endmacro %}
+{% block community_content %}
+<article class="community-card">
+    <div class="community-meta"><span class="community-tag">{{ categories[post.category] }}</span><span>{{ states[post.status] }}</span><time>{{ post.created_at|community_time }}</time></div>
+    <h2 class="community-title">{{ post.title }}</h2><p class="community-muted">{{ '匿名同学' if post.anonymous else (post.author.name or '校园同学') }} · {{ post.school }}</p>
+    <div class="community-body">{{ post.body }}</div>
+    {% if post.status!='published' %}<p class="community-notice">{{ '正在等待管理员审核，其他同学暂不可见。' if post.status=='pending' else '此内容已被管理员隐藏，其他同学暂不可见。' }}</p>{% endif %}
+    <div class="community-tools">
+        {% if not community_user %}<a href="/#step1-card">赞 · {{ likes.get(post.id,0) }}（登录参与）</a><a href="/#step1-card">登录收藏</a><a href="/#step1-card">登录评论</a>{% endif %}
+        {% if community_user and post.status=='published' %}{% for kind,label in [('like','赞'),('save','收藏')] %}<form method="post" data-community-action="reaction" action="{{ url_for('community.react',post_id=post.id) }}"><input type="hidden" name="csrf" value="{{ community_csrf }}"><input type="hidden" name="kind" value="{{ kind }}"><input type="hidden" name="enabled" value="{{ '0' if (post.id,kind) in reactions else '1' }}"><button type="submit">{{ '取消' if (post.id,kind) in reactions else '' }}{{ label }}{% if kind=='like' %} · {{ likes.get(post.id,0) }}{% endif %}</button></form>{% endfor %}{% endif %}
+        {% if community_user and post.author_id==community_user.id %}{{ delete_form(post) }}{% elif community_user and post.status=='published' %}{{ report_form(post) }}{% endif %}
+    </div>
+</article>
+<section class="community-card"><h2>评论 · {{ comment_counts.get(post.id,0) }}</h2>
+    {% for item in comments %}<article class="community-comment"><div class="community-meta"><strong>{{ '匿名同学' if item.anonymous else (item.author.name or '校园同学') }}</strong><span>{{ item.school }} · {{ item.created_at|community_time }}</span></div><p class="community-body">{{ item.body }}</p>{% if community_user and item.author_id==community_user.id %}{{ delete_form(item) }}{% elif community_user and post.status=='published' %}{{ report_form(item) }}{% endif %}</article>{% else %}<p class="community-muted">还没有评论，友善地说声你好吧。</p>{% endfor %}
+    <nav class="community-pagination">{% if page>1 %}<a href="{{ url_for('community.detail',post_id=post.id,page=page-1) }}">上一页</a>{% endif %}{% if more %}<a href="{{ url_for('community.detail',post_id=post.id,page=page+1) }}">下一页</a>{% endif %}</nav>
+    {% if community_user and post.status=='published' %}<form method="post" action="{{ url_for('community.comment',post_id=post.id) }}" class="community-form"><input type="hidden" name="csrf" value="{{ community_csrf }}"><label>写下评论<textarea name="body" required maxlength="500" rows="3" placeholder="友善交流，不公开个人联系方式"></textarea></label><label class="community-checkbox"><input type="checkbox" name="anonymous" value="1">匿名评论（学校仍会展示）</label><button type="submit" class="community-primary">发表评论</button></form>{% endif %}
+</section>
+{% endblock %}

@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block content %}
+<link rel="stylesheet" href="/static/community.css?v=1">
+<script src="{{ url_for('static', filename='community.js') }}?v=1" defer></script>
+<div class="community-shell">
+    <header class="community-hero"><div><span class="community-eyebrow">CAMPUS LIFE · 校园里的每一种相遇</span><h1><a href="/community">校园广场</a></h1><p>心动可以慢慢来，先从一句你好开始。</p></div><a class="community-primary" href="{{ '/community/new' if community_user else '/#step1-card' }}">{{ '＋ 发一条动态' if community_user else '注册 / 登录参与' }}</a></header>
+    <nav class="community-tabs" aria-label="广场导航"><a href="/community">发现</a>{% if community_user %}<a href="/community?view=mine">我的帖子</a><a href="/community?view=saved">我的收藏</a><a href="/matches">回到匹配</a>{% endif %}</nav>
+    {% if not community_user %}<p class="community-notice">欢迎逛逛校园广场。注册并验证学校邮箱后，即可发帖、评论、点赞和收藏。<a href="/#step1-card">注册 / 登录 →</a></p>{% endif %}
+    {% for message in get_flashed_messages() %}<p class="community-notice" role="status">{{ message }}</p>{% endfor %}
+    {% block community_content %}{% endblock %}
+</div>
+{% endblock %}

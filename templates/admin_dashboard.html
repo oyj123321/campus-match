@@ -11,6 +11,7 @@
     <header class="admin-topbar">
         <div><strong>CampusMatch</strong><span>运营总览</span></div>
         <div class="admin-actions">
+            <a href="/admin/community">社区管理</a>
             <span>更新于 {{ data.generated_at }}</span>
             <a href="/admin" title="刷新数据" aria-label="刷新数据">刷新</a>
             <form method="post" action="/admin/logout"><input type="hidden" name="csrf" value="{{ admin_csrf }}"><button type="submit">退出</button></form>

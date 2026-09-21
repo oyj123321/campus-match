@@ -1,0 +1,13 @@
+{% extends "community_layout.html" %}
+{% block community_content %}
+<section class="community-card community-compose"><h2>分享你的校园瞬间</h2><p>公开帖子可被所有访客看到，包括未注册用户。表白帖先审核，其余分类发布后公开。</p>
+<form method="post" class="community-form">
+    <input type="hidden" name="csrf" value="{{ community_csrf }}">
+    <label>选择话题<select name="category" required>{% for key,label in categories.items() %}<option value="{{ key }}">{{ label }}</option>{% endfor %}</select></label>
+    <label>标题<input name="title" required minlength="2" maxlength="80" placeholder="给这段故事起个名字（2–80 字）"></label>
+    <label>正文<textarea name="body" required minlength="5" maxlength="2000" rows="8" placeholder="想说的话、想发起的活动，或今天的小确幸（5–2000 字）"></textarea></label>
+    <label class="community-checkbox"><input type="checkbox" name="anonymous" value="1">匿名发布（管理员仍可关联账号；学校仍会展示）</label>
+    <p class="community-muted">请勿发布他人的姓名、联系方式、照片或未经同意的个人经历。本期支持纯文字。</p>
+    <button class="community-primary" type="submit">提交发布</button>
+</form></section>
+{% endblock %}

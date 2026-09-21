@@ -1,0 +1,20 @@
+{% extends "community_layout.html" %}
+{% block community_content %}
+<div class="community-grid"><section>
+    <form class="community-filters" method="get">
+        <input type="hidden" name="view" value="{{ view }}">
+        <label>话题<select name="category"><option value="">全部话题</option>{% for key,label in categories.items() %}<option value="{{ key }}" {% if category==key %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
+        <label>学校<select name="school"><option value="">全部学校</option>{% for s in schools %}<option value="{{ s }}" {% if school==s %}selected{% endif %}>{{ s }}</option>{% endfor %}</select></label>
+        <button type="submit">筛选</button>
+    </form>
+    {% for post in posts %}
+    <article class="community-card">
+        <div class="community-meta"><span class="community-tag">{{ categories[post.category] }}</span>{% if post.pinned %}<span>置顶</span>{% endif %}{% if post.status!='published' %}<span>{{ states[post.status] }}</span>{% endif %}<time>{{ post.created_at|community_time }}</time></div>
+        <h2><a href="{{ url_for('community.detail',post_id=post.id) }}">{{ post.title }}</a></h2>
+        <p class="community-excerpt">{{ post.body[:180] }}{% if post.body|length>180 %}…{% endif %}</p>
+        <div class="community-meta"><span>{{ '匿名同学' if post.anonymous else (post.author.name or '校园同学') }} · {{ post.school }}</span><a href="{{ url_for('community.detail',post_id=post.id) }}">{{ comment_counts.get(post.id,0) }} 条评论 · {{ likes.get(post.id,0) }} 个赞</a></div>
+    </article>
+    {% else %}<div class="community-card community-empty"><span class="community-eyebrow">从这里开始</span><h2>{{ '还没有收藏的帖子' if view=='saved' else ('你还没有发布帖子' if view=='mine' else '这里还在等第一声你好') }}</h2><p>分享一段校园日常，或邀请大家一起做件有趣的事。</p><a href="/community/new">写下第一条动态 →</a></div>{% endfor %}
+    <nav class="community-pagination" aria-label="分页">{% if page>1 %}<a href="{{ url_for('community.feed',page=page-1,view=view,category=category,school=school) }}">上一页</a>{% endif %}<span>第 {{ page }} 页</span>{% if more %}<a href="{{ url_for('community.feed',page=page+1,view=view,category=category,school=school) }}">下一页</a>{% endif %}</nav>
+</section><aside class="community-card community-guide"><span class="community-eyebrow">让相遇自然发生</span><h2>今天，想聊什么？</h2><p><strong>表白与心动</strong><br>记录心动瞬间。表白帖审核后公开。</p><p><strong>认识新朋友</strong><br>饭搭子、运动伙伴，或周末的一场活动。</p><p><strong>校园日常</strong><br>分享生活里的小事，也听听别人的故事。</p><hr><p>友善交流，不公开他人身份和联系方式，不冒充他人。遇到不适内容可在详情页举报。</p><p>匿名对同学隐藏昵称，管理员仍可处理违规账号。</p></aside></div>
+{% endblock %}

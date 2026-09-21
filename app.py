@@ -68,6 +68,8 @@ if PUBLIC_URL.startswith("https://"):
 db.init_app(app)
 from admin_dashboard import bp as admin_dashboard_bp
 app.register_blueprint(admin_dashboard_bp)
+from community import bp as community_bp, purge_community
+app.register_blueprint(community_bp)
 from product_analytics import enroll_new_user, observe_response
 app.after_request(observe_response)
 _DEVICE_SERIALIZER = URLSafeTimedSerializer(SECRET_KEY, salt="cm-device-v1")
@@ -1635,6 +1637,7 @@ def api_me():
 def _purge_user_account(user):
     """删除用户及其配对、拉黑、标签。调用方负责 commit / 清 session。"""
     uid = user.id
+    purge_community(uid)
     PoolEvent.query.filter_by(user_id=uid).delete(synchronize_session=False)
     WeeklyParticipation.query.filter_by(user_id=uid).delete(synchronize_session=False)
 

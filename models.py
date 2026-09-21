@@ -410,6 +410,65 @@ class MatchingRound(db.Model):
     report_json = db.Column(db.Text, default="{}", nullable=False)
 
 
+class CommunityEntry(db.Model):
+    __tablename__ = "community_entries"
+    __table_args__ = {"sqlite_autoincrement": True}
+    id = db.Column(db.Integer, primary_key=True)
+    author_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
+    parent_id = db.Column(db.Integer, db.ForeignKey("community_entries.id"), index=True)
+    category = db.Column(db.String(16), nullable=False)
+    school = db.Column(db.String(64), nullable=False)
+    title = db.Column(db.String(80), nullable=False, default="")
+    body = db.Column(db.Text, nullable=False)
+    anonymous = db.Column(db.Boolean, nullable=False, default=False)
+    status = db.Column(db.String(16), nullable=False, default="published", index=True)
+    pinned = db.Column(db.Boolean, nullable=False, default=False)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, index=True)
+    author = db.relationship("User", foreign_keys=[author_id], lazy="joined")
+
+
+class CommunityReaction(db.Model):
+    __tablename__ = "community_reactions"
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), primary_key=True)
+    entry_id = db.Column(db.Integer, db.ForeignKey("community_entries.id"), primary_key=True)
+    kind = db.Column(db.String(16), primary_key=True)
+
+
+class CommunityReport(db.Model):
+    __tablename__ = "community_reports"
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
+    entry_id = db.Column(db.Integer, db.ForeignKey("community_entries.id"), nullable=False, index=True)
+    reason = db.Column(db.String(280), nullable=False)
+    resolved = db.Column(db.Boolean, nullable=False, default=False, index=True)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    __table_args__ = (db.UniqueConstraint("user_id", "entry_id"),)
+
+
+class CommunityBan(db.Model):
+    __tablename__ = "community_bans"
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), primary_key=True)
+    until = db.Column(db.DateTime, nullable=False)
+    reason = db.Column(db.String(280), nullable=False)
+
+
+class CommunityLimit(db.Model):
+    __tablename__ = "community_limits"
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), primary_key=True)
+    action = db.Column(db.String(16), primary_key=True)
+    last_at = db.Column(db.DateTime, nullable=False)
+
+
+class CommunityAudit(db.Model):
+    __tablename__ = "community_audits"
+    id = db.Column(db.Integer, primary_key=True)
+    entry_id = db.Column(db.Integer, db.ForeignKey("community_entries.id"), index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), index=True)
+    action = db.Column(db.String(24), nullable=False)
+    reason = db.Column(db.String(280), nullable=False)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+
+
 class TrafficDay(db.Model):
     """Anonymous daily page and visitor totals for the private admin dashboard."""
     __tablename__ = "traffic_days"

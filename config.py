@@ -147,8 +147,9 @@ DEVICE_COOKIE_NAME = "cm_device"
 CROSS_DEGREE_LEGACY_BEFORE = datetime(2026, 9, 4, 0, 0, 0)
 # 全站公告：.env 设 SITE_ANNOUNCEMENT= 可强制清空；未设置则用默认运营文案
 _DEFAULT_SITE_ANNOUNCEMENT = (
-    "【更新】完整问卷新增当前周岁与可接受年龄范围。年龄范围默认不限，设置后双方须互相满足；"
-    "隐私模式可暂不填写，老用户不会因此退出匹配池。"
+    "【重磅更新】校园广场来了！表白心动、认识新朋友、分享校园日常，免注册也能逛。"
+    "注册并验证学校邮箱后即可发帖、评论、点赞和收藏；支持匿名发布，表白帖审核后公开。"
+    "点击导航「校园广场」，从一句你好开始。"
 )
 if "SITE_ANNOUNCEMENT" in os.environ:
     SITE_ANNOUNCEMENT = os.environ.get("SITE_ANNOUNCEMENT", "").strip()
