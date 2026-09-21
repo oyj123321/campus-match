@@ -1,6 +1,6 @@
 {% extends "community_layout.html" %}
 {% block community_content %}
-<section class="community-card community-compose"><h2>分享你的校园瞬间</h2><p>公开帖子可被所有访客看到，包括未注册用户。表白帖先审核，其余分类发布后公开。</p>
+<section class="community-card community-compose"><h2>分享你的校园瞬间</h2><p>未注册访客只能预览最新 3 条。验证学校邮箱的同学可浏览全部公开帖。表白帖及表白下的评论都先审核，其余分类发布后公开。</p>
 <form method="post" class="community-form">
     <input type="hidden" name="csrf" value="{{ community_csrf }}">
     <label>选择话题<select name="category" required>{% for key,label in categories.items() %}<option value="{{ key }}">{{ label }}</option>{% endfor %}</select></label>

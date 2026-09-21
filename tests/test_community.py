@@ -56,8 +56,10 @@ class CommunityTests(unittest.TestCase):
         return self.client.post(url, data={"csrf":"test-csrf", **data})
 
     def post(self, **overrides):
-        entry = Entry(author_id=self.user.id, school=self.user.school, category="campus",
-                      title="Campus afternoon", body="A quiet afternoon on campus", **overrides)
+        fields = dict(author_id=self.user.id, school=self.user.school, category="campus",
+                      title="Campus afternoon", body="A quiet afternoon on campus")
+        fields.update(overrides)
+        entry = Entry(**fields)
         db.session.add(entry)
         db.session.commit()
         return entry
@@ -89,6 +91,31 @@ class CommunityTests(unittest.TestCase):
         self.assertEqual(Reaction.query.count(), 0)
         self.assertEqual(Report.query.count(), 0)
         self.assertEqual(Entry.query.count(), 3)
+
+    def test_guest_preview_is_limited_to_three_posts(self):
+        outsider = User(email="never-posted@example.test", school="School C", name="Silent", email_verified=True)
+        db.session.add(outsider)
+        for index in range(5):
+            self.post(title=f"Preview {index}", body="enough body text for the guest excerpt preview card")
+        with self.client.session_transaction() as session:
+            session.clear()
+        html = self.client.get("/community").get_data(as_text=True)
+        self.assertIn("Preview 4", html)
+        self.assertIn("Preview 2", html)
+        self.assertNotIn("Preview 1", html)
+        self.assertNotIn("Preview 0", html)
+        self.assertIn("还有 2 条动态", html)
+        self.assertNotIn("下一页", html)
+        self.assertNotIn("School C", html)
+        newest = Entry.query.filter_by(title="Preview 4").one()
+        older = Entry.query.filter_by(title="Preview 0").one()
+        self.assertEqual(self.client.get(f"/community/posts/{newest.id}").status_code, 200)
+        self.assertEqual(self.client.get(f"/community/posts/{older.id}").status_code, 403)
+        self.login(self.user)
+        full = self.client.get("/community").get_data(as_text=True)
+        self.assertIn("Preview 0", full)
+        self.assertIn("School A", full)
+        self.assertNotIn("School C", full)
 
     def test_async_reactions_and_errors(self):
         post = self.post()
@@ -205,13 +232,53 @@ class CommunityTests(unittest.TestCase):
 
     def test_muted_user_cannot_post_comment_or_like_but_can_report(self):
         post=self.post()
+        self.assertEqual(self.submit(f"/community/entries/{post.id}/report",reason="harassment").status_code,302)
         self.moderate(post,"ban")
+        self.assertEqual(db.session.get(Entry,post.id).status,"hidden")
+        self.login(self.other)
+        self.assertEqual(self.client.get(f"/community/posts/{post.id}").status_code,404)
+        self.login(self.user)
         self.assertEqual(self.submit("/community/new",category="campus",title="hello",body="hello world").status_code,403)
         self.assertEqual(self.submit(f"/community/posts/{post.id}/comments",body="hello").status_code,403)
         self.assertEqual(self.submit(f"/community/posts/{post.id}/reaction",kind="like",enabled="1").status_code,403)
-        self.assertEqual(self.submit(f"/community/entries/{post.id}/report",reason="harassment").status_code,302)
         self.moderate(post,"unban")
+        self.assertEqual(db.session.get(Entry,post.id).status,"hidden")
+        self.moderate(post,"approve")
         self.assertEqual(self.submit(f"/community/posts/{post.id}/comments",body="hello").status_code,302)
+
+    def test_confession_comments_require_review(self):
+        post=self.post(category="confession",status="published",title="A confession",body="A kind classmate")
+        self.login(self.other)
+        self.assertEqual(self.submit(f"/community/posts/{post.id}/comments",body="hello there").status_code,302)
+        comment=Entry.query.filter_by(parent_id=post.id).one()
+        self.assertEqual(comment.status,"pending")
+        self.login(self.user)
+        html=self.client.get(f"/community/posts/{post.id}").get_data(as_text=True)
+        self.assertNotIn("hello there",html)
+        self.login(self.other)
+        self.assertIn("hello there",self.client.get(f"/community/posts/{post.id}").get_data(as_text=True))
+        self.moderate(comment,"approve")
+        self.login(self.user)
+        self.assertIn("hello there",self.client.get(f"/community/posts/{post.id}").get_data(as_text=True))
+
+    def test_post_delete_keeps_reports_and_audit(self):
+        post=self.post()
+        comment=Entry(author_id=self.other.id,parent_id=post.id,school="School B",category="campus",body="reply")
+        db.session.add(comment)
+        db.session.flush()
+        db.session.add_all([Reaction(user_id=self.other.id,entry_id=post.id,kind="like"),
+                            Report(user_id=self.other.id,entry_id=comment.id,reason="test"),
+                            Audit(entry_id=post.id,action="approve",reason="test")])
+        db.session.commit()
+        self.assertEqual(self.submit(f"/community/entries/{post.id}/delete").status_code,302)
+        leftover=Entry.query.filter_by(id=post.id).one()
+        self.assertEqual(leftover.status,"deleted")
+        self.assertEqual(leftover.body,"")
+        self.assertEqual(Reaction.query.count(),0)
+        self.assertEqual(Report.query.count(),1)
+        self.assertTrue(Report.query.one().resolved)
+        self.assertGreaterEqual(Audit.query.count(),2)
+        self.assertEqual(self.client.get(f"/community/posts/{post.id}").status_code,404)
 
     def test_expired_ban_allows_comment(self):
         post=self.post()
@@ -226,19 +293,6 @@ class CommunityTests(unittest.TestCase):
         self.login(self.other)
         self.assertEqual(self.submit(f"/community/posts/{post.id}/comments",body="hello").status_code,404)
 
-    def test_post_delete_cleans_comments_reports_reactions_audit(self):
-        post=self.post()
-        comment=Entry(author_id=self.other.id,parent_id=post.id,school="School B",category="campus",body="reply")
-        db.session.add(comment)
-        db.session.flush()
-        db.session.add_all([Reaction(user_id=self.other.id,entry_id=post.id,kind="like"),
-                            Report(user_id=self.other.id,entry_id=comment.id,reason="test"),
-                            Audit(entry_id=post.id,action="approve",reason="test")])
-        db.session.commit()
-        self.assertEqual(self.submit(f"/community/entries/{post.id}/delete").status_code,302)
-        for model in (Entry,Reaction,Report,Audit):
-            self.assertEqual(model.query.count(),0)
-
     def test_account_purge_removes_owned_activity_and_preserves_other_posts(self):
         post=self.post()
         other_post=Entry(author_id=self.other.id,school="School B",category="campus",title="Other",body="other post")
@@ -248,7 +302,8 @@ class CommunityTests(unittest.TestCase):
                            Reaction(user_id=self.user.id,entry_id=other_post.id,kind="save"),
                            Report(user_id=self.user.id,entry_id=other_post.id,reason="test"),
                            Ban(user_id=self.user.id,until=datetime.utcnow(),reason="test"),
-                           Limit(user_id=self.user.id,action="post",last_at=datetime.utcnow())])
+                           Limit(user_id=self.user.id,action="post",last_at=datetime.utcnow()),
+                           Audit(entry_id=post.id,user_id=self.user.id,action="ban",reason="test")])
         db.session.commit()
         purge_community(self.user.id)
         db.session.delete(self.user)
@@ -257,6 +312,9 @@ class CommunityTests(unittest.TestCase):
         self.assertEqual(Entry.query.one().id,other_post.id)
         for model in (Reaction,Report,Ban,Limit):
             self.assertEqual(model.query.count(),0)
+        audit=Audit.query.one()
+        self.assertIsNone(audit.entry_id)
+        self.assertIsNone(audit.user_id)
 
     def test_unban_after_author_deletes_all_posts(self):
         post=self.post()

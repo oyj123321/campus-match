@@ -11,6 +11,7 @@ from models import (db, User, CommunityEntry as Entry, CommunityReaction as Reac
                     CommunityLimit as Limit, CommunityAudit as Audit)
 
 bp = Blueprint("community", __name__)
+GUEST_PREVIEW = 3
 CATEGORIES = {"confession": "表白与心动", "friends": "认识新朋友", "campus": "校园日常"}
 STATES = {"published": "已发布", "pending": "待审核", "hidden": "已隐藏", "deleted": "已删除"}
 ACTIONS = {"approve": "审核通过", "hide": "隐藏内容", "pin": "置顶", "unpin": "取消置顶",
@@ -116,7 +117,22 @@ def visible_post(post_id):
         abort(404, "帖子不存在或已删除。")
     if post.status != "published" and (not g.community_user or post.author_id != g.community_user.id):
         abort(404, "帖子暂不可见。")
+    if post.status == "published" and not g.community_user and post.id not in guest_preview_ids():
+        abort(403, "这是广场预览之外的帖子。注册并验证学校邮箱后，即可浏览全部内容。")
     return post
+
+
+def published_posts(category="", school=""):
+    query = Entry.query.filter(Entry.parent_id.is_(None), Entry.status == "published")
+    if category:
+        query = query.filter(Entry.category == category)
+    if school:
+        query = query.filter(Entry.school == school)
+    return query.order_by(Entry.pinned.desc(), Entry.created_at.desc(), Entry.id.desc())
+
+
+def guest_preview_ids():
+    return [row.id for row in published_posts().limit(GUEST_PREVIEW).all()]
 
 
 def page_number():
@@ -151,14 +167,26 @@ def feed():
             Reaction.user_id == g.community_user.id, Reaction.kind == "save")))
     if category:
         query = query.filter(Entry.category == category)
-    if school:
-        query = query.filter(Entry.school == school)
-    page = page_number()
-    rows = query.order_by(Entry.pinned.desc(), Entry.created_at.desc(), Entry.id.desc()).offset((page-1)*20).limit(21).all()
-    schools = [s for s, in db.session.query(User.school).distinct().order_by(User.school)]
-    return render_template("community_feed.html", posts=rows[:20], more=len(rows)>20, page=page,
+    guest = not g.community_user
+    if guest:
+        school = ""
+        page, more, locked = 1, False, 0
+        total = query.count()
+        rows = query.order_by(Entry.pinned.desc(), Entry.created_at.desc(), Entry.id.desc()).limit(GUEST_PREVIEW).all()
+        locked = max(0, total - len(rows))
+        schools = []
+    else:
+        if school:
+            query = query.filter(Entry.school == school)
+        page = page_number()
+        rows = query.order_by(Entry.pinned.desc(), Entry.created_at.desc(), Entry.id.desc()).offset((page-1)*20).limit(21).all()
+        more, locked = len(rows) > 20, 0
+        rows = rows[:20]
+        schools = [s for s, in db.session.query(Entry.school).filter(
+            Entry.parent_id.is_(None), Entry.status == "published").distinct().order_by(Entry.school)]
+    return render_template("community_feed.html", posts=rows, more=more, page=page, locked=locked,
                            category=category, view=view, school=school, schools=schools,
-                           **card_data(rows[:20]))
+                           **card_data(rows))
 
 
 @bp.route("/community/new", methods=["GET", "POST"])
@@ -183,9 +211,11 @@ def create():
 @bp.get("/community/posts/<int:post_id>")
 def detail(post_id):
     post = visible_post(post_id)
-    query = Entry.query.filter_by(parent_id=post.id, status="published")
-    if post.status != "published":
-        query = query.filter_by(author_id=g.community_user.id)
+    query = Entry.query.filter_by(parent_id=post.id).filter(Entry.status != "deleted")
+    if g.community_user:
+        query = query.filter(db.or_(Entry.status == "published", Entry.author_id == g.community_user.id))
+    else:
+        query = query.filter(Entry.status == "published")
     page = page_number()
     comments = query.order_by(Entry.created_at, Entry.id).offset((page-1)*30).limit(31).all()
     return render_template("community_detail.html", post=post, comments=comments[:30], page=page,
@@ -200,10 +230,12 @@ def comment(post_id):
     guard_muted()
     body = text_field("body", 500)
     rate_limit("comment", 15)
+    pending = post.category == "confession"
     db.session.add(Entry(parent_id=post.id, author_id=g.community_user.id, school=g.community_user.school,
-                         category=post.category, body=body, anonymous=request.form.get("anonymous") == "1"))
+                         category=post.category, body=body, anonymous=request.form.get("anonymous") == "1",
+                         status="pending" if pending else "published"))
     db.session.commit()
-    flash("评论已发布。")
+    flash("评论已提交审核，通过后会显示在帖子下。" if pending else "评论已发布。")
     return redirect(url_for("community.detail", post_id=post.id))
 
 
@@ -239,7 +271,10 @@ def delete(entry_id):
     if not entry or entry.author_id != g.community_user.id:
         abort(404, "内容不存在。")
     parent_id = entry.parent_id
-    erase_entries([entry.id] + [i for i, in db.session.query(Entry.id).filter_by(parent_id=entry.id)])
+    ids = [entry.id] + [i for i, in db.session.query(Entry.id).filter_by(parent_id=entry.id)]
+    retire_entries(ids)
+    db.session.add(Audit(entry_id=entry.id, user_id=g.community_user.id, action="user_delete",
+                         reason="用户自行删除"))
     db.session.commit()
     flash("内容已删除。")
     parent = db.session.get(Entry, parent_id) if parent_id else None
@@ -319,6 +354,8 @@ def moderate(entry_id):
             ban = Ban(user_id=entry.author_id)
             db.session.add(ban)
         ban.until, ban.reason = datetime.utcnow() + timedelta(days=7), reason
+        Entry.query.filter(Entry.author_id == entry.author_id, Entry.status == "published").update(
+            {"status": "hidden", "pinned": False}, synchronize_session=False)
     elif action == "unban":
         Ban.query.filter_by(user_id=entry.author_id).delete()
     if action in ("hide", "resolve"):
@@ -342,11 +379,23 @@ def unban_user(user_id):
     return redirect(url_for("community.admin", state="banned"))
 
 
-def erase_entries(ids):
-    """Child-first hard deletion, including reports/reactions and related audit text."""
+def retire_entries(ids):
+    """Hide deleted content from the square but keep reports and audit rows."""
     if not ids:
         return
-    for model in (Reaction, Report, Audit):
+    Reaction.query.filter(Reaction.entry_id.in_(ids)).delete(synchronize_session=False)
+    Report.query.filter(Report.entry_id.in_(ids), Report.resolved.is_(False)).update(
+        {"resolved": True}, synchronize_session=False)
+    Entry.query.filter(Entry.id.in_(ids)).update(
+        {"status": "deleted", "pinned": False, "title": "", "body": ""}, synchronize_session=False)
+
+
+def erase_entries(ids):
+    """Account purge: remove rows, but detach audit so the log can remain."""
+    if not ids:
+        return
+    Audit.query.filter(Audit.entry_id.in_(ids)).update({"entry_id": None}, synchronize_session=False)
+    for model in (Reaction, Report):
         model.query.filter(model.entry_id.in_(ids)).delete(synchronize_session=False)
     Entry.query.filter(Entry.id.in_(ids), Entry.parent_id.isnot(None)).delete(synchronize_session=False)
     Entry.query.filter(Entry.id.in_(ids)).delete(synchronize_session=False)
@@ -356,5 +405,6 @@ def purge_community(user_id):
     own = [i for i, in db.session.query(Entry.id).filter_by(author_id=user_id)]
     children = [i for i, in db.session.query(Entry.id).filter(Entry.parent_id.in_(own))]
     erase_entries(own + children)
-    for model in (Reaction, Report, Ban, Limit, Audit):
+    Audit.query.filter_by(user_id=user_id).update({"user_id": None}, synchronize_session=False)
+    for model in (Reaction, Report, Ban, Limit):
         model.query.filter_by(user_id=user_id).delete(synchronize_session=False)

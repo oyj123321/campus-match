@@ -147,8 +147,8 @@ DEVICE_COOKIE_NAME = "cm_device"
 CROSS_DEGREE_LEGACY_BEFORE = datetime(2026, 9, 4, 0, 0, 0)
 # 全站公告：.env 设 SITE_ANNOUNCEMENT= 可强制清空；未设置则用默认运营文案
 _DEFAULT_SITE_ANNOUNCEMENT = (
-    "【重磅更新】校园广场来了！表白心动、认识新朋友、分享校园日常，免注册也能逛。"
-    "注册并验证学校邮箱后即可发帖、评论、点赞和收藏；支持匿名发布，表白帖审核后公开。"
+    "【重磅更新】校园广场来了！表白心动、认识新朋友、分享校园日常；未注册也可先看最新 3 条。"
+    "注册并验证学校邮箱后即可浏览全部、发帖、评论、点赞和收藏；支持匿名发布，表白帖审核后公开。"
     "点击导航「校园广场」，从一句你好开始。"
 )
 if "SITE_ANNOUNCEMENT" in os.environ:
