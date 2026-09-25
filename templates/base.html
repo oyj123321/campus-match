@@ -4,9 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CampusMatch — 校园恋爱匹配</title>
-    <link rel="stylesheet" href="/static/style.css?v=1991">
+    <link rel="stylesheet" href="/static/style.css?v=1994">
     <link rel="stylesheet" href="/static/personality_themes.css?v=1971">
-    <script src="/static/i18n.js?v=analytics-20260916"></script>
+    {% if festival_autumn %}<link rel="stylesheet" href="/static/festival-autumn.css?v=2">{% endif %}
+    <script src="/static/i18n.js?v=fest-20260925b"></script>
     <script src="/static/love_personality_i18n.js?v=1968"></script>
     <script src="/static/vendor/html2canvas.min.js"></script>
     <script src="/static/vendor/qrcode-generator.min.js"></script>
@@ -51,7 +52,27 @@
         }
     </script>
 </head>
-<body>
+<body{% if festival_autumn %} class="fest-autumn"{% endif %}>
+    {% if festival_autumn %}
+    <div class="fest-layer" aria-hidden="true">
+        <div class="fest-moon"><span class="fest-moon-star"></span></div>
+        <div class="fest-hang fest-hang-a">
+            <span class="fest-cord"></span>
+            <span class="fest-lantern"><i>团</i></span>
+            <span class="fest-tassel"></span>
+        </div>
+        <div class="fest-hang fest-hang-b">
+            <span class="fest-cord"></span>
+            <span class="fest-lantern fest-lantern-gold"><i>圆</i></span>
+            <span class="fest-tassel"></span>
+        </div>
+        <span class="fest-spark star"></span>
+        <span class="fest-spark dot"></span>
+        <span class="fest-spark star"></span>
+        <span class="fest-spark dot"></span>
+        <span class="fest-spark star"></span>
+    </div>
+    {% endif %}
     <!-- 动态背景：柔光晕 + 网格 -->
     <div class="bg-decor" aria-hidden="true">
         <div class="orb orb-a"></div>

@@ -1,0 +1,149 @@
+/* 双节合一：圆月里嵌五角星（中秋+国庆），灯笼写「团圆」。构图自学节日活动页常见「月+灯+红金」，图形全部自绘。 */
+
+body.fest-autumn {
+    --fest-gold: #e8c36a;
+    --fest-red: #c23a2b;
+    --bg-top: #fff4e6;
+    --bg-mid: #ffeee4;
+    --bg-bot: #ffe4d6;
+    --accent: #c2410c;
+    --accent-deep: #9a3412;
+    --match: #be123c;
+}
+
+body.fest-autumn .orb-a { background: #ffd79a; }
+body.fest-autumn .orb-b { background: #fecaca; }
+body.fest-autumn .orb-c { background: #fde68a; }
+body.fest-autumn .gba-hero { opacity: 0.16; filter: sepia(0.5) hue-rotate(-12deg); }
+body.fest-autumn .nav {
+    border-bottom-color: rgba(194, 58, 43, 0.2);
+    background: rgba(255, 247, 237, 0.9);
+}
+body.fest-autumn .nav-brand { color: #9a3412; }
+body.fest-autumn .kicker { color: #b45309; letter-spacing: 2px; }
+body.fest-autumn .hero .grad-text {
+    background: linear-gradient(120deg, #b45309, #c2410c 42%, #be123c 88%);
+    background-size: 220% auto;
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+body.fest-autumn .stat-chip {
+    background: rgba(255, 247, 237, 0.9);
+    border-color: rgba(180, 83, 9, 0.3);
+    color: #9a3412;
+}
+body.fest-autumn .btn-primary,
+body.fest-autumn .btn-match {
+    background: linear-gradient(135deg, #c2410c, #be123c) !important;
+    border-color: transparent !important;
+}
+body.fest-autumn .site-announcement { background: #7f1d1d; color: #fff7ed; }
+
+.fest-layer { position: fixed; inset: 0; z-index: 31; pointer-events: none; overflow: hidden; }
+
+.fest-moon {
+    position: absolute; top: 70px; right: 6%;
+    width: 96px; height: 96px; border-radius: 50%;
+    background: radial-gradient(circle at 30% 28%, #fff8de, #f2d27a 52%, #c2410c 100%);
+    box-shadow: 0 0 36px 10px rgba(242, 210, 122, 0.55), 0 0 80px 24px rgba(190, 18, 60, 0.16);
+    animation: festGlow 3.2s ease-in-out infinite alternate;
+}
+.fest-moon::after {
+    content: ""; position: absolute; width: 22px; height: 22px; border-radius: 50%;
+    background: rgba(154, 52, 18, 0.16); top: 26px; left: 42px;
+}
+.fest-moon-star {
+    position: absolute; right: 10px; bottom: 12px;
+    width: 22px; height: 22px;
+    background: #fef3c7;
+    clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
+    filter: drop-shadow(0 0 6px rgba(254, 243, 199, 0.9));
+}
+
+.fest-hang {
+    position: absolute; top: 0; transform-origin: top center;
+    animation: festSwing 3.4s ease-in-out infinite;
+}
+.fest-hang-a { left: 10px; }
+.fest-hang-b { right: 14px; animation-duration: 4s; animation-delay: -1.2s; }
+.fest-cord {
+    display: block; width: 2px; height: 44px; margin: 0 auto;
+    background: linear-gradient(#7f1d1d, #b45309);
+}
+.fest-lantern {
+    display: flex; align-items: center; justify-content: center;
+    width: 48px; height: 60px; margin: 0 auto;
+    border-radius: 46% / 42%;
+    background: radial-gradient(circle at 50% 28%, #f87171, #b91c1c 72%);
+    box-shadow: 0 0 18px rgba(220, 38, 38, 0.45), inset 0 0 0 3px #fbbf24;
+    color: #fef3c7; font-weight: 800; font-size: 16px;
+    position: relative;
+}
+.fest-lantern::before,
+.fest-lantern::after {
+    content: ""; position: absolute; left: 50%; transform: translateX(-50%);
+    width: 28px; height: 7px; background: #1c1917; border-radius: 3px;
+}
+.fest-lantern::before { top: -6px; }
+.fest-lantern::after { bottom: -8px; }
+.fest-lantern i { font-style: normal; }
+.fest-lantern-gold {
+    background: radial-gradient(circle at 50% 28%, #fde68a, #d97706 74%);
+    box-shadow: 0 0 18px rgba(217, 119, 6, 0.5), inset 0 0 0 3px #fecaca;
+    color: #7f1d1d;
+}
+.fest-tassel {
+    display: block; width: 3px; height: 16px; margin: 8px auto 0;
+    background: #b45309; border-radius: 2px;
+}
+
+.fest-spark {
+    position: absolute;
+    animation: festFall 12s linear infinite;
+}
+.fest-spark.dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: rgba(251, 191, 36, 0.7);
+}
+.fest-spark.star {
+    width: 11px; height: 11px;
+    background: rgba(220, 38, 38, 0.62);
+    clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
+}
+.fest-spark:nth-child(1) { left: 16%; animation-delay: -1s; }
+.fest-spark:nth-child(2) { left: 34%; animation-delay: -4s; }
+.fest-spark:nth-child(3) { left: 52%; animation-delay: -7s; }
+.fest-spark:nth-child(4) { left: 70%; animation-delay: -2.5s; }
+.fest-spark:nth-child(5) { left: 86%; animation-delay: -9s; }
+
+@keyframes festSwing {
+    0%, 100% { transform: rotate(-8deg); }
+    50% { transform: rotate(8deg); }
+}
+@keyframes festGlow {
+    from { box-shadow: 0 0 28px 8px rgba(242, 210, 122, 0.4), 0 0 64px 18px rgba(190, 18, 60, 0.1); }
+    to { box-shadow: 0 0 48px 16px rgba(242, 210, 122, 0.7), 0 0 96px 32px rgba(190, 18, 60, 0.2); }
+}
+@keyframes festFall {
+    0% { top: -14px; opacity: 0; transform: rotate(0deg); }
+    14% { opacity: 0.85; }
+    100% { top: 110%; opacity: 0; transform: rotate(240deg); }
+}
+
+.fest-badge {
+    display: inline-block; margin: 0 0 10px;
+    padding: 4px 12px; border-radius: 99px;
+    background: rgba(127, 29, 29, 0.08);
+    border: 1px solid rgba(180, 83, 9, 0.28);
+    color: #9a3412; font-size: 0.78em; font-weight: 700; letter-spacing: 1px;
+}
+
+@media (max-width: 700px) {
+    .fest-hang-b { display: none; }
+    .fest-moon { width: 58px; height: 58px; top: 56px; right: 10px; }
+    .fest-moon-star { width: 14px; height: 14px; right: 6px; bottom: 8px; }
+    .fest-hang-a { left: 4px; transform: scale(0.82); transform-origin: top left; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .fest-hang, .fest-spark, .fest-moon { animation: none; }
+}

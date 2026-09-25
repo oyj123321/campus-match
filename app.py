@@ -33,6 +33,7 @@ from config import (
     LOGIN_ONCE_PER_DAY, SITE_ANNOUNCEMENT,
     SESSION_REMEMBER_DAYS, DEVICE_COOKIE_NAME,
     CROSS_DEGREE_LEGACY_BEFORE,
+    festival_autumn_active,
 )
 from models import db, User, UserTag, Match, Blocklist, AccountDeletion, EXPRESS_BIO_MIN, EDUCATION_LEVELS, EXIT_REASON_CODES
 from models import PoolEvent, WeeklyParticipation
@@ -88,6 +89,7 @@ def inject_globals():
         "public_url": PUBLIC_URL,
         "current_user": user,
         "questionnaire_incomplete": incomplete,
+        "festival_autumn": festival_autumn_active(),
     }
 
 
@@ -176,13 +178,17 @@ def _email_local_part(email: str) -> str:
     return (email or "").strip().lower().split("@", 1)[0]
 
 
+# 旅游大学新旧域名长期并存（utm / iftm / ift），拦截同学报错比一人两号更糟，允许各自成号。
+SIBLING_ALIAS_EXEMPT_SCHOOLS = frozenset({"澳门旅游大学"})
+
+
 def find_sibling_account(email: str, school: str | None = None):
     """同校其他域名、相同本地名的已有账号（一人多号风险）。"""
     email = (email or "").strip().lower()
     if "@" not in email:
         return None
     school = school or get_school_from_email(email)
-    if not school:
+    if not school or school in SIBLING_ALIAS_EXEMPT_SCHOOLS:
         return None
     local = _email_local_part(email)
     if not local:

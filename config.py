@@ -1,7 +1,7 @@
 """CampusMatch 配置 — 澳门大学为基础，逐步扩展香港"""
 
 import os
-from datetime import datetime
+from datetime import datetime, date, timedelta, timezone
 
 # 项目根目录
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -89,7 +89,7 @@ SCHOOL_DOMAINS = {
     # 科大：学生 Outlook 为 学号@student.must.edu.mo；教职员/旧号仍用 @must.edu.mo
     "澳门科技大学":   ["student.must.edu.mo", "must.edu.mo"],
     "澳门理工大学":   ["mpu.edu.mo"],
-    # 旅游大学：现行 @utm.edu.mo；兼容 IFTM/IFT 旧域
+    # 旅游大学：现行 @utm.edu.mo，旧域 @iftm.edu.mo / @ift.edu.mo 均可注册，不互拦
     "澳门旅游大学":   ["utm.edu.mo", "iftm.edu.mo", "ift.edu.mo"],
     "澳门城市大学":   ["cityu.edu.mo"],
 
@@ -155,6 +155,21 @@ if "SITE_ANNOUNCEMENT" in os.environ:
     SITE_ANNOUNCEMENT = os.environ.get("SITE_ANNOUNCEMENT", "").strip()
 else:
     SITE_ANNOUNCEMENT = _DEFAULT_SITE_ANNOUNCEMENT
+
+# 中秋（2026-09-25）到国庆假期：澳门时区。FESTIVAL_AUTUMN=on/off 可强制开关。
+FESTIVAL_AUTUMN_START = date(2026, 9, 22)
+FESTIVAL_AUTUMN_END = date(2026, 10, 8)
+
+
+def festival_autumn_active():
+    flag = (os.environ.get("FESTIVAL_AUTUMN") or "").strip().lower()
+    if flag in ("1", "true", "on", "yes"):
+        return True
+    if flag in ("0", "false", "off", "no"):
+        return False
+    today = datetime.now(timezone(timedelta(hours=8))).date()
+    return FESTIVAL_AUTUMN_START <= today <= FESTIVAL_AUTUMN_END
+
 
 # weekday 显示名（供前端）
 WEEKDAY_LABELS = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"]

@@ -1,7 +1,8 @@
 {% extends "base.html" %}
 {% block content %}
 <div class="hero">
-    <span class="kicker" data-i18n="kicker">Campus Match · 澳门 & 大湾区</span>
+    {% if festival_autumn %}<p class="fest-badge" data-i18n="fest.badge">双节团圆限定</p>{% endif %}
+    <span class="kicker" data-i18n="{{ 'fest.kicker' if festival_autumn else 'kicker' }}">{{ '月圆星亮 · 在校园遇见对的人' if festival_autumn else 'Campus Match · 澳门 & 大湾区' }}</span>
     <h1><span data-i18n="hero.t1">在你的校园里，</span><br><span class="grad-text" data-i18n="hero.t2">遇见那个刚好合拍的人</span></h1>
     <p class="hero-sub" data-i18n="hero.sub">学校邮箱验证在校身份 → 39 题走心问卷 → 每周一对一揭晓，附相处说明书与破冰话题。慢一点，但更认真。</p>
     <div class="stat-chip">
