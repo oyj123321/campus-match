@@ -82,7 +82,7 @@
         </div>
     </div>
     <div class="form-group" style="margin-top:8px;">
-        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+        <label class="check-row" for="open_to_match">
             <input type="checkbox" id="open_to_match" {% if user.is_open_to_match() %}checked{% endif %}>
             <span data-i18n="qn.openMatch">参与匹配（关闭后不再进入匹配池，历史结果仍可看）</span>
         </label>
@@ -91,10 +91,10 @@
     <div class="form-group" style="margin-top:12px;" id="cross-schools-box">
         <label data-i18n="qn.cross">愿意跨配的学校（双向：对方也须勾选你的学校）</label>
         <p class="hint" data-i18n="qn.cross.hint">不勾选 = 只同校。勾选后仅会与「也勾选了你学校」的对方跨校配对。</p>
-        <div id="cross-schools-list" style="display:flex;flex-wrap:wrap;gap:8px 14px;margin-top:8px;"></div>
+        <div id="cross-schools-list" class="choice-chips"></div>
     </div>
     <div class="form-group" style="margin-top:12px;">
-        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+        <label class="check-row" for="allow_cross_degree">
             <input type="checkbox" id="allow_cross_degree" {% if user.allow_cross_degree %}checked{% endif %}>
             <span data-i18n="qn.crossDegree">愿意跨学历匹配</span>
         </label>
@@ -185,9 +185,9 @@ const EXISTING_CROSS = {{ user.get_cross_schools() | tojson }};
 const CROSS_ENABLED = {{ cross_school_enabled | default(true) | tojson }};
 
 const dimColors = {
-    'values': '#7c3aed', 'lifestyle': '#059669',
-    'emotional': '#db2777', 'interests': '#2563eb',
-    'expectations': '#d97706', 'open': '#0d9488'
+    'values': '#1c1b19', 'lifestyle': '#1c1b19',
+    'emotional': '#1c1b19', 'interests': '#1c1b19',
+    'expectations': '#1c1b19', 'open': '#1c1b19'
 };
 
 let answers = {};
@@ -224,7 +224,7 @@ function renderCrossSchools() {
     var html = '';
     (ALL_SCHOOLS || []).forEach(function (s) {
         if (s === MY_SCHOOL) return;
-        html += '<label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:0.92em;">'
+        html += '<label class="choice-chip">'
             + '<input type="checkbox" class="cross-school-cb" value="' + esc(s) + '"'
             + (selected[s] ? ' checked' : '') + '> <span>' + esc(s) + '</span></label>';
     });

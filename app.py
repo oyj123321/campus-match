@@ -30,7 +30,7 @@ from config import (
     MAIL_ENABLED, MAIL_PROVIDER, MAIL_SERVER, MAIL_PORT, MAIL_USERNAME, MAIL_PASSWORD, MAIL_FROM,
     CONTACT_EMAIL,
     RESEND_API_KEY,
-    LOGIN_ONCE_PER_DAY, SITE_ANNOUNCEMENT,
+    LOGIN_ONCE_PER_DAY, SITE_ANNOUNCEMENT, SITE_ANNOUNCEMENT_I18N,
     SESSION_REMEMBER_DAYS, DEVICE_COOKIE_NAME,
     CROSS_DEGREE_LEGACY_BEFORE,
     festival_autumn_active,
@@ -85,6 +85,7 @@ def inject_globals():
     return {
         "contact_email": CONTACT_EMAIL,
         "site_announcement": (SITE_ANNOUNCEMENT or "").strip(),
+        "site_announcement_i18n": bool(SITE_ANNOUNCEMENT_I18N and SITE_ANNOUNCEMENT),
         "login_once_per_day": LOGIN_ONCE_PER_DAY,
         "public_url": PUBLIC_URL,
         "current_user": user,

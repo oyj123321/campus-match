@@ -66,8 +66,8 @@
         <h3 style="margin-bottom:8px;" data-i18n="pace.title">你的节奏与账号</h3>
         <p class="hint" style="margin:0 0 12px;" data-i18n="pace.hint">暂停匹配不会删资料；删号会清掉账号与配对记录，需再次确认。</p>
 
-        <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer;margin-bottom:4px;">
-            <input type="checkbox" id="want-followup" style="margin-top:3px;" {% if user.want_match_followup %}checked{% endif %} onchange="saveFollowupPref()">
+        <label class="check-row" for="want-followup" style="margin-bottom:4px;">
+            <input type="checkbox" id="want-followup" {% if user.want_match_followup %}checked{% endif %} onchange="saveFollowupPref()">
             <span>
                 <span data-i18n="pace.followup">配对后回访邮件</span>
                 <span class="hint" style="display:block;margin-top:2px;" data-i18n="pace.followupHint">双方都勾选后才会发一次可选回访；默认关闭。</span>
@@ -132,7 +132,7 @@
     <div id="cross-box" class="card box-dim" style="margin-top:14px;text-align:left;">
         <h3 style="margin-bottom:8px;" data-i18n="cross.title">跨校学校（双向严选）</h3>
         <p class="hint" data-i18n="cross.hint">勾选你愿意跨配的学校；对方也必须勾选你的学校才会配对。不勾 = 只同校。</p>
-        <div id="cross-schools-list" style="display:flex;flex-wrap:wrap;gap:8px 14px;margin-top:10px;"></div>
+        <div id="cross-schools-list" class="choice-chips"></div>
         <button type="button" class="btn btn-secondary" id="cross-save-btn" onclick="saveCrossSchools()" style="margin-top:10px;" data-i18n="btn.saveCross">保存跨校偏好</button>
         <p id="cross-save-status" class="hint" style="margin-top:6px;"></p>
     </div>
@@ -149,7 +149,7 @@
                 <option value="doctorate" {% if user.education_level == 'doctorate' %}selected{% endif %} data-i18n="edu.doctorate">博士</option>
             </select>
         </div>
-        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-top:10px;">
+        <label class="check-row" for="match-allow-cross-degree">
             <input type="checkbox" id="match-allow-cross-degree" {% if user.allow_cross_degree %}checked{% endif %}>
             <span data-i18n="qn.crossDegree">愿意跨学历匹配</span>
         </label>
@@ -338,7 +338,7 @@ function renderMatchCards(matches, headerHtml) {
         var m = matches[i];
         html += '<div class="card" style="margin-top:8px;text-align:left;">'
             + '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">'
-            + '<span style="font-size:1.25em;font-weight:800;color:#2563eb;">' + t('card.assigned') + '</span>'
+            + '<span style="font-size:1.25em;font-weight:800;color:#141413;">' + t('card.assigned') + '</span>'
             + '<span style="font-size:1.15em;font-weight:700;">' + esc(m.name) + '</span>'
             + (m.privacy_user ? '<span class="privacy-badge">' + t('card.privacyBadge') + '</span>' : '')
             + '<span>' + (m.gender === 'male' ? t('g.male') : m.gender === 'female' ? t('g.female') : '') + '</span>'
@@ -365,12 +365,12 @@ function renderMatchCards(matches, headerHtml) {
         }
         if (m.open_letter) {
             html += '<div class="box box-ice" style="margin-top:12px;">'
-                + '<strong style="color:#0f766e;">' + t('card.letter') + '</strong>'
+                + '<strong>' + t('card.letter') + '</strong>'
                 + '<p class="hint" style="margin:8px 0 0;white-space:pre-wrap;line-height:1.65;">' + esc(m.open_letter) + '</p></div>';
         }
         if (m.icebreakers && m.icebreakers.length) {
             html += '<div class="box box-ice">'
-                + '<strong style="color:#db2777;">' + t('card.ice') + '</strong>'
+                + '<strong>' + t('card.ice') + '</strong>'
                 + '<p class="hint" style="margin:6px 0 8px;">' + t('card.ice.hint') + '</p>';
             for (var ib = 0; ib < m.icebreakers.length; ib++) {
                 var ice = m.icebreakers[ib];
@@ -430,7 +430,7 @@ function renderCrossList(q) {
     var html = '';
     (q.all_schools || []).forEach(function (s) {
         if (s === mySchool) return;
-        html += '<label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:0.92em;">'
+        html += '<label class="choice-chip">'
             + '<input type="checkbox" class="match-cross-cb" value="' + esc(s) + '"'
             + (selected[s] ? ' checked' : '') + '> <span>' + esc(tSchool(s)) + '</span></label>';
     });

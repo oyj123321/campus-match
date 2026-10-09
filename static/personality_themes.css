@@ -832,3 +832,26 @@
     text-align: left;
 }
 .lp-theme-gallery .personality-name { font-size: 1.35em; }
+
+/* 站内结果卡：米白底，型色只留在名字/纹章上，避免整张蓝紫片 */
+.personality-card[data-lp-code]:not(.lp-share-card) {
+    background: #f4eee3 !important;
+    border-color: rgba(28, 27, 25, 0.12) !important;
+    box-shadow: 0 8px 24px rgba(28, 27, 25, 0.06) !important;
+}
+.personality-card[data-lp-code]:not(.lp-share-card)::before {
+    opacity: 0.2;
+}
+.personality-card[data-lp-code]:not(.lp-share-card) .lp-grid {
+    opacity: 0.16;
+    background-image:
+        linear-gradient(rgba(28, 27, 25, 0.06) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(28, 27, 25, 0.06) 1px, transparent 1px);
+}
+.personality-card[data-lp-code]:not(.lp-share-card) a {
+    color: #141413 !important;
+}
+.personality-card[data-lp-code]:not(.lp-share-card) .lp-invite-oncard,
+.personality-card[data-lp-code]:not(.lp-share-card) .personality-sub {
+    color: #5c5850;
+}

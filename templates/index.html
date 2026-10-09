@@ -1,34 +1,54 @@
 {% extends "base.html" %}
+{% block body_class %}page-landing{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="/static/landing-editorial.css?v=16">
+{% endblock %}
 {% block content %}
-<div class="hero">
-    {% if festival_autumn %}<p class="fest-badge" data-i18n="fest.badge">双节团圆限定</p>{% endif %}
-    <span class="kicker" data-i18n="{{ 'fest.kicker' if festival_autumn else 'kicker' }}">{{ '月圆星亮 · 在校园遇见对的人' if festival_autumn else 'Campus Match · 澳门 & 大湾区' }}</span>
-    <h1><span data-i18n="hero.t1">在你的校园里，</span><br><span class="grad-text" data-i18n="hero.t2">遇见那个刚好合拍的人</span></h1>
-    <p class="hero-sub" data-i18n="hero.sub">学校邮箱验证在校身份 → 39 题走心问卷 → 每周一对一揭晓，附相处说明书与破冰话题。慢一点，但更认真。</p>
-    <div class="stat-chip">
-        <span class="dot"></span>
-        <span data-i18n="stat.pre">已有</span>&nbsp;<strong>{{ total_users }}</strong>&nbsp;<span data-i18n="stat.post">位同学验证加入 · 揭晓时间</span>&nbsp;<span data-batch="{{ batch_label }}">{{ batch_label }}</span>
+<section class="ed-hero">
+    <div class="ed-hero-copy">
+        <p class="ed-kicker" data-i18n="kicker">Campus Match · 澳门 & 大湾区</p>
+        <h1>
+            <span data-i18n="hero.t1">在你的校园里，</span><br>
+            <span class="ed-mark" data-i18n="hero.t2">遇见那个刚好合拍的人</span>
+        </h1>
     </div>
-</div>
+    <div class="ed-hero-aside">
+        <p class="ed-lead" data-i18n="hero.sub">学校邮箱验证在校身份 → 39 题走心问卷 → 每周一对一揭晓，附相处说明书与破冰话题。慢一点，但更认真。</p>
+        <p class="ed-stat">
+            <span class="live-dot" aria-hidden="true"></span>
+            <span data-i18n="stat.pre">已有</span>
+            <strong>{{ total_users }}</strong>
+            <span data-i18n="stat.post">位同学验证加入 · 揭晓时间</span>
+            <span data-batch="{{ batch_label }}">{{ batch_label }}</span>
+        </p>
+    </div>
+</section>
 
-<!-- Step 1: 注册 -->
-<div class="card" id="step1-card">
+<div class="ed-board">
+    <div class="ed-stage" id="ed-stage" aria-hidden="true">
+        <canvas id="ed-stage-canvas"></canvas>
+        <span class="ed-scan"></span>
+    </div>
+    <div class="ed-dock">
+<section class="ed-panel" id="step1-card">
     <h2 data-i18n="step1.title">① 输入学校邮箱</h2>
+    <div class="ed-form-grid">
     <div class="form-group">
         <label for="email" data-i18n="form.email">学校邮箱</label>
         <input type="email" id="email" placeholder="例如：yc12345@um.edu.mo" data-i18n-ph="form.email.ph" autocomplete="email"
                onkeydown="if(event.key==='Enter')register()">
-        <p class="hint" style="margin-top:8px;margin-bottom:0;" data-i18n="form.email.must">科大学生请用 学号@student.must.edu.mo（Outlook 网页邮箱）；学号@must.edu.mo 收不到验证码。</p>
     </div>
     <div class="form-group">
         <label for="invite-code" data-i18n="form.invite">邀请码（选填）</label>
         <input type="text" id="invite-code" maxlength="8" autocomplete="off" spellcheck="false"
                placeholder="朋友卡片上的 6 位码" data-i18n-ph="form.invite.ph"
                onkeydown="if(event.key==='Enter')register()">
-        <p class="hint" style="margin-top:8px;margin-bottom:0;" data-i18n="form.invite.hint">填了且对方资料齐，双方本周可多一次匹配；跨校也可以。</p>
     </div>
-    <label class="hint" style="display:flex;align-items:flex-start;gap:8px;margin:12px 0;cursor:pointer;line-height:1.55;">
-        <input type="checkbox" id="privacy-accept" style="margin-top:3px;flex-shrink:0;">
+    </div>
+    <p class="hint" data-i18n="form.email.must">科大学生请用 学号@student.must.edu.mo（Outlook 网页邮箱）；学号@must.edu.mo 收不到验证码。</p>
+    <p class="hint" data-i18n="form.invite.hint">填了且对方资料齐，双方本周可多一次匹配；跨校也可以。</p>
+    <label class="ed-agree">
+        <input type="checkbox" id="privacy-accept">
         <span>
             <span data-i18n="privacy.accept1">我已阅读并同意</span>
             <a href="/privacy" target="_blank" rel="noopener" data-i18n="privacy.link">《隐私政策》</a>
@@ -36,119 +56,148 @@
         </span>
     </label>
     <button class="btn btn-primary" id="register-btn" onclick="register()"><span data-i18n="btn.send">发送验证码</span></button>
-    <p class="hint" style="margin-top:10px;" data-i18n="step1.remember">同一设备验证过一次后，7 天内再登录不用验证码。</p>
-    <p class="hint" style="margin-top:12px;margin-bottom:0;" data-i18n="schools.support">支持学校（已验证人数）：</p>
-    {% set rows = [] %}
-    {% for name in schools %}{% set _ = rows.append((school_stats.get(name, 0), name)) %}{% endfor %}
-    <div class="school-list">
-        {% for cnt, name in rows|sort(reverse=True) %}
-        <span class="school-pill"><span class="live-dot"></span><span data-school="{{ name }}">{{ name }}</span> <span class="cnt">{{ cnt }}</span></span>
-        {% endfor %}
-    </div>
-</div>
+    <p class="hint" data-i18n="step1.remember">同一设备验证过一次后，7 天内再登录不用验证码。</p>
+</section>
 
-<!-- Step 2: 验证码（注册后显示） -->
-<div class="card" id="step2-card" style="display:none;">
+<section class="ed-panel" id="step2-card" style="display:none;">
     <h2 data-i18n="step2.title">② 输入验证码</h2>
-    <p id="step2-email" style="color:#4f46e5;font-weight:600;"></p>
-    <p class="hint" style="margin-bottom:12px;" data-i18n="step2.sent">验证码已发送到你的学校邮箱，请检查收件箱（和垃圾邮件）</p>
-    <p class="hint" style="margin:-4px 0 14px;line-height:1.65;">
+    <p id="step2-email" class="ed-sent-email"></p>
+    <p class="hint" data-i18n="step2.sent">验证码已发送到你的学校邮箱，请检查收件箱（和垃圾邮件）</p>
+    <p class="hint">
         <span data-i18n="step2.quarantine">仍找不到？请检查学校邮箱的隔离区。Microsoft 365 用户可打开：</span>
         <a href="https://security.microsoft.com/quarantine" target="_blank" rel="noopener noreferrer">security.microsoft.com/quarantine</a>
     </p>
     <div class="form-group">
         <label for="token" data-i18n="form.token">6 位验证码</label>
         <input type="text" id="token" placeholder="输入验证码" data-i18n-ph="form.token.ph" maxlength="8" autocomplete="one-time-code"
-               style="font-size:1.5em;letter-spacing:6px;text-align:center;"
+               class="ed-token"
                onkeydown="if(event.key==='Enter')verify()">
     </div>
-    <div style="display:flex;gap:8px;">
+    <div class="ed-actions">
         <button class="btn btn-primary" id="verify-btn" onclick="verify()"><span data-i18n="btn.verify">验证</span></button>
         <button class="btn btn-secondary" onclick="register()"><span data-i18n="btn.resendCode">重新发送</span></button>
     </div>
-    <p id="verify-msg" style="margin-top:10px;"></p>
+    <p id="verify-msg"></p>
+</section>
+
+<div class="ed-trust">
+    <p class="ed-trust-label" data-i18n="schools.support">支持学校（已验证人数）：</p>
+    {% set rows = [] %}
+    {% for name in schools %}{% set _ = rows.append((school_stats.get(name, 0), name)) %}{% endfor %}
+    <ul class="ed-schools">
+        {% for cnt, name in rows|sort(reverse=True) %}
+        <li><span class="live-dot" aria-hidden="true"></span><span data-school="{{ name }}">{{ name }}</span> <span class="cnt">{{ cnt }}</span></li>
+        {% endfor %}
+    </ul>
+</div>
+    </div>
 </div>
 
-<!-- 如何参与 -->
-<div class="section-head">
-    <span class="kicker">How it works</span>
+<section class="ed-section">
+    <p class="ed-kicker" data-i18n="how.kicker">流程</p>
     <h2 data-i18n="how.title">三步，认识那个合拍的人</h2>
-</div>
-<div class="steps">
-    <div class="card step-card">
-        <span class="step-num">01</span>
-        <h3 data-i18n="step01.h">答一份走心问卷</h3>
-        <p data-i18n="step01.p">39 道题覆盖价值观、生活习惯、情感风格、兴趣与相处预期，可标记「对我很重要」加权。</p>
-    </div>
-    <div class="card step-card">
-        <span class="step-num">02</span>
-        <h3 data-i18n="step02.h">预约本周匹配</h3>
-        <p data-i18n="step02.p">每周统一揭晓一位一对一对象：昵称、几个契合点与破冰话题——分数不展示，让你们自己聊。</p>
-    </div>
-    <div class="card step-card">
-        <span class="step-num">03</span>
-        <h3 data-i18n="step03.h">照着破冰开聊</h3>
-        <p data-i18n="step03.p">配对成功互见学校邮箱与你留下的联系方式；附破冰话题，开口不再尴尬。</p>
-    </div>
-</div>
+    <ol class="ed-steps">
+        <li>
+            <span class="ed-num">01</span>
+            <div>
+                <h3 data-i18n="step01.h">答一份走心问卷</h3>
+                <p data-i18n="step01.p">39 道题覆盖价值观、生活习惯、情感风格、兴趣与相处预期，可标记「对我很重要」加权。</p>
+            </div>
+        </li>
+        <li>
+            <span class="ed-num">02</span>
+            <div>
+                <h3 data-i18n="step02.h">预约本周匹配</h3>
+                <p data-i18n="step02.p">每周统一揭晓一位一对一对象：昵称、几个契合点与破冰话题。</p>
+            </div>
+        </li>
+        <li>
+            <span class="ed-num">03</span>
+            <div>
+                <h3 data-i18n="step03.h">照着破冰开聊</h3>
+                <p data-i18n="step03.p">配对成功互见学校邮箱与你留下的联系方式；附破冰话题，开口不再尴尬。</p>
+            </div>
+        </li>
+    </ol>
+</section>
 
-<!-- 为什么选择我们 -->
-<div class="section-head">
-    <span class="kicker">Why us</span>
-    <h2 data-i18n="why.title">我们和「刷脸软件」不一样</h2>
-</div>
-<div class="features">
-    <div class="card feature-card">
-        <h4><span class="feature-icon">⛨</span><span data-i18n="feat1.h">只限在校生</span></h4>
-        <p data-i18n="feat1.p">仅支持列表内学校邮箱注册，你遇到的每个人都经过校园身份验证。</p>
+<section class="ed-section">
+    <p class="ed-kicker" data-i18n="why.kicker">差异</p>
+    <h2 data-i18n="why.title">我们不一样</h2>
+    <div class="ed-features">
+        <article>
+            <h3 data-i18n="feat1.h">只限在校生</h3>
+            <p data-i18n="feat1.p">仅支持列表内学校邮箱注册，你遇到的每个人都经过校园身份验证。</p>
+        </article>
+        <article>
+            <h3 data-i18n="feat2.h">一周一位，宁缺毋滥</h3>
+            <p data-i18n="feat2.p">没有无限右滑。每人每周最多被配一次。</p>
+        </article>
+        <article>
+            <h3 data-i18n="feat3.h">隐私优先</h3>
+            <p data-i18n="feat3.p">资料不公开陈列；学校邮箱与附加联系方式只在配对成功后互见，还可拉黑不想遇到的人。</p>
+        </article>
+        <article>
+            <h3 data-i18n="feat4.h">告诉你「为什么是 TA」</h3>
+            <p data-i18n="feat4.p">只列出几个契合点与破冰话题，剩下的交给聊天。</p>
+        </article>
     </div>
-    <div class="card feature-card">
-        <h4><span class="feature-icon">◈</span><span data-i18n="feat2.h">一周一位，宁缺毋滥</span></h4>
-        <p data-i18n="feat2.p">没有无限右滑。每人每周最多被配一次；页面只给契合点，不晒匹配度分数。</p>
-    </div>
-    <div class="card feature-card">
-        <h4><span class="feature-icon">◎</span><span data-i18n="feat3.h">隐私优先</span></h4>
-        <p data-i18n="feat3.p">资料不公开陈列；学校邮箱与附加联系方式只在配对成功后互见，还可拉黑不想遇到的人。</p>
-    </div>
-    <div class="card feature-card">
-        <h4><span class="feature-icon">✦</span><span data-i18n="feat4.h">告诉你「为什么是 TA」</span></h4>
-        <p data-i18n="feat4.p">不给分数焦虑：只列出几个契合点与破冰话题，剩下的交给聊天。</p>
-    </div>
-</div>
+</section>
 
-<!-- 使用说明 & 隐私 -->
-<div class="card" style="border-left:3px solid var(--accent);">
-    <h3 style="margin-bottom:8px;" data-i18n="privacy.title">使用说明 & 隐私</h3>
-    <ul class="hint" style="padding-left:18px;margin:0;">
+<section class="ed-lower">
+<details class="ed-notes">
+    <summary data-i18n="privacy.title">使用说明 & 隐私</summary>
+    <ul>
         <li data-i18n="privacy.li1">仅接受支持列表内的学校邮箱注册，用于确认在校身份。</li>
         <li data-i18n="privacy.li2">问卷与择偶取向用于匹配；学校邮箱与附加联系方式仅在匹配成功后互见。</li>
-        <li data-i18n="privacy.li3">每人每周最多匹配一次（双向）；历史上配过的人双向永不再配；结果只展示契合点与联系渠道，不以分数衡量；以网站页面为准。</li>
+        <li data-i18n="privacy.li3">每人每周最多匹配一次（双向）；历史上配过的人双向永不再配；结果只展示契合点与联系渠道，以网站页面为准。</li>
         <li data-i18n="privacy.li4">可随时退出登录；匹配页可自助暂停匹配或删除账号（删号须再次确认学校邮箱）；也可写信至页脚邮箱，并阅读《隐私政策》。</li>
         <li data-i18n="privacy.li5">请友善使用，禁止骚扰；本平台不提供线下担保。</li>
         <li data-i18n="privacy.li6">开发者不会主动私聊用户，也不参与匹配。配对对象是其他同学，请小心受骗：自称工作人员、要转账或验证码的都不是官方。</li>
     </ul>
-</div>
+</details>
 
-<div class="insight-box" style="margin-top:16px;">
-    <h3 data-i18n="roadmap.title">扩展路线图</h3>
-    <table style="width:100%;font-size:0.9em;">
-        <tr><td>✅ <span data-school="澳门大学">澳门大学</span></td><td>um.edu.mo</td></tr>
-        <tr><td>✅ <span data-school="澳门科技大学">澳门科技大学</span></td><td>student.must.edu.mo / must.edu.mo</td></tr>
-        <tr><td>✅ <span data-school="澳门理工大学">澳门理工大学</span></td><td>mpu.edu.mo</td></tr>
-        <tr><td>✅ <span data-school="澳门旅游大学">澳门旅游大学</span></td><td>utm.edu.mo</td></tr>
-        <tr><td>🔜 <span data-i18n="roadmap.hk">香港大学 / 中大 / 科大</span></td><td data-i18n="roadmap.next">下一阶段</td></tr>
+<section class="ed-roadmap">
+    <h2 data-i18n="roadmap.title">扩展路线图</h2>
+    <table>
+        <tr>
+            <td><span class="ed-mark-ok" aria-hidden="true"></span><span data-school="澳门大学">澳门大学</span></td>
+            <td>um.edu.mo</td>
+        </tr>
+        <tr>
+            <td><span class="ed-mark-ok" aria-hidden="true"></span><span data-school="澳门科技大学">澳门科技大学</span></td>
+            <td>student.must.edu.mo / must.edu.mo</td>
+        </tr>
+        <tr>
+            <td><span class="ed-mark-ok" aria-hidden="true"></span><span data-school="澳门理工大学">澳门理工大学</span></td>
+            <td>mpu.edu.mo</td>
+        </tr>
+        <tr>
+            <td><span class="ed-mark-ok" aria-hidden="true"></span><span data-school="澳门旅游大学">澳门旅游大学</span></td>
+            <td>utm.edu.mo</td>
+        </tr>
+        <tr>
+            <td><span class="ed-mark-ok" aria-hidden="true"></span><span data-school="澳门城市大学">澳门城市大学</span></td>
+            <td>cityu.edu.mo</td>
+        </tr>
+        <tr class="is-next">
+            <td><span class="ed-mark-soon" aria-hidden="true"></span><span data-i18n="roadmap.hk">香港大学 / 中大 / 科大</span></td>
+            <td data-i18n="roadmap.next">下一阶段</td>
+        </tr>
     </table>
-</div>
+</section>
+</section>
 
-<!-- CTA -->
-<div class="card" style="text-align:center;">
-    <h2 style="margin-bottom:6px;" data-i18n="cta.title">准备好了？</h2>
-    <p class="hint" style="margin-bottom:8px;" data-i18n="cta.sub">用学校邮箱开始。完整问卷会优先匹配；隐私模式约 2 分钟能进池，但优先级更低。</p>
-    <p class="hint" style="margin-bottom:14px;font-size:0.88em;opacity:0.9;" data-i18n="cta.noguarantee">填完不保证配上：每周一对一有额度，人也要对得上。</p>
-    <a class="btn btn-match" href="#step1-card"
+<section class="ed-cta">
+    <div>
+        <h2 data-i18n="cta.title">准备好了？</h2>
+        <p data-i18n="cta.sub">用学校邮箱开始。完整问卷会优先匹配；隐私模式约 2 分钟能进池，但优先级更低。</p>
+    </div>
+    <a class="btn btn-primary" href="#step1-card"
        onclick="document.getElementById('email').focus(); return true;" data-i18n="cta.btn">立即开始匹配</a>
-</div>
+</section>
 
+<script src="/static/landing-stage.js?v=5"></script>
 <script>
 var currentEmail = '';
 (function prefInvite() {
@@ -172,7 +221,7 @@ async function register() {
 
     var btn = document.getElementById('register-btn');
     btn.disabled = true;
-    btn.textContent = t('msg.sending');
+    btn.innerHTML = '<span data-i18n="msg.sending">' + t('msg.sending') + '</span>';
 
     var data = await api('POST', '/api/register', {
         email: email,
@@ -180,20 +229,18 @@ async function register() {
         invite_code: (document.getElementById('invite-code').value || '').trim()
     });
     btn.disabled = false;
-    btn.textContent = t('btn.resendCode');
+    btn.innerHTML = '<span data-i18n="btn.resendCode">' + t('btn.resendCode') + '</span>';
 
     if (!data.ok) {
         alert(data.error);
         return;
     }
 
-    // 内测号 / 已验证用户紧急免邮件直登：跳过验证码
     if (data.beta_skip_verify || data.direct_login || data.remembered) {
         window.location.href = '/questionnaire';
         return;
     }
 
-    // 显示 Step 2（含「码已发送、请直接输入」；连点发送不再挡住输入框）
     currentEmail = email;
     document.getElementById('step2-email').textContent = email;
     document.getElementById('step2-card').style.display = 'block';
@@ -205,7 +252,6 @@ async function register() {
             '<span class="t-ok">' + data.message + '</span>';
     }
 
-    // 如果有 dev_token（邮件发送失败的降级），显示在页面上
     if (data.dev_token) {
         document.getElementById('verify-msg').innerHTML =
             '<span class="code-chip">' + t('msg.devCode') + '<code style="font-size:1.5em;letter-spacing:4px;">' + data.dev_token + '</code></span>';
@@ -215,18 +261,17 @@ async function register() {
 async function verify() {
     var token = document.getElementById('token').value.trim().toUpperCase();
     if (!currentEmail) { alert(t('msg.registerFirst')); return; }
-    // 内测号允许空验证码；真邮箱仍要求填写
     var isBeta = /^(cmtest|beta|test)\d+@/i.test(currentEmail);
     if (!token && !isBeta) { alert(t('msg.enterToken')); return; }
 
     var btn = document.getElementById('verify-btn');
     var msg = document.getElementById('verify-msg');
     btn.disabled = true;
-    btn.textContent = t('msg.verifying');
+    btn.innerHTML = '<span data-i18n="msg.verifying">' + t('msg.verifying') + '</span>';
 
     var data = await api('POST', '/api/verify', { email: currentEmail, token: token });
     btn.disabled = false;
-    btn.textContent = t('btn.verify');
+    btn.innerHTML = '<span data-i18n="btn.verify">' + t('btn.verify') + '</span>';
 
     if (data.ok) {
         msg.innerHTML = '<span class="t-ok" style="font-size:1.1em;">' + t('msg.verifyOk') + '</span>';

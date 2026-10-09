@@ -8,6 +8,7 @@
     var coarse = window.matchMedia && window.matchMedia('(hover: none), (pointer: coarse)').matches;
     var desktop = window.matchMedia && window.matchMedia('(min-width: 860px)').matches;
     if (reduced) return;
+    if (document.body.classList.contains('page-landing')) return;
 
     var wrap = document.createElement('div');
     wrap.className = 'cm-atmosphere';
@@ -57,7 +58,7 @@
         }
 
         var vs = compile(gl.VERTEX_SHADER, '#version 300 es\nin vec2 a; void main(){ gl_Position=vec4(a,0.,1.); }');
-        var fs = compile(gl.FRAGMENT_SHADER, '#version 300 es\nprecision mediump float;\nuniform vec2 u_res;\nuniform float u_time;\nuniform vec2 u_mouse;\nout vec4 fragColor;\nfloat hash(vec2 p){ return fract(sin(dot(p,vec2(127.1,311.7))) * 43758.5453); }\nfloat noise(vec2 p){ vec2 i=floor(p), f=fract(p); f=f*f*(3.-2.*f); float a=hash(i), b=hash(i+vec2(1.,0.)), c=hash(i+vec2(0.,1.)), d=hash(i+vec2(1.,1.)); return mix(mix(a,b,f.x), mix(c,d,f.x), f.y); }\nfloat fbm(vec2 p){ float v=0., a=.5; for(int i=0;i<5;i++){ v+=a*noise(p); p=p*2.03+vec2(1.7,9.2); a*=.5; } return v; }\nvoid main(){\n  vec2 uv=gl_FragCoord.xy/u_res;\n  float aspect=u_res.x/max(u_res.y,1.);\n  vec2 p=vec2((uv.x-.5)*aspect, uv.y-.5);\n  vec2 m=vec2((u_mouse.x-.5)*aspect, u_mouse.y-.5);\n  float md=length(p-m);\n  p += normalize(p-m+1e-4)*exp(-md*md*8.)*0.18;\n  float t=u_time*.06;\n  float n=fbm(p*2.2+vec2(t*.4,-t*.25));\n  float n2=fbm(p*3.1-vec2(t*.2,t*.35)+n);\n  float fog=smoothstep(.22,.78, mix(n,n2,.45));\n  vec3 c1=vec3(0.93,0.96,1.0);\n  vec3 c2=vec3(0.75,0.83,1.0);\n  vec3 c3=vec3(0.78,0.95,0.98);\n  vec3 c4=vec3(1.0,0.84,0.93);\n  vec3 col=mix(c1,c2,fog);\n  col=mix(col,c3,smoothstep(.35,.8,n2)*.55);\n  col=mix(col,c4,smoothstep(.55,.95,n)*.28);\n  float vign=smoothstep(1.15,.2,length(p));\n  fragColor=vec4(col, .42*vign);\n}');
+        var fs = compile(gl.FRAGMENT_SHADER, '#version 300 es\nprecision mediump float;\nuniform vec2 u_res;\nuniform float u_time;\nuniform vec2 u_mouse;\nout vec4 fragColor;\nfloat hash(vec2 p){ return fract(sin(dot(p,vec2(127.1,311.7))) * 43758.5453); }\nfloat noise(vec2 p){ vec2 i=floor(p), f=fract(p); f=f*f*(3.-2.*f); float a=hash(i), b=hash(i+vec2(1.,0.)), c=hash(i+vec2(0.,1.)), d=hash(i+vec2(1.,1.)); return mix(mix(a,b,f.x), mix(c,d,f.x), f.y); }\nfloat fbm(vec2 p){ float v=0., a=.5; for(int i=0;i<5;i++){ v+=a*noise(p); p=p*2.03+vec2(1.7,9.2); a*=.5; } return v; }\nvoid main(){\n  vec2 uv=gl_FragCoord.xy/u_res;\n  float aspect=u_res.x/max(u_res.y,1.);\n  vec2 p=vec2((uv.x-.5)*aspect, uv.y-.5);\n  vec2 m=vec2((u_mouse.x-.5)*aspect, u_mouse.y-.5);\n  float md=length(p-m);\n  p += normalize(p-m+1e-4)*exp(-md*md*8.)*0.18;\n  float t=u_time*.06;\n  float n=fbm(p*2.2+vec2(t*.4,-t*.25));\n  float n2=fbm(p*3.1-vec2(t*.2,t*.35)+n);\n  float fog=smoothstep(.22,.78, mix(n,n2,.45));\n  vec3 c1=vec3(0.94,0.90,0.82);\n  vec3 c2=vec3(0.88,0.82,0.70);\n  vec3 c3=vec3(0.92,0.86,0.76);\n  vec3 c4=vec3(0.82,0.76,0.64);\n  vec3 col=mix(c1,c2,fog);\n  col=mix(col,c3,smoothstep(.35,.8,n2)*.55);\n  col=mix(col,c4,smoothstep(.55,.95,n)*.28);\n  float vign=smoothstep(1.15,.2,length(p));\n  fragColor=vec4(col, .42*vign);\n}');
         if (!vs || !fs) return;
         var prog = gl.createProgram();
         gl.attachShader(prog, vs);
@@ -151,8 +152,8 @@
                 ctx.save();
                 ctx.rotate((Math.PI * 2 * i) / petals);
                 ctx.fillStyle = i % 2
-                    ? 'rgba(236,72,153,0.85)'
-                    : 'rgba(251,207,232,0.95)';
+                    ? 'rgba(140,118,88,0.55)'
+                    : 'rgba(244,238,227,0.9)';
                 petalLotus(s);
                 ctx.fill();
                 ctx.restore();
@@ -175,8 +176,8 @@
                 ctx.save();
                 ctx.rotate((Math.PI * 2 * i) / 5);
                 ctx.fillStyle = i === 0
-                    ? 'rgba(99,102,241,0.9)'
-                    : 'rgba(219,39,119,0.88)';
+                    ? 'rgba(60,55,48,0.45)'
+                    : 'rgba(168,146,112,0.5)';
                 petalBauhinia(s);
                 ctx.fill();
                 ctx.restore();

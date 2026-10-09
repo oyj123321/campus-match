@@ -4,10 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CampusMatch — 校园恋爱匹配</title>
-    <link rel="stylesheet" href="/static/style.css?v=1994">
-    <link rel="stylesheet" href="/static/personality_themes.css?v=1971">
+    <link rel="stylesheet" href="/static/style.css?v=1998">
+    <link rel="stylesheet" href="/static/personality_themes.css?v=1972">
     {% if festival_autumn %}<link rel="stylesheet" href="/static/festival-autumn.css?v=2">{% endif %}
-    <script src="/static/i18n.js?v=fest-20260925b"></script>
+    {% block extra_css %}{% endblock %}
+    <script src="/static/i18n.js?v=landing-20261006h"></script>
     <script src="/static/love_personality_i18n.js?v=1968"></script>
     <script src="/static/vendor/html2canvas.min.js"></script>
     <script src="/static/vendor/qrcode-generator.min.js"></script>
@@ -52,7 +53,7 @@
         }
     </script>
 </head>
-<body{% if festival_autumn %} class="fest-autumn"{% endif %}>
+<body class="{% block body_class %}{% endblock %}{% if festival_autumn %} fest-autumn{% endif %}">
     {% if festival_autumn %}
     <div class="fest-layer" aria-hidden="true">
         <div class="fest-moon"><span class="fest-moon-star"></span></div>
@@ -185,7 +186,10 @@
         <div class="nav-inner">
             <a href="/" class="nav-brand">CampusMatch</a>
             <div class="nav-right">
-                <a href="/community" class="nav-link">校园广场</a>
+                <a href="/community" class="nav-link" data-i18n="nav.community">校园广场</a>
+                {% if not session.user_id and request.endpoint == 'index' %}
+                <a href="#step1-card" class="nav-cta" data-i18n="nav.start">开始</a>
+                {% endif %}
                 {% if session.user_id %}
                     <a href="/matches" class="nav-link" data-i18n="nav.matches">匹配结果</a>
                     <a href="/questionnaire" class="nav-link{% if questionnaire_incomplete %} nav-link-alert{% endif %}" data-i18n="nav.questionnaire">问卷</a>
@@ -205,10 +209,16 @@
     </nav>
 
     {% if site_announcement %}
-    <div class="site-announcement" role="status">
-        {# 不用 data-i18n，以便 .env 的 SITE_ANNOUNCEMENT 可原样覆盖 #}
-        <div class="site-announcement-inner">{{ site_announcement }}</div>
-    </div>
+    <details class="site-announcement">
+        {# 默认公告走 i18n；.env 的 SITE_ANNOUNCEMENT 覆盖时保持原文 #}
+        <summary class="site-announcement-inner">
+            <span class="site-announcement-text"{% if site_announcement_i18n %} data-i18n="announce.community"{% endif %}>{{ site_announcement }}</span>
+            <span class="site-announcement-toggle" aria-hidden="true">
+                <span class="ann-more" data-i18n="announce.more">展开</span>
+                <span class="ann-less" data-i18n="announce.less">收起</span>
+            </span>
+        </summary>
+    </details>
     {% endif %}
 
     {% if questionnaire_incomplete %}
@@ -234,6 +244,6 @@
             <a href="mailto:{{ contact_email }}">{{ contact_email }}</a>
         </p>
     </footer>
-    <script src="/static/atmosphere.js?v=1962"></script>
+    <script src="/static/atmosphere.js?v=1964"></script>
 </body>
 </html>
