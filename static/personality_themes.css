@@ -848,8 +848,12 @@
         linear-gradient(rgba(28, 27, 25, 0.06) 1px, transparent 1px),
         linear-gradient(90deg, rgba(28, 27, 25, 0.06) 1px, transparent 1px);
 }
-.personality-card[data-lp-code]:not(.lp-share-card) a {
+.personality-card[data-lp-code]:not(.lp-share-card) a:not(.btn) {
     color: #141413 !important;
+}
+.personality-card[data-lp-code]:not(.lp-share-card) a.btn-primary,
+.personality-card[data-lp-code]:not(.lp-share-card) a.btn-match {
+    color: #f3efe6 !important;
 }
 .personality-card[data-lp-code]:not(.lp-share-card) .lp-invite-oncard,
 .personality-card[data-lp-code]:not(.lp-share-card) .personality-sub {
