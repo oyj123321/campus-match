@@ -128,9 +128,7 @@
 
     <div class="card" style="text-align:center;">
         <p class="hint" style="margin:0 0 12px;line-height:1.6;" data-i18n="qn.noguarantee">每周一对一有额度；池子偏小、取向不合或硬性底线冲突时，可能配不上——填完问卷不等于保证有对象。</p>
-        <button type="button" class="btn btn-match" id="submit-btn" onclick="submitAll()" data-i18n="qn.submit">
-            提交问卷 & 开始匹配
-        </button>
+        <button type="button" class="btn btn-match" id="submit-btn" onclick="submitAll()" data-i18n="qn.submit">提交问卷，下一步预约揭晓</button>
         <p id="save-status" style="margin-top:8px;"></p>
     </div>
 </form>
@@ -169,7 +167,8 @@
             <p class="hint lp-disc-corner lp-no-capture" data-i18n="lp.shareDisc">问卷规则生成 · 仅供娱乐</p>
         </div>
         <div class="personality-actions" style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;">
-            <a class="btn btn-primary" href="/matches" data-i18n="lp.goMatches">进入匹配页</a>
+            <a class="btn btn-primary" href="/matches#reveal-box" data-i18n="lp.goMatches">去预约本周匹配</a>
+            <a class="btn btn-secondary" href="/matches" data-i18n="lp.peekMatches">先看看匹配页</a>
             <button type="button" class="btn btn-secondary" id="lp-modal-share" data-i18n="lp.share">分享报告</button>
         </div>
     </div>
@@ -554,7 +553,7 @@ async function submitAll() {
         if (p && (p.code || p.name)) {
             showPersonalityModal(p);
         } else {
-            setTimeout(function () { location.href = '/matches'; }, 600);
+            setTimeout(function () { location.href = '/matches#reveal-box'; }, 600);
         }
     } else {
         status.innerHTML = '<span class="error">' + t('qn.saveFail') + esc(r2.error || '') + '</span>';
