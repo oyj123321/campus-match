@@ -17,6 +17,11 @@
     <a href="/questionnaire" class="btn btn-secondary" data-i18n="m.privacySelfCta">去填完整问卷</a>
 </div>
 {% endif %}
+{% if user.ready_to_match() and not user.is_express() and quota.reveal_require_opt_in %}
+<div id="optin-gap-banner" class="box box-warn" style="margin-bottom:14px;text-align:left;{% if quota.opted_in %}display:none;{% endif %}">
+    <p style="margin:0;font-weight:700;line-height:1.65;" data-i18n="m.optinGap">问卷已完成，还差一步：预约本周（周二21:00揭晓）。不预约不进本周池。</p>
+</div>
+{% endif %}
 <div class="card" style="text-align:center;">
     <h2><span data-school="{{ user.school }}">{{ user.school }}</span> · <span data-i18n="m.center">匹配中心</span></h2>
     <p class="hint" style="font-size:0.9em;">
@@ -256,6 +261,8 @@ function renderQuota(q) {
     optBtn.textContent = q.opted_in ? t('btn.optout') : t('btn.optin');
     optBtn.className = q.opted_in ? 'btn btn-secondary' : 'btn btn-primary';
     optBtn.disabled = !openOn;
+    var gap = document.getElementById('optin-gap-banner');
+    if (gap) gap.style.display = (q.reveal_require_opt_in && !q.opted_in) ? '' : 'none';
 
     var crossBox = document.getElementById('cross-box');
     if (crossBox) {
