@@ -53,21 +53,24 @@ def school_compatible(user_a, user_b):
     return user_b.school in a_list and user_a.school in b_list
 
 
+def _accepts_unknown_degree(user):
+    """未填学历的老用户只和「三种学历都接受」的人配，避免窄范围误配未知。"""
+    return set(user.accepted_degree_list()) == set(EDUCATION_LEVELS)
+
+
 def degree_compatible(user_a, user_b):
-    """双方都填了学历：同学历可配，跨学历须双方勾选。
-    有一方未填：不知道学历，不拦老用户；但已填且明确不跨的一方，不与「未知」配。"""
+    """双方都填了学历：各自的学历必须落在对方愿意匹配的范围内。
+    有一方未填：只有接受全部学历的一方才与「未知」配；两边都未填则不拦。"""
     a = (user_a.education_level or "").strip()
     b = (user_b.education_level or "").strip()
     a_ok = a in EDUCATION_LEVELS
     b_ok = b in EDUCATION_LEVELS
     if a_ok and b_ok:
-        if a == b:
-            return True
-        return bool(user_a.allow_cross_degree) and bool(user_b.allow_cross_degree)
-    if a_ok and not user_a.allow_cross_degree:
-        return False
-    if b_ok and not user_b.allow_cross_degree:
-        return False
+        return b in user_a.accepted_degree_list() and a in user_b.accepted_degree_list()
+    if a_ok and not b_ok:
+        return _accepts_unknown_degree(user_a)
+    if b_ok and not a_ok:
+        return _accepts_unknown_degree(user_b)
     return True
 
 
@@ -94,8 +97,8 @@ def deactivate_filled_degree_violations(user=None):
         n += 1
         print(
             f"[CampusMatch] deactivate match #{m.id}: "
-            f"{a.id}/{ea}/cross={int(bool(a.allow_cross_degree))} "
-            f"x {b.id}/{eb}/cross={int(bool(b.allow_cross_degree))}"
+            f"{a.id}/{ea}/accept={a.accepted_degree_list()} "
+            f"x {b.id}/{eb}/accept={b.accepted_degree_list()}"
         )
     return n
 
@@ -151,9 +154,10 @@ def eligible_candidates(user, exclude_ids=None):
     # 未选跨校：只查同校，少扫库
     if not (CROSS_SCHOOL_MATCHING_ENABLED and willing):
         q = q.filter(User.school == user.school)
-    # 未开跨学历：只查同学历
-    if user.education_level in EDUCATION_LEVELS and not user.allow_cross_degree:
-        q = q.filter(User.education_level == user.education_level)
+    # 未接受全部学历：只查对方学历落在范围内的人（未知学历留到 degree_compatible）
+    accepted = set(user.accepted_degree_list())
+    if accepted and accepted != set(EDUCATION_LEVELS):
+        q = q.filter(User.education_level.in_(list(accepted)))
 
     out = []
     for c in q.all():

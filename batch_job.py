@@ -542,10 +542,38 @@ def run_batch_all(mail_cfg, require_opt_in=None):
     return results
 
 
+def remind_dormant_participants(mail_cfg, now_utc=None, now_local=None):
+    """连续三周未登录且近三周未预约：发一封提醒。不关参与匹配。"""
+    from email_service import send_dormant_reminder_email
+    from pool_rhythm import is_dormant
+
+    noticed = 0
+    mailed = 0
+    for user in User.query.filter(User.email_verified == True).all():
+        if not is_dormant(user, now_utc=now_utc, now_local=now_local):
+            continue
+        ok, info = send_dormant_reminder_email(user.email, mail_cfg)
+        if not ok:
+            print(f"[dormant] mail failed {user.id}: {info}")
+            continue
+        user.dormant_notice_at = datetime.utcnow()
+        db.session.commit()
+        noticed += 1
+        mailed += 1
+    if noticed:
+        print(f"[dormant] reminded={noticed} mailed={mailed}")
+    return noticed
+
+
 def _run_batch_all(mail_cfg, require_opt_in=None):
     from config import REVEAL_REQUIRE_OPT_IN
     if require_opt_in is None:
         require_opt_in = REVEAL_REQUIRE_OPT_IN
+    try:
+        remind_dormant_participants(mail_cfg)
+    except Exception as e:
+        print(f"[dormant] skip: {e}")
+        db.session.rollback()
     # Snapshot participation before matching; only a fully completed run is recorded.
     analytics_week = week_window_start().date()
     analytics_ids = [u.id for u in ready_users(require_opt_in=require_opt_in)]
@@ -599,8 +627,16 @@ def schedule_loop(mail_cfg_factory, check_seconds=30):
 
     print(f"[batch] 调度中：每{WEEKDAY_NAMES[BATCH_MATCH_DAY]} {BATCH_MATCH_HOUR}:00")
     last_followup = 0.0
+    last_dormant = 0.0
     while True:
         now_ts = time.time()
+        if now_ts - last_dormant >= 86400:
+            try:
+                remind_dormant_participants(mail_cfg_factory())
+            except Exception as e:
+                db.session.rollback()
+                print(f"[batch] 三周提醒检查失败: {e}")
+            last_dormant = now_ts
         if ICEBREAKER_FOLLOWUP_ENABLED and now_ts - last_followup >= 3600:
             try:
                 n = send_due_icebreaker_followups(mail_cfg_factory())
@@ -617,6 +653,13 @@ def schedule_loop(mail_cfg_factory, check_seconds=30):
         end = time.time() + max(wait, 1)
         while time.time() < end:
             time.sleep(min(check_seconds, max(1, end - time.time())))
+            if time.time() - last_dormant >= 86400:
+                try:
+                    remind_dormant_participants(mail_cfg_factory())
+                except Exception as e:
+                    db.session.rollback()
+                    print(f"[batch] 三周提醒检查失败: {e}")
+                last_dormant = time.time()
             if ICEBREAKER_FOLLOWUP_ENABLED and time.time() - last_followup >= 3600:
                 try:
                     n = send_due_icebreaker_followups(mail_cfg_factory())

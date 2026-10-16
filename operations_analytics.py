@@ -17,6 +17,8 @@ def set_pool_participation(user, enabled, reason_code=None, reason_note=None):
     user.open_to_match = enabled
     if not enabled:
         user.opt_in_week = None
+    else:
+        user.dormant_notice_at = None
     if previous != enabled:
         db.session.add(PoolEvent(user_id=user.id, kind="resume" if enabled else "pause",
                                  reason_code=reason_code, reason_note=reason_note))

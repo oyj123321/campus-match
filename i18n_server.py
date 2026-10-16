@@ -217,6 +217,12 @@ M = {
         "en": "Please select your degree: bachelor, master, or doctorate",
         "pt": "Seleciona o grau: licenciatura, mestrado ou doutoramento",
     },
+    "err.accept_degrees": {
+        "zh": "请至少选择一种愿意匹配的学历",
+        "tw": "請至少選擇一種願意配對的學歷",
+        "en": "Select at least one degree you will match",
+        "pt": "Escolhe pelo menos um grau que aceitas",
+    },
     "err.search_q": {
         "zh": "请输入昵称或邮箱", "tw": "請輸入暱稱或電郵",
         "en": "Enter a nickname or email", "pt": "Indica uma alcunha ou email",
