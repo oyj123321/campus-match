@@ -1,7 +1,7 @@
 import unittest
 from datetime import datetime, timedelta
 
-from pool_rhythm import grant_debut_week, is_dormant, current_week_key
+from pool_rhythm import grant_debut_week, grant_transition_week, is_dormant, current_week_key
 
 
 class Fake:
@@ -9,6 +9,8 @@ class Fake:
         self.debut_opted_at = None
         self.opt_in_week = None
         self.dormant_notice_at = None
+        self.weekly_rule_notice_at = None
+        self.rhythm_grace_week = None
         self.open = True
         self.ready = True
         self.last_login_at = datetime.utcnow()
@@ -57,6 +59,25 @@ class PoolRhythmTests(unittest.TestCase):
         self.assertFalse(is_dormant(opted, now_utc=now, now_local=now))
         self.assertFalse(is_dormant(paused, now_utc=now, now_local=now))
         self.assertFalse(is_dormant(told, now_utc=now, now_local=now))
+
+    def test_transition_week_opts_waiters_once(self):
+        now = datetime(2026, 10, 18, 12, 0, 0)
+        week = current_week_key(now)
+        waiter = Fake()
+        self.assertTrue(grant_transition_week(waiter, week=week, has_active_match=False))
+        self.assertEqual(waiter.opt_in_week, week)
+        self.assertEqual(waiter.rhythm_grace_week, week)
+        waiter.opt_in_week = None
+        self.assertFalse(grant_transition_week(waiter, week=week, has_active_match=False))
+        self.assertIsNone(waiter.opt_in_week)
+
+    def test_transition_week_skips_active_match(self):
+        now = datetime(2026, 10, 18, 12, 0, 0)
+        week = current_week_key(now)
+        paired = Fake()
+        self.assertFalse(grant_transition_week(paired, week=week, has_active_match=True))
+        self.assertIsNone(paired.opt_in_week)
+        self.assertEqual(paired.rhythm_grace_week, week)
 
 
 if __name__ == "__main__":

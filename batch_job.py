@@ -542,6 +542,37 @@ def run_batch_all(mail_cfg, require_opt_in=None):
     return results
 
 
+WEEKLY_RULE_NOTICE_BATCH = 40
+
+
+def notify_weekly_rule_change(mail_cfg, limit=WEEKLY_RULE_NOTICE_BATCH):
+    """给还在池里、没收到过说明信的老用户发一封。发出去才记账。"""
+    from email_service import send_weekly_rule_notice_email
+
+    mailed = 0
+    failed = 0
+    q = User.query.filter(
+        User.email_verified == True,
+        User.weekly_rule_notice_at.is_(None),
+    )
+    for user in q.all():
+        if mailed + failed >= limit:
+            break
+        if not user.in_match_pool():
+            continue
+        ok, info = send_weekly_rule_notice_email(user.email, mail_cfg)
+        if not ok:
+            print(f"[weekly-rule] mail failed {user.id}: {info}")
+            failed += 1
+            continue
+        user.weekly_rule_notice_at = datetime.utcnow()
+        db.session.commit()
+        mailed += 1
+    if mailed or failed:
+        print(f"[weekly-rule] mailed={mailed} failed={failed}")
+    return mailed
+
+
 def remind_dormant_participants(mail_cfg, now_utc=None, now_local=None):
     """连续三周未登录且近三周未预约：发一封提醒。不关参与匹配。"""
     from email_service import send_dormant_reminder_email
@@ -573,6 +604,11 @@ def _run_batch_all(mail_cfg, require_opt_in=None):
         remind_dormant_participants(mail_cfg)
     except Exception as e:
         print(f"[dormant] skip: {e}")
+        db.session.rollback()
+    try:
+        notify_weekly_rule_change(mail_cfg)
+    except Exception as e:
+        print(f"[weekly-rule] skip: {e}")
         db.session.rollback()
     # Snapshot participation before matching; only a fully completed run is recorded.
     analytics_week = week_window_start().date()
@@ -628,8 +664,16 @@ def schedule_loop(mail_cfg_factory, check_seconds=30):
     print(f"[batch] 调度中：每{WEEKDAY_NAMES[BATCH_MATCH_DAY]} {BATCH_MATCH_HOUR}:00")
     last_followup = 0.0
     last_dormant = 0.0
+    last_rule_mail = 0.0
     while True:
         now_ts = time.time()
+        if now_ts - last_rule_mail >= 3600:
+            try:
+                notify_weekly_rule_change(mail_cfg_factory())
+            except Exception as e:
+                db.session.rollback()
+                print(f"[batch] 每周预约说明失败: {e}")
+            last_rule_mail = now_ts
         if now_ts - last_dormant >= 86400:
             try:
                 remind_dormant_participants(mail_cfg_factory())
@@ -653,6 +697,13 @@ def schedule_loop(mail_cfg_factory, check_seconds=30):
         end = time.time() + max(wait, 1)
         while time.time() < end:
             time.sleep(min(check_seconds, max(1, end - time.time())))
+            if time.time() - last_rule_mail >= 3600:
+                try:
+                    notify_weekly_rule_change(mail_cfg_factory())
+                except Exception as e:
+                    db.session.rollback()
+                    print(f"[batch] 每周预约说明失败: {e}")
+                last_rule_mail = time.time()
             if time.time() - last_dormant >= 86400:
                 try:
                     remind_dormant_participants(mail_cfg_factory())

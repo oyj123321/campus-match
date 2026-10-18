@@ -1978,6 +1978,16 @@ def ensure_schema():
         db.session.commit()
         print("[CampusMatch] migrated: users.dormant_notice_at")
 
+    if "weekly_rule_notice_at" not in user_cols:
+        db.session.execute(text("ALTER TABLE users ADD COLUMN weekly_rule_notice_at DATETIME"))
+        db.session.commit()
+        print("[CampusMatch] migrated: users.weekly_rule_notice_at")
+
+    if "rhythm_grace_week" not in user_cols:
+        db.session.execute(text("ALTER TABLE users ADD COLUMN rhythm_grace_week VARCHAR(16)"))
+        db.session.commit()
+        print("[CampusMatch] migrated: users.rhythm_grace_week")
+
     if "quota_bonus" not in user_cols:
         db.session.execute(text("ALTER TABLE users ADD COLUMN quota_bonus INTEGER DEFAULT 0"))
         db.session.commit()
@@ -2105,6 +2115,7 @@ def ensure_schema():
     _backfill_legacy_cross_degree()
     _backfill_accepted_degrees()
     _backfill_debut_opted()
+    _grant_rhythm_grace_week()
     _cleanup_one_to_one_matches()
     n_deg = deactivate_filled_degree_violations()
     if n_deg:
@@ -2150,6 +2161,29 @@ def _backfill_debut_opted():
     if n:
         db.session.commit()
         print(f"[CampusMatch] backfill debut_opted_at: {n} users")
+
+
+def _grant_rhythm_grace_week():
+    """还在等配对的老用户：自动预约当周一次。已有有效配对的不推进新一轮。"""
+    from pool_rhythm import grant_transition_week, current_week_key
+
+    week = current_week_key()
+    n = 0
+    for u in User.query.filter(
+        User.email_verified.is_(True),
+        User.rhythm_grace_week.is_(None),
+    ).all():
+        active = Match.query.filter(
+            ((Match.user1_id == u.id) | (Match.user2_id == u.id)),
+            Match.active.is_(True),
+        ).first()
+        if grant_transition_week(u, week=week, has_active_match=bool(active)):
+            n += 1
+        elif u.rhythm_grace_week == week:
+            pass
+    db.session.commit()
+    if n:
+        print(f"[CampusMatch] rhythm grace opt-in: {n} users")
 
 
 def _backfill_accepted_degrees():

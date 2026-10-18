@@ -23,7 +23,26 @@ def grant_debut_week(user, now=None):
         return False
     user.opt_in_week = current_week_key(now)
     user.debut_opted_at = datetime.utcnow()
+    # 新用户问卷里已写明规则，不发老用户变更信。
+    if getattr(user, "weekly_rule_notice_at", None) is None:
+        user.weekly_rule_notice_at = datetime.utcnow()
     return True
+
+
+def grant_transition_week(user, week=None, has_active_match=False):
+    """老用户过渡：还在池里、当前没有有效配对的，自动预约当周一次。已有配对的不推进新一轮。"""
+    week = week or current_week_key()
+    if getattr(user, "rhythm_grace_week", None):
+        return False
+    if not user.is_open_to_match() or not user.ready_to_match():
+        return False
+    user.rhythm_grace_week = week
+    if has_active_match:
+        return False
+    if user.opt_in_week != week:
+        user.opt_in_week = week
+        return True
+    return False
 
 
 def is_dormant(user, now_utc=None, now_local=None):

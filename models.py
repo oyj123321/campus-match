@@ -101,6 +101,10 @@ class User(db.Model):
     debut_opted_at = db.Column(db.DateTime, nullable=True)
     # 连续三周未出现、提醒信已发出的时间。登录或再次预约后清空，才会再提醒。
     dormant_notice_at = db.Column(db.DateTime, nullable=True)
+    # 每周预约规则变更说明信发出的时间。只发一次。
+    weekly_rule_notice_at = db.Column(db.DateTime, nullable=True)
+    # 上线时给老用户保留的过渡周（ISO 周键）。有值后不再自动续。
+    rhythm_grace_week = db.Column(db.String(16))
     # 运营补偿：仅在 quota_bonus_week 等于当前 ISO 周时，加在每周上限上
     quota_bonus = db.Column(db.Integer, default=0)
     quota_bonus_week = db.Column(db.String(16))
