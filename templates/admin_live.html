@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="robots" content="noindex,nofollow">
+    <title>实时指挥屏 · CampusMatch</title>
+    <link rel="stylesheet" href="/static/admin_live.css?v=1">
+</head>
+<body class="live-deck">
+    <header class="live-top">
+        <div class="live-brand">CampusMatch <span>LIVE</span></div>
+        <div class="live-clock" id="live-now">{{ snapshot.now }}</div>
+        <div class="live-actions">
+            <span class="live-pulse" id="live-pulse">同步中</span>
+            <a href="/admin">运营总览</a>
+            <a href="/admin/community">社区</a>
+        </div>
+    </header>
+
+    <main class="live-grid">
+        <section class="live-hero">
+            <p class="live-kicker">下一轮揭晓 · {{ snapshot.week_key }}</p>
+            <div class="live-count" id="live-count">--:--:--</div>
+            <p class="live-next" id="live-next">{{ snapshot.next_batch }}</p>
+            <div class="live-hero-metrics">
+                <div><span>本周已预约</span><strong id="m-opted">{{ snapshot.metrics.opted_week }}</strong></div>
+                <div><span>当前池</span><strong id="m-pool">{{ snapshot.metrics.open_pool }}</strong></div>
+                <div><span>本周新配对</span><strong id="m-week">{{ snapshot.metrics.matches_week }}</strong></div>
+            </div>
+        </section>
+
+        <section class="live-panel">
+            <h2>状态</h2>
+            <div class="live-stats">
+                <article><span>已验证</span><strong id="m-verified">{{ snapshot.metrics.verified_total }}</strong><small>今日 +<b id="m-today">{{ snapshot.metrics.verified_today }}</b></small></article>
+                <article><span>有效配对</span><strong id="m-active">{{ snapshot.metrics.active_matches }}</strong></article>
+                <article><span>暂停参与</span><strong id="m-paused">{{ snapshot.metrics.paused }}</strong></article>
+                <article><span>邮件 24h</span><strong id="m-mail">{{ snapshot.metrics.mail_used if snapshot.metrics.mail_used is not none else '—' }}</strong><small id="m-mail-cap">{% if snapshot.metrics.mail_limit %}/ {{ snapshot.metrics.mail_limit }}{% endif %}</small></article>
+            </div>
+            <p class="live-sys">邮件 {{ snapshot.system.mail }} · {{ snapshot.system.provider }} · 批次调度 {{ snapshot.system.scheduler }}</p>
+        </section>
+
+        <section class="live-panel" id="live-alerts-wrap">
+            <h2>告警</h2>
+            <div id="live-alerts">
+                {% for a in snapshot.alerts %}<p class="live-alert {{ a.level }}">{{ a.text }}</p>{% endfor %}
+            </div>
+        </section>
+
+        <section class="live-panel">
+            <h2>池内性别</h2>
+            <div class="live-gender" id="live-gender"></div>
+        </section>
+
+        <section class="live-panel live-span-2">
+            <h2>近 7 日访问</h2>
+            <div class="live-bars" id="live-traffic"></div>
+        </section>
+
+        <section class="live-panel live-span-2">
+            <h2>学校</h2>
+            <div class="live-schools" id="live-schools"></div>
+        </section>
+
+        <section class="live-panel live-feed-panel">
+            <h2>实时记录</h2>
+            <ol class="live-feed" id="live-feed"></ol>
+        </section>
+    </main>
+    <script>
+    const state = {{ snapshot | tojson }};
+    let seconds = state.seconds_to_batch || 0;
+
+    function pad(n) { return String(n).padStart(2, '0'); }
+    function fmtCount(sec) {
+        sec = Math.max(0, sec | 0);
+        const h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60), s = sec % 60;
+        return pad(h) + ':' + pad(m) + ':' + pad(s);
+    }
+    function esc(s) {
+        return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+    function render(data) {
+        document.getElementById('live-now').textContent = data.now;
+        document.getElementById('live-next').textContent = data.next_batch;
+        seconds = data.seconds_to_batch;
+        document.getElementById('live-count').textContent = fmtCount(seconds);
+        const m = data.metrics;
+        document.getElementById('m-opted').textContent = m.opted_week;
+        document.getElementById('m-pool').textContent = m.open_pool;
+        document.getElementById('m-week').textContent = m.matches_week;
+        document.getElementById('m-verified').textContent = m.verified_total;
+        document.getElementById('m-today').textContent = m.verified_today;
+        document.getElementById('m-active').textContent = m.active_matches;
+        document.getElementById('m-paused').textContent = m.paused;
+        document.getElementById('m-mail').textContent = (m.mail_used == null ? '—' : m.mail_used);
+        document.getElementById('m-mail-cap').textContent = m.mail_limit ? ('/ ' + m.mail_limit) : '';
+        document.getElementById('live-alerts').innerHTML = (data.alerts || []).map(function (a) {
+            return '<p class="live-alert ' + esc(a.level) + '">' + esc(a.text) + '</p>';
+        }).join('');
+        const g = data.gender || {}, tot = (g.male || 0) + (g.female || 0) + (g.unknown || 0) || 1;
+        document.getElementById('live-gender').innerHTML =
+            '<div class="g-row"><span>男 ' + g.male + '</span><i style="width:' + (100 * g.male / tot) + '%"></i></div>' +
+            '<div class="g-row g-f"><span>女 ' + g.female + '</span><i style="width:' + (100 * g.female / tot) + '%"></i></div>' +
+            '<div class="g-row g-u"><span>未填 ' + g.unknown + '</span><i style="width:' + (100 * g.unknown / tot) + '%"></i></div>';
+        const tmax = data.traffic_max || 1;
+        document.getElementById('live-traffic').innerHTML = (data.traffic || []).map(function (row) {
+            return '<div class="t-col"><i style="height:' + Math.max(4, 100 * row.page_views / tmax) + '%"></i><span>' + esc(row.day.slice(3)) + '</span></div>';
+        }).join('');
+        const smax = Math.max.apply(null, (data.schools || []).map(function (s) { return s.verified; }).concat([1]));
+        document.getElementById('live-schools').innerHTML = (data.schools || []).map(function (s) {
+            return '<div class="s-row"><span>' + esc(s.school) + '</span><div class="s-track"><i style="width:' + (100 * s.verified / smax) + '%"></i></div><b>' + s.pool + '/' + s.verified + '</b><small>约 ' + s.opted + '</small></div>';
+        }).join('') || '<p class="live-empty">暂无学校数据</p>';
+        document.getElementById('live-feed').innerHTML = (data.feed || []).map(function (row) {
+            return '<li class="' + esc(row.tone) + '"><time>' + esc(row.time) + '</time><strong>' + esc(row.title) + '</strong><span>' + esc(row.meta) + '</span></li>';
+        }).join('') || '<li class="muted">还没有事件</li>';
+    }
+    render(state);
+    setInterval(function () {
+        seconds = Math.max(0, seconds - 1);
+        document.getElementById('live-count').textContent = fmtCount(seconds);
+    }, 1000);
+    async function tick() {
+        const pulse = document.getElementById('live-pulse');
+        try {
+            const r = await fetch('/admin/live.json', { credentials: 'same-origin' });
+            if (r.redirected) { location.href = r.url; return; }
+            const d = await r.json();
+            if (d.ok) { render(d.data); pulse.textContent = '已同步'; pulse.className = 'live-pulse on'; }
+        } catch (e) {
+            pulse.textContent = '同步失败'; pulse.className = 'live-pulse off';
+        }
+    }
+    setInterval(tick, 8000);
+    </script>
+</body>
+</html>

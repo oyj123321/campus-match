@@ -66,6 +66,21 @@ class AdminDashboardTests(unittest.TestCase):
             follow_redirects=False,
         )
 
+    def test_live_deck_requires_login_and_hides_emails(self):
+        self.assertEqual(self.client.get("/admin/live").status_code, 302)
+        self.assertEqual(self.client.get("/admin/live.json").status_code, 302)
+        self._login()
+        page = self.client.get("/admin/live")
+        self.assertEqual(page.status_code, 200)
+        html = page.get_data(as_text=True)
+        self.assertIn("实时指挥屏", html)
+        self.assertNotIn("student@um.edu.mo", html)
+        payload = self.client.get("/admin/live.json").get_json()
+        self.assertTrue(payload["ok"])
+        blob = json.dumps(payload, ensure_ascii=False)
+        self.assertNotIn("student@um.edu.mo", blob)
+        self.assertIn("open_pool", payload["data"]["metrics"])
+
     def test_admin_requires_login_and_accepts_configured_secret(self):
         self.assertEqual(self.client.get("/admin").status_code, 302)
         response = self._login()
