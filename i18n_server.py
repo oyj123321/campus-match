@@ -325,10 +325,10 @@ M = {
         "pt": "{name} foi bloqueado e não voltará a fazer match",
     },
     "ok.paused": {
-        "zh": "已暂停参与匹配。历史配对仍可查看，资料不会删除。",
-        "tw": "已暫停參與配對。歷史配對仍可查看，資料不會刪除。",
-        "en": "Matching paused. History stays; your profile is kept.",
-        "pt": "Matching em pausa. O histórico fica; o perfil mantém-se.",
+        "zh": "已暂停参与匹配，不扣本周额度。历史配对仍可查看，资料不会删除；已经配对成功的仍计入额度。",
+        "tw": "已暫停參與配對，不扣本週額度。歷史配對仍可查看，資料不會刪除；已經配對成功的仍計入額度。",
+        "en": "Matching paused — this week's quota is not used. History stays and your profile is kept. Matches that already succeeded still count.",
+        "pt": "Matching em pausa — a quota desta semana não é consumida. O histórico fica e o perfil mantém-se. Matches já bem-sucedidos continuam a contar.",
     },
     "ok.exit_feedback": {
         "zh": "谢谢反馈，我们会用来改进。",
