@@ -64,7 +64,7 @@
 
     <div id="pool-box" class="card box-dim" style="margin-top:14px;text-align:left;">
         <h3 style="margin-bottom:8px;" data-i18n="pace.title">你的节奏与账号</h3>
-        <p class="hint" style="margin:0 0 12px;" data-i18n="pace.hint">暂停匹配不会删资料；删号会清掉账号与配对记录，需再次确认。</p>
+        <p class="hint" style="margin:0 0 12px;" data-i18n="pace.hint">暂停匹配不会删资料，也不扣本周额度；已经正式配对成功的仍计入额度。删号会清掉账号与配对记录，需再次确认。</p>
 
         <label class="check-row" for="want-followup" style="margin-bottom:4px;">
             <input type="checkbox" id="want-followup" {% if user.want_match_followup %}checked{% endif %} onchange="saveFollowupPref()">
@@ -159,6 +159,7 @@
         <span data-i18n="q.mode">模式：</span><strong id="q-mode">{{ quota.match_mode }}</strong>
         · <span data-i18n="q.quota">本周额度：</span><strong id="q-remain">{{ quota.weekly_remaining }}</strong> / {{ quota.weekly_limit }}
         · <span data-i18n="q.cool">冷却</span> {{ quota.cooldown_hours }} <span data-i18n="q.hours">小时</span>
+        <span data-i18n="q.quotaHint" style="display:block;margin-top:4px;">仅在正式配对成功时扣 1 次；暂停、取消预约不扣；邀请成功可 +1。</span>
     </div>
 
     <div style="margin-top:12px;" id="instant-wrap">
