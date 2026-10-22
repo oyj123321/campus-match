@@ -289,7 +289,22 @@ def current_week_key(now=None):
     return now.strftime("%G-W%V")
 
 
+def apply_due_ahead_opt_ins(now=None):
+    """把已经到期的「下周有空」写成当周预约。人不在池里先留着。"""
+    from pool_rhythm import apply_ahead_opt_in
+
+    changed = False
+    for user in User.query.filter(User.next_availability == "yes").all():
+        if apply_ahead_opt_in(user, now=now):
+            changed = True
+    if changed:
+        db.session.commit()
+    return changed
+
+
 def ready_users(school=None, require_opt_in=False):
+    if require_opt_in:
+        apply_due_ahead_opt_ins()
     q = User.query.filter(
         User.email_verified == True,
         User.feature_vector_json.isnot(None),
@@ -669,6 +684,11 @@ def schedule_loop(mail_cfg_factory, check_seconds=30):
         now_ts = time.time()
         if now_ts - last_rule_mail >= 3600:
             try:
+                apply_due_ahead_opt_ins()
+            except Exception as e:
+                db.session.rollback()
+                print(f"[batch] 下周预约落周失败: {e}")
+            try:
                 notify_weekly_rule_change(mail_cfg_factory())
             except Exception as e:
                 db.session.rollback()
@@ -698,6 +718,11 @@ def schedule_loop(mail_cfg_factory, check_seconds=30):
         while time.time() < end:
             time.sleep(min(check_seconds, max(1, end - time.time())))
             if time.time() - last_rule_mail >= 3600:
+                try:
+                    apply_due_ahead_opt_ins()
+                except Exception as e:
+                    db.session.rollback()
+                    print(f"[batch] 下周预约落周失败: {e}")
                 try:
                     notify_weekly_rule_change(mail_cfg_factory())
                 except Exception as e:

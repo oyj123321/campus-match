@@ -128,6 +128,15 @@
             <button type="button" class="btn btn-secondary" onclick="loadHistory()" data-i18n="btn.current">查看当前配对</button>
             <a href="/questionnaire" class="btn btn-secondary" data-i18n="btn.editQ">修改问卷</a>
         </div>
+        <div id="next-week-box" style="margin-top:14px;">
+            <p class="hint" style="margin:0 0 8px;" data-i18n="next.ask">下周你有空吗？</p>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                <button type="button" class="choice-chip" id="next-yes" onclick="setNextAvailability('yes')" data-i18n="next.yes">有</button>
+                <button type="button" class="choice-chip" id="next-no" onclick="setNextAvailability('no')" data-i18n="next.no">无</button>
+                <button type="button" class="choice-chip" id="next-later" onclick="setNextAvailability('later')" data-i18n="next.later">再说</button>
+            </div>
+            <p class="hint" id="next-week-note" style="margin:8px 0 0;" data-i18n="next.hint">选「有」会直接预约下周。选「无」下周不进。选「再说」下周还是要自己点。</p>
+        </div>
     </div>
 
     <div id="cross-box" class="card box-dim" style="margin-top:14px;text-align:left;">
@@ -257,6 +266,12 @@ function renderQuota(q) {
     optBtn.textContent = q.opted_in ? t('btn.optout') : t('btn.optin');
     optBtn.className = q.opted_in ? 'btn btn-secondary' : 'btn btn-primary';
     optBtn.disabled = !openOn;
+    ['yes', 'no', 'later'].forEach(function (choice) {
+        var el = document.getElementById('next-' + choice);
+        if (!el) return;
+        el.disabled = !openOn;
+        el.className = 'choice-chip' + (q.next_availability === choice ? ' is-on' : '');
+    });
 
     var crossBox = document.getElementById('cross-box');
     if (crossBox) {
@@ -417,6 +432,13 @@ async function toggleOptIn() {
     if (d.quota) renderQuota(d.quota);
     else await refreshQuota();
     alert(opted ? t('al.optout') : (d.message || t('al.optin')));
+}
+
+async function setNextAvailability(choice) {
+    var d = await api('POST', '/api/match/next-availability', { choice: choice });
+    if (!d.ok) { alert(d.error || t('al.fail')); return; }
+    if (d.quota) renderQuota(d.quota);
+    else await refreshQuota();
 }
 
 function renderCrossList(q) {

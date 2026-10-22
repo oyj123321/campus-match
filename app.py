@@ -476,6 +476,10 @@ def apply_education_fields(user, data, required=False):
 
 def match_quota_status(user):
     """计算冷却 / 本周额度 / 预约揭晓状态。"""
+    from pool_rhythm import apply_ahead_opt_in, next_week_key
+
+    if apply_ahead_opt_in(user):
+        db.session.commit()
     used = count_new_matches_this_week(user.id)
     limit = weekly_limit_for(user)
     remaining = max(0, limit - used)
@@ -489,6 +493,8 @@ def match_quota_status(user):
     mode = MATCH_MODE if MATCH_MODE != "realtime" else "one_to_one"
     week = current_week_key()
     opted_in = (user.opt_in_week == week)
+    upcoming = next_week_key()
+    next_choice = user.next_availability if user.next_availability_week == upcoming else None
     now = datetime.now()
     # 本周是否已过揭晓时刻（周二 BATCH_MATCH_HOUR 之后）
     reveal_happened_this_week = now.weekday() > BATCH_MATCH_DAY or (
@@ -513,6 +519,7 @@ def match_quota_status(user):
         "match_mode": mode,
         "week_key": week,
         "opted_in": opted_in,
+        "next_availability": next_choice,
         "reveal_require_opt_in": REVEAL_REQUIRE_OPT_IN,
         "reveal_happened_this_week": reveal_happened_this_week,
         "has_active_match": bool(active_match),
@@ -1543,6 +1550,29 @@ def api_match_opt_in():
     })
 
 
+@app.route("/api/match/next-availability", methods=["POST"])
+@login_required
+def api_match_next_availability():
+    """下周有空吗：有则预先预约，无则下周不进，再说则下周仍要自己点。"""
+    from pool_rhythm import set_next_availability
+
+    user = get_current_user()
+    if not user.ready_to_match():
+        return api_err("err.need_ready_optin")
+    if not user.is_open_to_match():
+        body, status = api_err("err.need_open_optin", 403)
+        payload = body.get_json()
+        payload["quota"] = match_quota_status(user)
+        return jsonify(payload), status
+
+    choice = (request.get_json(silent=True) or {}).get("choice") or request.form.get("choice")
+    if choice not in ("yes", "no", "later"):
+        return api_err("err.bad_request", 400)
+    set_next_availability(user, choice)
+    db.session.commit()
+    return jsonify({"ok": True, "next_availability": choice, "quota": match_quota_status(user)})
+
+
 @app.route("/api/matches", methods=["GET"])
 @login_required
 def api_get_matches():
@@ -1987,6 +2017,17 @@ def ensure_schema():
         db.session.execute(text("ALTER TABLE users ADD COLUMN rhythm_grace_week VARCHAR(16)"))
         db.session.commit()
         print("[CampusMatch] migrated: users.rhythm_grace_week")
+
+    if "next_availability" not in user_cols:
+        db.session.execute(text("ALTER TABLE users ADD COLUMN next_availability VARCHAR(8)"))
+        db.session.commit()
+        print("[CampusMatch] migrated: users.next_availability")
+        user_cols.add("next_availability")
+
+    if "next_availability_week" not in user_cols:
+        db.session.execute(text("ALTER TABLE users ADD COLUMN next_availability_week VARCHAR(16)"))
+        db.session.commit()
+        print("[CampusMatch] migrated: users.next_availability_week")
 
     if "quota_bonus" not in user_cols:
         db.session.execute(text("ALTER TABLE users ADD COLUMN quota_bonus INTEGER DEFAULT 0"))

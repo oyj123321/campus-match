@@ -1,7 +1,10 @@
 import unittest
 from datetime import datetime, timedelta
 
-from pool_rhythm import grant_debut_week, grant_transition_week, is_dormant, current_week_key
+from pool_rhythm import (
+    grant_debut_week, grant_transition_week, is_dormant, current_week_key,
+    set_next_availability, apply_ahead_opt_in, next_week_key,
+)
 
 
 class Fake:
@@ -11,6 +14,8 @@ class Fake:
         self.dormant_notice_at = None
         self.weekly_rule_notice_at = None
         self.rhythm_grace_week = None
+        self.next_availability = None
+        self.next_availability_week = None
         self.open = True
         self.ready = True
         self.last_login_at = datetime.utcnow()
@@ -106,6 +111,37 @@ class PoolRhythmTests(unittest.TestCase):
         self.assertFalse(grant_transition_week(paired, week=week, has_active_match=True))
         self.assertIsNone(paired.opt_in_week)
         self.assertEqual(paired.rhythm_grace_week, week)
+
+    def test_yes_books_the_following_week_once(self):
+        now = datetime(2026, 10, 22, 12, 0, 0)
+        user = Fake()
+        set_next_availability(user, "yes", now)
+        self.assertEqual(user.next_availability_week, next_week_key(now))
+        self.assertFalse(apply_ahead_opt_in(user, now))
+        self.assertIsNone(user.opt_in_week)
+        later = now + timedelta(days=7)
+        self.assertTrue(apply_ahead_opt_in(user, later))
+        self.assertEqual(user.opt_in_week, current_week_key(later))
+        user.opt_in_week = None
+        self.assertFalse(apply_ahead_opt_in(user, later))
+        self.assertIsNone(user.opt_in_week)
+
+    def test_no_and_later_do_not_book_ahead(self):
+        now = datetime(2026, 10, 22, 12, 0, 0)
+        later = now + timedelta(days=7)
+        for choice in ("no", "later"):
+            user = Fake()
+            set_next_availability(user, choice, now)
+            self.assertFalse(apply_ahead_opt_in(user, later))
+            self.assertIsNone(user.opt_in_week)
+
+    def test_yes_can_be_changed_before_the_week(self):
+        now = datetime(2026, 10, 22, 12, 0, 0)
+        user = Fake()
+        set_next_availability(user, "yes", now)
+        set_next_availability(user, "no", now)
+        self.assertFalse(apply_ahead_opt_in(user, now + timedelta(days=7)))
+        self.assertIsNone(user.opt_in_week)
 
 
 if __name__ == "__main__":

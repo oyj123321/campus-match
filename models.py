@@ -97,6 +97,9 @@ class User(db.Model):
     last_matched_at = db.Column(db.DateTime, nullable=True)
     # 本周预约匹配：ISO 周键，如 "2026-W31"；与当前周相同表示已 opt-in
     opt_in_week = db.Column(db.String(16))
+    # 对「下一周」的回答：yes 有 / no 无 / later 再说。只作用于 next_availability_week。
+    next_availability = db.Column(db.String(8))
+    next_availability_week = db.Column(db.String(16))
     # 第一次进池时自动预约过的时间；有值后不再自动续周
     debut_opted_at = db.Column(db.DateTime, nullable=True)
     # 连续三周未出现、提醒信已发出的时间。登录或再次预约后清空，才会再提醒。

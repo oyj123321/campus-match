@@ -573,6 +573,10 @@ input[type="radio"] {
     white-space: nowrap;
     color: #1c1b19;
 }
+button.choice-chip {
+    font: inherit;
+}
+.choice-chip.is-on,
 .choice-chip:has(input:checked) {
     background: #1c1b19;
     border-color: #1c1b19;

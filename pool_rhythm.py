@@ -10,6 +10,36 @@ def current_week_key(now=None):
     return now.strftime("%G-W%V")
 
 
+def next_week_key(now=None):
+    now = now or datetime.now()
+    return current_week_key(now + timedelta(days=7))
+
+
+def set_next_availability(user, choice, now=None):
+    """有 = 预先预约下周；无 = 下周不进；再说 = 下周仍要自己点。"""
+    if choice not in ("yes", "no", "later"):
+        raise ValueError(choice)
+    user.next_availability = choice
+    user.next_availability_week = next_week_key(now)
+
+
+def apply_ahead_opt_in(user, now=None):
+    """「有」指向的那一周到了，就写成当周预约。写下后清掉，取消预约不会被写回去。"""
+    now = now or datetime.now()
+    week = current_week_key(now)
+    if getattr(user, "next_availability", None) != "yes":
+        return False
+    if getattr(user, "next_availability_week", None) != week:
+        return False
+    if not user.is_open_to_match() or not user.ready_to_match():
+        return False
+    user.next_availability = None
+    user.next_availability_week = None
+    if user.opt_in_week != week:
+        user.opt_in_week = week
+    return True
+
+
 def recent_week_keys(now=None, weeks=3):
     now = now or datetime.now()
     return {current_week_key(now - timedelta(days=7 * i)) for i in range(weeks)}
