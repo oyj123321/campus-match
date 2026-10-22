@@ -2,6 +2,18 @@
 
 All notable changes to CampusMatch.
 
+## [1.9.70] — 2026-10-22
+
+### 问题（上次）
+- 网站没有 logo。浏览器标签页、收藏夹、手机添加到主屏幕都是空白图标，导航栏只有文字。
+
+### 改动
+- **Added**：logo「交叠双圆」，墨黑圆角方块上两个米白圆，交集处暖橙。源文件 `static/brand/logo.svg`，PNG/ICO 由 `scripts/gen_brand_icons.py` 生成：网站图标（favicon-32.png、favicon.ico）、苹果主屏幕图标（apple-touch-icon.png）、安卓与分享图标（icon-192.png、icon-512.png，配 site.webmanifest）。
+- **Added**：`/favicon.ico` 路由，搜索引擎和老浏览器直接访问也能拿到图标。
+- **Added**：导航栏左上角「CampusMatch」前加上 logo，手机端略小。首页原来的小黑点换成 logo。四个管理后台页面也带上网站图标。万圣节期间导航栏仍用南瓜，活动结束后自动换回 logo。
+- **Added**：`static/brand/concepts/` 留着四版设计稿（交叠双圆、心加学士帽、CM 字标、连线双点）和预览页，供以后改版对照。
+- **Deploy**：无数据库改动，拉代码重启即可。
+
 ## [1.9.69] — 2026-10-22
 
 ### 问题（上次）

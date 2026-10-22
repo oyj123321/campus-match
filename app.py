@@ -638,6 +638,11 @@ def support_page():
     return render_template("support.html", qrs=qrs, contact_email=CONTACT_EMAIL)
 
 
+@app.route("/favicon.ico")
+def favicon():
+    return app.send_static_file("brand/favicon.ico")
+
+
 @app.route("/")
 def index():
     user = get_current_user()

@@ -256,6 +256,11 @@ body {
     font-size: 1.15em; font-weight: 700; text-decoration: none; letter-spacing: -0.02em;
     background: none; -webkit-background-clip: border-box; background-clip: border-box;
     -webkit-text-fill-color: #141413; color: #141413;
+    display: inline-flex; align-items: center; gap: 9px;
+}
+.nav-brand::before {
+    content: ""; width: 26px; height: 26px; flex-shrink: 0;
+    background: url("/static/brand/logo.svg?v=1") center / contain no-repeat;
 }
 .nav-right { display: flex; align-items: center; gap: 20px; font-size: 0.95em; }
 .nav-link { color: var(--text-secondary); text-decoration: none; transition: color 0.15s; }
@@ -789,7 +794,8 @@ textarea.open-letter:focus {
         flex-wrap: wrap;
         align-items: center;
     }
-    .nav-brand { font-size: 0.95em; flex-shrink: 0; }
+    .nav-brand { font-size: 0.95em; flex-shrink: 0; gap: 7px; }
+    .nav-brand::before { width: 22px; height: 22px; }
     .nav-right {
         gap: 8px;
         flex: 1 1 auto;
