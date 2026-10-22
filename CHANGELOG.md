@@ -2,6 +2,17 @@
 
 All notable changes to CampusMatch.
 
+## [1.9.69] — 2026-10-22
+
+### 问题（上次）
+- 网站只有秋日主题，万圣节没有任何节日界面。
+
+### 改动
+- **Added**：万圣限定界面，10.22 – 11.01（澳门时间）自动开启，`.env` 里 `FESTIVAL_HALLOWEEN=on/off` 可强制开关（`config.py`）。
+- **Added**：全站暗色夜场主题 `static/festival-halloween.css`：血月和蝙蝠、飘动幽灵、地面南瓜灯和墓碑、城堡剪影、余烬粒子；导航、卡片、表单、按钮同步换色。首页加限定横幅（四语言），首页画布改为紫橙配色（`static/landing-stage.js`）。人格分享卡不受暗色影响。
+- **Added**：素材来自 Microsoft Fluent UI Emoji（MIT）、Twemoji（CC-BY 4.0）、Tabler Icons（MIT），字体 Creepster（SIL OFL），许可见 `static/festival/halloween/LICENSE` 与 `static/fonts/Creepster-OFL.txt`。
+- **Deploy**：无数据库改动，拉代码重启即可。
+
 ## [1.9.68] — 2026-10-22
 
 ### 问题（上次）

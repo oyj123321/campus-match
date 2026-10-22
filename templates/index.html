@@ -6,6 +6,15 @@
 {% block content %}
 <section class="ed-hero">
     <div class="ed-hero-copy">
+        {% if festival_halloween %}
+        <div class="hw-hero-ribbon">
+            <img class="hw-ribbon-img" src="/static/festival/halloween/fluent-pumpkin.svg" alt="">
+            <span class="hw-creepy-tag">HALLOWEEN NIGHT</span>
+            <span class="hw-ribbon-sep">·</span>
+            <span data-i18n="hw.ribbon">万圣限定夜场 · 10.22 – 11.01</span>
+            <img class="hw-ribbon-img" src="/static/festival/halloween/fluent-ghost.svg" alt="">
+        </div>
+        {% endif %}
         <p class="ed-kicker" data-i18n="kicker">Campus Match · 澳门 & 大湾区</p>
         <h1>
             <span data-i18n="hero.t1">在你的校园里，</span><br>
@@ -25,6 +34,10 @@
 </section>
 
 <div class="ed-board">
+    {% if festival_halloween %}
+    <img class="hw-board-pumpkin" src="/static/festival/halloween/fluent-pumpkin.svg" alt="" aria-hidden="true">
+    <img class="hw-board-bat" src="/static/festival/halloween/fluent-bat.svg" alt="" aria-hidden="true">
+    {% endif %}
     <div class="ed-stage" id="ed-stage" aria-hidden="true">
         <canvas id="ed-stage-canvas"></canvas>
         <span class="ed-scan"></span>
@@ -189,6 +202,10 @@
 </section>
 
 <section class="ed-cta">
+    {% if festival_halloween %}
+    <img class="hw-cta-pumpkin" src="/static/festival/halloween/fluent-pumpkin.svg" alt="" aria-hidden="true">
+    <img class="hw-cta-crystal" src="/static/festival/halloween/fluent-crystal-ball.svg" alt="" aria-hidden="true">
+    {% endif %}
     <div>
         <h2 data-i18n="cta.title">准备好了？</h2>
         <p data-i18n="cta.sub">用学校邮箱开始。完整问卷会优先匹配；隐私模式约 2 分钟能进池，但优先级更低。</p>
@@ -197,7 +214,7 @@
        onclick="document.getElementById('email').focus(); return true;" data-i18n="cta.btn">立即开始匹配</a>
 </section>
 
-<script src="/static/landing-stage.js?v=5"></script>
+<script src="/static/landing-stage.js?v=6"></script>
 <script>
 var currentEmail = '';
 (function prefInvite() {

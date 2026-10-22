@@ -172,5 +172,20 @@ def festival_autumn_active():
     return FESTIVAL_AUTUMN_START <= today <= FESTIVAL_AUTUMN_END
 
 
+# 万圣节当周到次日：澳门时区。FESTIVAL_HALLOWEEN=on/off 可强制开关。
+FESTIVAL_HALLOWEEN_START = date(2026, 10, 22)
+FESTIVAL_HALLOWEEN_END = date(2026, 11, 1)
+
+
+def festival_halloween_active():
+    flag = (os.environ.get("FESTIVAL_HALLOWEEN") or "").strip().lower()
+    if flag in ("1", "true", "on", "yes"):
+        return True
+    if flag in ("0", "false", "off", "no"):
+        return False
+    today = datetime.now(timezone(timedelta(hours=8))).date()
+    return FESTIVAL_HALLOWEEN_START <= today <= FESTIVAL_HALLOWEEN_END
+
+
 # weekday 显示名（供前端）
 WEEKDAY_LABELS = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"]

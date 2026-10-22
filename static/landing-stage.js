@@ -120,11 +120,25 @@
         return path[0] === 0 ? path : [];
     }
 
+    function isHalloween() {
+        return document.body && document.body.classList && document.body.classList.contains('fest-halloween');
+    }
+
     function tick(now) {
         if (!t0) t0 = now;
         var t = (now - t0) / 1000;
-        ctx.fillStyle = '#0b0a09';
+        var hw = isHalloween();
+        ctx.fillStyle = hw ? '#07040d' : '#0b0a09';
         ctx.fillRect(0, 0, w, h);
+
+        if (hw) {
+            var moonGlow = ctx.createRadialGradient(w * 0.78, h * 0.24, 2, w * 0.78, h * 0.24, Math.min(w, h) * 0.36);
+            moonGlow.addColorStop(0, 'rgba(255, 138, 36, 0.22)');
+            moonGlow.addColorStop(0.45, 'rgba(168, 85, 247, 0.08)');
+            moonGlow.addColorStop(1, 'rgba(7, 4, 13, 0)');
+            ctx.fillStyle = moonGlow;
+            ctx.fillRect(0, 0, w, h);
+        }
 
         var gx = mouse.x * w;
         var gy = mouse.y * h;
@@ -168,7 +182,9 @@
                 if (j <= i) continue;
                 if (pathEdge[i + '-' + j]) continue;
                 var fade = 1 - list[k].d / LINK;
-                ctx.strokeStyle = 'rgba(210, 196, 168,' + (0.14 + 0.22 * fade) + ')';
+                ctx.strokeStyle = hw
+                    ? 'rgba(168, 85, 247,' + (0.16 + 0.26 * fade) + ')'
+                    : 'rgba(210, 196, 168,' + (0.14 + 0.22 * fade) + ')';
                 ctx.lineWidth = 0.9;
                 ctx.beginPath();
                 ctx.moveTo(nodes[i].x, nodes[i].y);
@@ -181,13 +197,17 @@
         for (i = 0; i < path.length - 1; i++) {
             var a = nodes[path[i]];
             var b = nodes[path[i + 1]];
-            ctx.strokeStyle = 'rgba(255, 214, 150,' + (0.18 + 0.12 * pulse) + ')';
+            ctx.strokeStyle = hw
+                ? 'rgba(255, 117, 24,' + (0.24 + 0.16 * pulse) + ')'
+                : 'rgba(255, 214, 150,' + (0.18 + 0.12 * pulse) + ')';
             ctx.lineWidth = 4.2;
             ctx.beginPath();
             ctx.moveTo(a.x, a.y);
             ctx.lineTo(b.x, b.y);
             ctx.stroke();
-            ctx.strokeStyle = 'rgba(255, 236, 205,' + (0.55 + 0.3 * pulse) + ')';
+            ctx.strokeStyle = hw
+                ? 'rgba(255, 200, 87,' + (0.68 + 0.28 * pulse) + ')'
+                : 'rgba(255, 236, 205,' + (0.55 + 0.3 * pulse) + ')';
             ctx.lineWidth = 1.35;
             ctx.beginPath();
             ctx.moveTo(a.x, a.y);
@@ -211,19 +231,21 @@
             for (i = 0; i < trail.length; i++) {
                 var tr = trail[i];
                 var ta = (i + 1) / trail.length;
-                ctx.fillStyle = 'rgba(255, 246, 220,' + (0.12 * ta) + ')';
+                ctx.fillStyle = hw
+                    ? 'rgba(255, 122, 24,' + (0.18 * ta) + ')'
+                    : 'rgba(255, 246, 220,' + (0.12 * ta) + ')';
                 ctx.beginPath();
                 ctx.arc(tr.x, tr.y, 1.2 + 2.2 * ta, 0, Math.PI * 2);
                 ctx.fill();
             }
             var tg = ctx.createRadialGradient(px, py, 0, px, py, 10);
-            tg.addColorStop(0, 'rgba(255, 250, 235, 0.95)');
-            tg.addColorStop(1, 'rgba(255, 220, 160, 0)');
+            tg.addColorStop(0, hw ? 'rgba(255, 225, 130, 0.98)' : 'rgba(255, 250, 235, 0.95)');
+            tg.addColorStop(1, hw ? 'rgba(255, 107, 26, 0)' : 'rgba(255, 220, 160, 0)');
             ctx.fillStyle = tg;
             ctx.beginPath();
             ctx.arc(px, py, 10, 0, Math.PI * 2);
             ctx.fill();
-            ctx.fillStyle = '#fff8ea';
+            ctx.fillStyle = hw ? '#ffd166' : '#fff8ea';
             ctx.beginPath();
             ctx.arc(px, py, 2.1, 0, Math.PI * 2);
             ctx.fill();
@@ -240,7 +262,7 @@
                 var breathe = 0.7 + 0.3 * Math.sin(t * 1.8);
                 r = q.r + 0.8;
                 var halo = ctx.createRadialGradient(q.x, q.y, 0, q.x, q.y, 22);
-                halo.addColorStop(0, 'rgba(255, 230, 190,' + (0.28 * breathe) + ')');
+                halo.addColorStop(0, hw ? 'rgba(255, 117, 24,' + (0.36 * breathe) + ')' : 'rgba(255, 230, 190,' + (0.28 * breathe) + ')');
                 halo.addColorStop(1, 'rgba(255, 230, 190, 0)');
                 ctx.fillStyle = halo;
                 ctx.beginPath();
@@ -248,7 +270,9 @@
                 ctx.fill();
                 glow = 0.82 + 0.18 * breathe;
             }
-            ctx.fillStyle = 'rgba(255, 236, 205,' + glow + ')';
+            ctx.fillStyle = hw
+                ? (onPath[i] ? 'rgba(255, 176, 72,' + glow + ')' : 'rgba(216, 180, 254,' + glow + ')')
+                : 'rgba(255, 236, 205,' + glow + ')';
             ctx.beginPath();
             ctx.arc(q.x, q.y, r, 0, Math.PI * 2);
             ctx.fill();

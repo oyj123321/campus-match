@@ -33,7 +33,7 @@ from config import (
     LOGIN_ONCE_PER_DAY, SITE_ANNOUNCEMENT, SITE_ANNOUNCEMENT_I18N,
     SESSION_REMEMBER_DAYS, DEVICE_COOKIE_NAME,
     CROSS_DEGREE_LEGACY_BEFORE,
-    festival_autumn_active,
+    festival_autumn_active, festival_halloween_active,
 )
 from models import db, User, UserTag, Match, Blocklist, AccountDeletion, EXPRESS_BIO_MIN, EDUCATION_LEVELS, EXIT_REASON_CODES
 from models import PoolEvent, WeeklyParticipation
@@ -91,6 +91,7 @@ def inject_globals():
         "current_user": user,
         "questionnaire_incomplete": incomplete,
         "festival_autumn": festival_autumn_active(),
+        "festival_halloween": festival_halloween_active(),
     }
 
 
