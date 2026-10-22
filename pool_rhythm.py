@@ -46,7 +46,7 @@ def grant_transition_week(user, week=None, has_active_match=False):
 
 
 def is_dormant(user, now_utc=None, now_local=None):
-    """连续三周没登录，且近三周都没有预约。已提醒过的不重复算。"""
+    """规则说明发出满三周后，仍三周没登录、近三周也没预约。已提醒过的不重复算。"""
     if not user.is_open_to_match():
         return False
     if getattr(user, "dormant_notice_at", None):
@@ -54,6 +54,10 @@ def is_dormant(user, now_utc=None, now_local=None):
     if not user.in_match_pool():
         return False
     now_utc = now_utc or datetime.utcnow()
+    # 规则说明发出后满三周仍不来，才提醒。没收到说明、或说明还不满三周，不算。
+    told = getattr(user, "weekly_rule_notice_at", None)
+    if told is None or told > now_utc - timedelta(days=DORMANT_DAYS):
+        return False
     seen = user.last_login_at or user.created_at
     if seen is None or seen >= now_utc - timedelta(days=DORMANT_DAYS):
         return False
