@@ -623,7 +623,7 @@ SUPPORT_QR_CANDIDATES = (
 
 @app.route("/support")
 def support_page():
-    """自愿赞助（全站唯一官方赞助入口，二维码只在此出现）。"""
+    """自愿打赏（打赏二维码只在此出现；不出售匹配，也不能购买破冰扩展包）。"""
     qrs = []
     for name, label_key, fallback in SUPPORT_QR_CANDIDATES:
         for ext in ("png", "jpg", "jpeg", "webp"):
