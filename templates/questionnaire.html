@@ -127,15 +127,15 @@
 
     <div class="card" style="text-align:center;">
         <p class="hint" style="margin:0 0 12px;line-height:1.6;" data-i18n="qn.noguarantee">每周一对一有额度；池子偏小、取向不合或硬性底线冲突时，可能配不上——填完问卷不等于保证有对象。</p>
-        <button type="button" class="btn btn-match" id="submit-btn" onclick="submitAll()" data-i18n="qn.submit">
-            提交问卷 & 开始匹配
-        </button>
+        <p class="hint" style="margin:0 0 12px;line-height:1.6;" data-i18n="qn.beforeSubmit">交卷不会马上开始匹配。参与匹配开着时，第一次提交会自动预约本周。从下周起，每一周都要到匹配页点「预约本周匹配」才进当周池，不点就不匹配。</p>
+        <button type="button" class="btn btn-match" id="submit-btn" onclick="submitAll()" data-i18n="qn.submit">提交问卷</button>
         <p id="save-status" style="margin-top:8px;"></p>
     </div>
 </form>
 
 <div class="card" id="express-submit-card" style="text-align:center;display:none;">
     <p class="hint" style="margin:0 0 12px;line-height:1.6;" data-i18n="qn.express.submitHint">不填 39 题，匹配主要看这段自我介绍。能进池，但会排在问卷用户后面；对方会看到你是隐私用户。想被优先匹配，请改填完整问卷。</p>
+    <p class="hint" style="margin:0 0 12px;line-height:1.6;" data-i18n="qn.express.book">保存不会马上配对。参与匹配开着时，第一次会自动预约本周。之后每周都要到匹配页点「预约本周匹配」，不点就不进当周池。</p>
     <button type="button" class="btn btn-match" id="express-submit-btn" onclick="submitExpress()" data-i18n="qn.express.submit">保存隐私资料并进池</button>
     <p id="express-save-status" style="margin-top:8px;"></p>
 </div>
@@ -167,8 +167,9 @@
             </details>
             <p class="hint lp-disc-corner lp-no-capture" data-i18n="lp.shareDisc">问卷规则生成 · 仅供娱乐</p>
         </div>
+        <p class="hint" data-i18n="lp.bookRule" style="margin:0 0 10px;line-height:1.65;text-align:center;">匹配还没开始。请到匹配页看本周是否已预约：没预约就要点「预约本周匹配」才进本周池。参与匹配开着时，只有第一次提交会自动预约本周；从下周起每周都要自己点，不点就不匹配。</p>
         <div class="personality-actions" style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;">
-            <a class="btn btn-primary" href="/matches" data-i18n="lp.goMatches">进入匹配页</a>
+            <a class="btn btn-primary" href="/matches#reveal-box" data-i18n="lp.goMatches">去匹配页看本周预约</a>
             <button type="button" class="btn btn-secondary" id="lp-modal-share" data-i18n="lp.share">分享报告</button>
         </div>
     </div>
@@ -609,7 +610,7 @@ async function submitAll() {
         if (p && (p.code || p.name)) {
             showPersonalityModal(p);
         } else {
-            setTimeout(function () { location.href = '/matches'; }, 600);
+            setTimeout(function () { location.href = '/matches#reveal-box'; }, 600);
         }
     } else {
         status.innerHTML = '<span class="error">' + t('qn.saveFail') + esc(r2.error || '') + '</span>';
@@ -796,7 +797,7 @@ async function submitExpress() {
         return;
     }
     status.innerHTML = '<span class="t-ok">' + esc(r.message || t('qn.express.saved')) + '</span>';
-    setTimeout(function () { location.href = '/matches'; }, 600);
+    setTimeout(function () { location.href = '/matches#reveal-box'; }, 600);
 }
 
 render();

@@ -17,6 +17,9 @@
     <a href="/questionnaire" class="btn btn-secondary" data-i18n="m.privacySelfCta">去填完整问卷</a>
 </div>
 {% endif %}
+<div id="optin-gap-banner" class="box box-warn" style="margin-bottom:14px;text-align:left;{% if not (user.ready_to_match() and user.is_open_to_match() and quota.reveal_require_opt_in and not quota.opted_in) %}display:none;{% endif %}">
+    <p style="margin:0;font-weight:700;line-height:1.65;" data-i18n="m.optinGap">本周还没进池。点「预约本周匹配」才会参加本周揭晓；不点就不匹配。</p>
+</div>
 <div class="card" style="text-align:center;">
     <h2><span data-school="{{ user.school }}">{{ user.school }}</span> · <span data-i18n="m.center">匹配中心</span></h2>
     <p class="hint" style="font-size:0.9em;">
@@ -64,7 +67,7 @@
 
     <div id="pool-box" class="card box-dim" style="margin-top:14px;text-align:left;">
         <h3 style="margin-bottom:8px;" data-i18n="pace.title">你的节奏与账号</h3>
-        <p class="hint" style="margin:0 0 12px;" data-i18n="pace.hint">暂停匹配不会删资料；删号会清掉账号与配对记录，需再次确认。</p>
+        <p class="hint" style="margin:0 0 12px;" data-i18n="pace.hint">暂停匹配不会删资料，也不扣本周额度；已经正式配对成功的仍计入额度。删号会清掉账号与配对记录，需再次确认。</p>
 
         <label class="check-row" for="want-followup" style="margin-bottom:4px;">
             <input type="checkbox" id="want-followup" {% if user.want_match_followup %}checked{% endif %} onchange="saveFollowupPref()">
@@ -122,7 +125,7 @@
         <p style="margin:8px 0;"><span data-i18n="rv.next">下次揭晓：</span><strong id="q-next-label">{{ quota.next_batch_label }}</strong>
             · <span id="q-countdown" data-i18n="rv.calc">计算中…</span></p>
         <p class="hint"><span data-i18n="rv.optin">本周预约状态：</span><strong id="q-optin">…</strong></p>
-        <p class="hint" data-i18n="rv.weekRule">从第二周起，每周都要自己点下面的确认才会匹配。连续三周不来，会发一封邮件提醒。</p>
+        <p class="hint" data-i18n="rv.weekRule">从第二周起，每周都要自己点「预约本周匹配」才会进当周池。连续三周不来，会发一封邮件提醒。</p>
         <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">
             <button type="button" class="btn btn-primary" id="optin-btn" onclick="toggleOptIn()" data-i18n="btn.optin">预约本周匹配</button>
             <button type="button" class="btn btn-secondary" onclick="loadHistory()" data-i18n="btn.current">查看当前配对</button>
@@ -168,6 +171,7 @@
         <span data-i18n="q.mode">模式：</span><strong id="q-mode">{{ quota.match_mode }}</strong>
         · <span data-i18n="q.quota">本周额度：</span><strong id="q-remain">{{ quota.weekly_remaining }}</strong> / {{ quota.weekly_limit }}
         · <span data-i18n="q.cool">冷却</span> {{ quota.cooldown_hours }} <span data-i18n="q.hours">小时</span>
+        <span data-i18n="q.quotaHint" style="display:block;margin-top:4px;">仅在正式配对成功时扣 1 次；暂停、取消预约不扣；邀请成功可 +1。</span>
     </div>
 
     <div style="margin-top:12px;" id="instant-wrap">
@@ -266,6 +270,8 @@ function renderQuota(q) {
     optBtn.textContent = q.opted_in ? t('btn.optout') : t('btn.optin');
     optBtn.className = q.opted_in ? 'btn btn-secondary' : 'btn btn-primary';
     optBtn.disabled = !openOn;
+    var gap = document.getElementById('optin-gap-banner');
+    if (gap) gap.style.display = (q.reveal_require_opt_in && openOn && !q.opted_in) ? '' : 'none';
     ['yes', 'no', 'later'].forEach(function (choice) {
         var el = document.getElementById('next-' + choice);
         if (!el) return;
