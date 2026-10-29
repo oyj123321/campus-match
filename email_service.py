@@ -80,6 +80,61 @@ campusmatch.com.cn"""
     return _dispatch_email(to_email, subject, body, mail_config, text_body, kind='verification')
 
 
+def send_weekly_rule_notice_email(to_email, mail_config):
+    """告诉老用户：每一轮都要自己点预约本周。"""
+    site = (mail_config.get("public_url") or "https://campusmatch.com.cn").rstrip("/")
+    matches_url = site + "/matches"
+    subject = "CampusMatch：每周都要自己点「预约本周」"
+    text_body = f"""CampusMatch
+
+为少打扰大家学习和工作，本周开始每一轮都要自己打开匹配页，点「预约本周」才会进当周匹配，以保证大家匹配的有效性。只开着「参与匹配」、不点预约，就不会进新一轮。
+
+不想再配的人不用做任何事。还想参加，打开这里点一次即可：
+{matches_url}"""
+    body = f"""<!DOCTYPE html>
+<html lang="zh-CN">
+<head><meta charset="utf-8"></head>
+<body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Noto Sans SC',sans-serif;max-width:480px;margin:0 auto;padding:32px 24px;color:#18201c;line-height:1.7;">
+    <div style="font-family:Arial,sans-serif;font-size:26px;font-weight:800;color:#145f53;">CampusMatch</div>
+    <div style="width:42px;height:4px;background:#d8ec68;margin:16px 0 28px;"></div>
+    <p style="font-size:16px;margin:0 0 12px;">每周都要自己点「预约本周」。</p>
+    <p style="font-size:15px;margin:0 0 12px;">为少打扰大家学习和工作，本周开始每一轮都要自己打开匹配页，点「预约本周」才会进当周匹配，以保证大家匹配的有效性。只开着「参与匹配」、不点预约，就不会进新一轮。</p>
+    <p style="margin:20px 0;"><a href="{_html_esc(matches_url)}" style="display:inline-block;background:#1c1b19;color:#f3efe6;text-decoration:none;padding:12px 22px;border-radius:999px;font-weight:700;">打开匹配页</a></p>
+    <p style="font-size:13px;color:#52605a;margin:0;">不想再配的人不用做任何事。</p>
+</body>
+</html>"""
+    if not mail_config.get("enabled"):
+        print(f"[DEV] 每周预约说明 → {to_email} {matches_url}")
+        return True, "dev-printed"
+    return _dispatch_email(to_email, subject, body, mail_config, text_body, kind='optional')
+
+
+def send_dormant_reminder_email(to_email, mail_config):
+    """三周没来：请他回来看看。不讲每周预约，那是另一封说明信。"""
+    site = (mail_config.get("public_url") or "https://campusmatch.com.cn").rstrip("/")
+    subject = "CampusMatch：三周没来了"
+    text_body = f"""CampusMatch
+
+三周没用了，记得回来看看。
+
+{site}"""
+    body = f"""<!DOCTYPE html>
+<html lang="zh-CN">
+<head><meta charset="utf-8"></head>
+<body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Noto Sans SC',sans-serif;max-width:480px;margin:0 auto;padding:32px 24px;color:#18201c;line-height:1.7;">
+    <div style="font-family:Arial,sans-serif;font-size:26px;font-weight:800;color:#145f53;">CampusMatch</div>
+    <div style="width:42px;height:4px;background:#d8ec68;margin:16px 0 28px;"></div>
+    <p style="font-size:16px;margin:0 0 12px;">三周没用了。</p>
+    <p style="font-size:15px;margin:0 0 12px;">记得回来看看。</p>
+    <p style="margin:20px 0;"><a href="{_html_esc(site)}" style="display:inline-block;background:#1c1b19;color:#f3efe6;text-decoration:none;padding:12px 22px;border-radius:999px;font-weight:700;">回来看看</a></p>
+</body>
+</html>"""
+    if not mail_config.get("enabled"):
+        print(f"[DEV] 三周提醒 → {to_email} {site}")
+        return True, "dev-printed"
+    return _dispatch_email(to_email, subject, body, mail_config, text_body, kind='optional')
+
+
 def send_match_result_email(to_email, matches, mail_config, insight=None, reason=None):
     """发送匹配结果邮件。matches 为空时发「暂未配对」说明。
     reason: 可选，本轮未配上的简要原因（给人看的人话）。

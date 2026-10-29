@@ -147,9 +147,8 @@ DEVICE_COOKIE_NAME = "cm_device"
 CROSS_DEGREE_LEGACY_BEFORE = datetime(2026, 9, 4, 0, 0, 0)
 # 全站公告：.env 设 SITE_ANNOUNCEMENT= 可强制清空；未设置则用默认运营文案
 _DEFAULT_SITE_ANNOUNCEMENT = (
-    "【重磅更新】校园广场来了！表白心动、认识新朋友、分享校园日常；未注册也可先看最新 3 条。"
-    "注册并验证学校邮箱后即可浏览全部、发帖、评论、点赞和收藏；支持匿名发布，表白帖审核后公开。"
-    "点击导航「校园广场」，从一句你好开始。"
+    "【更新】可配学历改为多选，默认只含自己的学历等级。为避免打扰大家工作学习，第一次参与后从下周起要自己打开匹配页，"
+    "点「预约本周」才进新一轮。连续三周不来会发一封提醒。"
 )
 if "SITE_ANNOUNCEMENT" in os.environ:
     SITE_ANNOUNCEMENT = os.environ.get("SITE_ANNOUNCEMENT", "").strip()
@@ -171,6 +170,21 @@ def festival_autumn_active():
         return False
     today = datetime.now(timezone(timedelta(hours=8))).date()
     return FESTIVAL_AUTUMN_START <= today <= FESTIVAL_AUTUMN_END
+
+
+# 万圣节当周到次日：澳门时区。FESTIVAL_HALLOWEEN=on/off 可强制开关。
+FESTIVAL_HALLOWEEN_START = date(2026, 10, 22)
+FESTIVAL_HALLOWEEN_END = date(2026, 11, 1)
+
+
+def festival_halloween_active():
+    flag = (os.environ.get("FESTIVAL_HALLOWEEN") or "").strip().lower()
+    if flag in ("1", "true", "on", "yes"):
+        return True
+    if flag in ("0", "false", "off", "no"):
+        return False
+    today = datetime.now(timezone(timedelta(hours=8))).date()
+    return FESTIVAL_HALLOWEEN_START <= today <= FESTIVAL_HALLOWEEN_END
 
 
 # weekday 显示名（供前端）

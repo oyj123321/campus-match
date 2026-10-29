@@ -33,7 +33,7 @@ from config import (
     LOGIN_ONCE_PER_DAY, SITE_ANNOUNCEMENT, SITE_ANNOUNCEMENT_I18N,
     SESSION_REMEMBER_DAYS, DEVICE_COOKIE_NAME,
     CROSS_DEGREE_LEGACY_BEFORE,
-    festival_autumn_active,
+    festival_autumn_active, festival_halloween_active,
 )
 from models import db, User, UserTag, Match, Blocklist, AccountDeletion, EXPRESS_BIO_MIN, EDUCATION_LEVELS, EXIT_REASON_CODES
 from models import PoolEvent, WeeklyParticipation
@@ -91,6 +91,7 @@ def inject_globals():
         "current_user": user,
         "questionnaire_incomplete": incomplete,
         "festival_autumn": festival_autumn_active(),
+        "festival_halloween": festival_halloween_active(),
     }
 
 
@@ -351,6 +352,7 @@ def _email_sent_today(user: User) -> bool:
 
 def _mark_login(user: User) -> None:
     user.last_login_at = datetime.utcnow()
+    user.dormant_notice_at = None
 
 
 def _cookie_secure() -> bool:
@@ -439,19 +441,46 @@ LOOKING_FOR_VALUES = {"male", "female", "both"}
 
 
 def apply_education_fields(user, data, required=False):
-    """写入学历 / 跨学历。required 时必须带合法 education_level。失败返回 api_err，成功返回 None。"""
+    """写入学历，以及愿意匹配的学历列表。required 时必须带合法 education_level。失败返回 api_err。"""
+    old_level = (user.education_level or "").strip()
+    had_explicit = bool(user.accepted_degrees_json)
+    previous = user.accepted_degree_list() if had_explicit else None
     if required or "education_level" in data:
         level = (data.get("education_level") or "").strip()
         if level not in EDUCATION_LEVELS:
             return api_err("err.education")
         user.education_level = level
-    if "allow_cross_degree" in data:
-        user.allow_cross_degree = bool(data.get("allow_cross_degree"))
+    if "accepted_degrees" in data:
+        raw = data.get("accepted_degrees")
+        if not isinstance(raw, list) or not user.set_accepted_degrees(raw):
+            return api_err("err.accept_degrees")
+    elif "allow_cross_degree" in data:
+        if data.get("allow_cross_degree"):
+            user.set_accepted_degrees(list(EDUCATION_LEVELS))
+        elif (user.education_level or "") in EDUCATION_LEVELS:
+            user.set_accepted_degrees([user.education_level])
+        else:
+            user.allow_cross_degree = False
+            user.accepted_degrees_json = None
+    else:
+        new_level = (user.education_level or "").strip()
+        if new_level in EDUCATION_LEVELS:
+            if not had_explicit:
+                if user.allow_cross_degree:
+                    user.set_accepted_degrees(list(EDUCATION_LEVELS))
+                else:
+                    user.set_accepted_degrees([new_level])
+            elif previous == [old_level] and old_level in EDUCATION_LEVELS and old_level != new_level:
+                user.set_accepted_degrees([new_level])
     return None
 
 
 def match_quota_status(user):
     """计算冷却 / 本周额度 / 预约揭晓状态。"""
+    from pool_rhythm import apply_ahead_opt_in, next_week_key
+
+    if apply_ahead_opt_in(user):
+        db.session.commit()
     used = count_new_matches_this_week(user.id)
     limit = weekly_limit_for(user)
     remaining = max(0, limit - used)
@@ -465,6 +494,8 @@ def match_quota_status(user):
     mode = MATCH_MODE if MATCH_MODE != "realtime" else "one_to_one"
     week = current_week_key()
     opted_in = (user.opt_in_week == week)
+    upcoming = next_week_key()
+    next_choice = user.next_availability if user.next_availability_week == upcoming else None
     now = datetime.now()
     # 本周是否已过揭晓时刻（周二 BATCH_MATCH_HOUR 之后）
     reveal_happened_this_week = now.weekday() > BATCH_MATCH_DAY or (
@@ -489,6 +520,7 @@ def match_quota_status(user):
         "match_mode": mode,
         "week_key": week,
         "opted_in": opted_in,
+        "next_availability": next_choice,
         "reveal_require_opt_in": REVEAL_REQUIRE_OPT_IN,
         "reveal_happened_this_week": reveal_happened_this_week,
         "has_active_match": bool(active_match),
@@ -499,6 +531,7 @@ def match_quota_status(user):
         "all_schools": list(SCHOOL_DOMAINS.keys()),
         "education_level": user.education_level if (user.education_level or "") in EDUCATION_LEVELS else None,
         "allow_cross_degree": bool(user.allow_cross_degree),
+        "accepted_degrees": user.accepted_degree_list(),
         "open_to_match": user.is_open_to_match(),
         "want_match_followup": bool(getattr(user, "want_match_followup", False)),
         "explain": _match_explain_text(mode),
@@ -603,6 +636,11 @@ def support_page():
                 })
                 break
     return render_template("support.html", qrs=qrs, contact_email=CONTACT_EMAIL)
+
+
+@app.route("/favicon.ico")
+def favicon():
+    return app.send_static_file("brand/favicon.ico")
 
 
 @app.route("/")
@@ -1101,6 +1139,8 @@ def api_express_profile():
     edu_err = apply_education_fields(user, data, required=True)
     if edu_err:
         return edu_err
+    if "education_level" in data or "accepted_degrees" in data or "allow_cross_degree" in data:
+        deactivate_filled_degree_violations(user)
     user.name = name[:32]
     user.gender = gender
     user.looking_for = looking_for
@@ -1121,7 +1161,9 @@ def api_express_profile():
     user.feature_vector = vec
     user.profile_mode = "privacy"
     from invite import try_redeem_invite
+    from pool_rhythm import grant_debut_week
     try_redeem_invite(user)
+    grant_debut_week(user)
     db.session.commit()
     return jsonify({"ok": True, "message": t_api("ok.express_saved"), "user": user.to_dict()})
 
@@ -1239,7 +1281,9 @@ def api_questionnaire():
     user.profile_mode = "full"
 
     from invite import try_redeem_invite
+    from pool_rhythm import grant_debut_week
     try_redeem_invite(user)
+    grant_debut_week(user)
     db.session.commit()
 
     return jsonify({
@@ -1501,6 +1545,7 @@ def api_match_opt_in():
         return jsonify({"ok": True, "opted_in": False, "quota": match_quota_status(user)})
 
     user.opt_in_week = week
+    user.dormant_notice_at = None
     db.session.commit()
     return jsonify({
         "ok": True,
@@ -1509,6 +1554,29 @@ def api_match_opt_in():
         "message": t_api("ok.optin", when=match_quota_status(user)["next_batch_label"]),
         "quota": match_quota_status(user),
     })
+
+
+@app.route("/api/match/next-availability", methods=["POST"])
+@login_required
+def api_match_next_availability():
+    """下周有空吗：有则预先预约，无则下周不进，再说则下周仍要自己点。"""
+    from pool_rhythm import set_next_availability
+
+    user = get_current_user()
+    if not user.ready_to_match():
+        return api_err("err.need_ready_optin")
+    if not user.is_open_to_match():
+        body, status = api_err("err.need_open_optin", 403)
+        payload = body.get_json()
+        payload["quota"] = match_quota_status(user)
+        return jsonify(payload), status
+
+    choice = (request.get_json(silent=True) or {}).get("choice") or request.form.get("choice")
+    if choice not in ("yes", "no", "later"):
+        return api_err("err.bad_request", 400)
+    set_next_availability(user, choice)
+    db.session.commit()
+    return jsonify({"ok": True, "next_availability": choice, "quota": match_quota_status(user)})
 
 
 @app.route("/api/matches", methods=["GET"])
@@ -1602,7 +1670,7 @@ def api_me():
     edu_err = apply_education_fields(user, data, required=False)
     if edu_err:
         return edu_err
-    if "education_level" in data or "allow_cross_degree" in data:
+    if "education_level" in data or "allow_cross_degree" in data or "accepted_degrees" in data:
         deactivate_filled_degree_violations(user)
     contact = (data.get("wechat_id") or "").strip()
     if "wechat_id" in data:
@@ -1636,7 +1704,9 @@ def api_me():
     if "want_match_followup" in data:
         user.want_match_followup = bool(data.get("want_match_followup"))
     from invite import try_redeem_invite
+    from pool_rhythm import grant_debut_week
     try_redeem_invite(user)
+    grant_debut_week(user)
     db.session.commit()
     return jsonify({"ok": True, "user": user.to_dict()})
 
@@ -1932,6 +2002,38 @@ def ensure_schema():
         db.session.execute(text("ALTER TABLE users ADD COLUMN opt_in_week VARCHAR(16)"))
         db.session.commit()
         print("[CampusMatch] migrated: users.opt_in_week")
+        user_cols.add("opt_in_week")
+
+    if "debut_opted_at" not in user_cols:
+        db.session.execute(text("ALTER TABLE users ADD COLUMN debut_opted_at DATETIME"))
+        db.session.commit()
+        print("[CampusMatch] migrated: users.debut_opted_at")
+
+    if "dormant_notice_at" not in user_cols:
+        db.session.execute(text("ALTER TABLE users ADD COLUMN dormant_notice_at DATETIME"))
+        db.session.commit()
+        print("[CampusMatch] migrated: users.dormant_notice_at")
+
+    if "weekly_rule_notice_at" not in user_cols:
+        db.session.execute(text("ALTER TABLE users ADD COLUMN weekly_rule_notice_at DATETIME"))
+        db.session.commit()
+        print("[CampusMatch] migrated: users.weekly_rule_notice_at")
+
+    if "rhythm_grace_week" not in user_cols:
+        db.session.execute(text("ALTER TABLE users ADD COLUMN rhythm_grace_week VARCHAR(16)"))
+        db.session.commit()
+        print("[CampusMatch] migrated: users.rhythm_grace_week")
+
+    if "next_availability" not in user_cols:
+        db.session.execute(text("ALTER TABLE users ADD COLUMN next_availability VARCHAR(8)"))
+        db.session.commit()
+        print("[CampusMatch] migrated: users.next_availability")
+        user_cols.add("next_availability")
+
+    if "next_availability_week" not in user_cols:
+        db.session.execute(text("ALTER TABLE users ADD COLUMN next_availability_week VARCHAR(16)"))
+        db.session.commit()
+        print("[CampusMatch] migrated: users.next_availability_week")
 
     if "quota_bonus" not in user_cols:
         db.session.execute(text("ALTER TABLE users ADD COLUMN quota_bonus INTEGER DEFAULT 0"))
@@ -2015,6 +2117,12 @@ def ensure_schema():
         db.session.execute(text("ALTER TABLE users ADD COLUMN allow_cross_degree BOOLEAN DEFAULT 0"))
         db.session.commit()
         print("[CampusMatch] migrated: users.allow_cross_degree")
+        user_cols.add("allow_cross_degree")
+
+    if "accepted_degrees_json" not in user_cols:
+        db.session.execute(text("ALTER TABLE users ADD COLUMN accepted_degrees_json TEXT"))
+        db.session.commit()
+        print("[CampusMatch] migrated: users.accepted_degrees_json")
 
     if "want_match_followup" not in user_cols:
         db.session.execute(text("ALTER TABLE users ADD COLUMN want_match_followup BOOLEAN DEFAULT 0"))
@@ -2052,6 +2160,9 @@ def ensure_schema():
         print("[CampusMatch] migrated: matches.active")
 
     _backfill_legacy_cross_degree()
+    _backfill_accepted_degrees()
+    _backfill_debut_opted()
+    _grant_rhythm_grace_week()
     _cleanup_one_to_one_matches()
     n_deg = deactivate_filled_degree_violations()
     if n_deg:
@@ -2081,6 +2192,64 @@ def _backfill_legacy_cross_degree():
     if n:
         db.session.commit()
         print(f"[CampusMatch] legacy allow_cross_degree=1: {n} users")
+
+
+def _backfill_debut_opted():
+    """已有特征向量的人视为过了首周，避免上线后改问卷又被自动预约。"""
+    q = User.query.filter(
+        User.debut_opted_at.is_(None),
+        User.feature_vector_json.isnot(None),
+    )
+    n = 0
+    now = datetime.utcnow()
+    for u in q.all():
+        u.debut_opted_at = u.created_at or now
+        n += 1
+    if n:
+        db.session.commit()
+        print(f"[CampusMatch] backfill debut_opted_at: {n} users")
+
+
+def _grant_rhythm_grace_week():
+    """还在等配对的老用户：自动预约当周一次。已有有效配对的不推进新一轮。"""
+    from pool_rhythm import grant_transition_week, current_week_key
+
+    week = current_week_key()
+    n = 0
+    for u in User.query.filter(
+        User.email_verified.is_(True),
+        User.rhythm_grace_week.is_(None),
+    ).all():
+        active = Match.query.filter(
+            ((Match.user1_id == u.id) | (Match.user2_id == u.id)),
+            Match.active.is_(True),
+        ).first()
+        if grant_transition_week(u, week=week, has_active_match=bool(active)):
+            n += 1
+        elif u.rhythm_grace_week == week:
+            pass
+    db.session.commit()
+    if n:
+        print(f"[CampusMatch] rhythm grace opt-in: {n} users")
+
+
+def _backfill_accepted_degrees():
+    """旧的跨学历开关迁成学历列表：开=三种都接受，关=只接受本人学历。已有列表不改。"""
+    q = User.query.filter(
+        (User.accepted_degrees_json.is_(None)) | (User.accepted_degrees_json == "")
+    )
+    n = 0
+    for u in q.all():
+        if u.allow_cross_degree:
+            u.set_accepted_degrees(list(EDUCATION_LEVELS))
+        elif (u.education_level or "") in EDUCATION_LEVELS:
+            u.set_accepted_degrees([u.education_level])
+        else:
+            continue
+        n += 1
+    if n:
+        db.session.commit()
+        print(f"[CampusMatch] backfill accepted_degrees: {n} users")
 
 
 def _cleanup_one_to_one_matches():

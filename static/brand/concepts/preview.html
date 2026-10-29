@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<title>CampusMatch logo 方案</title>
+<style>
+  body { margin: 0; padding: 32px; background: #e8e0d0; color: #1c1b19; font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; }
+  h1 { font-size: 20px; margin: 0 0 24px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
+  .card { background: #f4eee3; border-radius: 16px; padding: 20px; }
+  .card h2 { font-size: 16px; margin: 0 0 4px; }
+  .card p { font-size: 13px; color: #5c5850; margin: 0 0 16px; }
+  .sizes { display: flex; align-items: flex-end; gap: 16px; margin-bottom: 16px; }
+  .sizes figure { margin: 0; text-align: center; font-size: 11px; color: #5c5850; }
+  .sizes img { display: block; margin: 0 auto 4px; }
+  .tab { display: flex; align-items: center; gap: 8px; background: #fff; border-radius: 8px 8px 0 0; padding: 6px 12px; width: fit-content; font-size: 12px; margin-bottom: 12px; }
+  .nav { display: flex; align-items: center; gap: 8px; background: #e8e0d0; padding: 10px 14px; border-radius: 10px; }
+  .nav b { font-size: 1.15em; letter-spacing: -0.02em; color: #141413; }
+</style>
+</head>
+<body>
+<h1>CampusMatch logo 方案</h1>
+<div class="grid" id="grid"></div>
+<script>
+  const items = [
+    ['a-overlap.svg', 'A · 交叠双圆', '两个人的圈子有了交集，交集处点一抹暖橙。'],
+    ['b-heart-cap.svg', 'B · 心 + 学士帽', '校园恋爱最直白的表达。'],
+    ['c-monogram.svg', 'C · CM 字标', 'C 包住 M，像名片上的品牌章。'],
+    ['d-nodes.svg', 'D · 连线双点', '和首页画布的节点连线呼应：两个点被一条线牵起来。'],
+  ];
+  document.getElementById('grid').innerHTML = items.map(([f, t, d]) => `
+    <div class="card">
+      <h2>${t}</h2><p>${d}</p>
+      <div class="sizes">
+        <figure><img src="${f}" width="16" height="16">16</figure>
+        <figure><img src="${f}" width="32" height="32">32</figure>
+        <figure><img src="${f}" width="64" height="64">64</figure>
+        <figure><img src="${f}" width="120" height="120">手机图标</figure>
+      </div>
+      <div class="tab"><img src="${f}" width="16" height="16">CampusMatch · 校园匹配</div>
+      <div class="nav"><img src="${f}" width="26" height="26"><b>CampusMatch</b></div>
+    </div>`).join('');
+</script>
+</body>
+</html>

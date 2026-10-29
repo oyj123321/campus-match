@@ -51,7 +51,7 @@
             <option value="master" {% if user.education_level == 'master' %}selected{% endif %} data-i18n="edu.master">硕士</option>
             <option value="doctorate" {% if user.education_level == 'doctorate' %}selected{% endif %} data-i18n="edu.doctorate">博士</option>
         </select>
-        <p class="hint" data-i18n="qn.edu.hint">须如实填写：本科生选本科，硕士生（含研一）选硕士，博士生选博士。默认只配同学历。</p>
+        <p class="hint" data-i18n="qn.edu.hint">须如实填写：本科生选本科，硕士生（含研一）选硕士，博士生选博士。</p>
     </div>
     <div class="form-group" id="age-section" style="padding:18px;border:1px solid var(--border, #e5d9e7);border-radius:12px;margin:16px 0;">
         <label for="age" id="age-label">当前周岁 *</label>
@@ -87,6 +87,7 @@
             <span data-i18n="qn.openMatch">参与匹配（关闭后不再进入匹配池，历史结果仍可看）</span>
         </label>
         <p class="hint" data-i18n="qn.openMatch.hint">提交问卷后默认开启。想暂停被匹配时关掉即可，不必删号。</p>
+        <p class="hint" data-i18n="qn.weekConfirm">参与匹配开启时，第一次提交会自动确认本周。从下周起要自己打开匹配页，点「预约本周」才会进那一轮；不点就不匹配。连续三周不来会发一封邮件提醒。</p>
     </div>
     <div class="form-group" style="margin-top:12px;" id="cross-schools-box">
         <label data-i18n="qn.cross">愿意跨配的学校（双向：对方也须勾选你的学校）</label>
@@ -94,11 +95,9 @@
         <div id="cross-schools-list" class="choice-chips"></div>
     </div>
     <div class="form-group" style="margin-top:12px;">
-        <label class="check-row" for="allow_cross_degree">
-            <input type="checkbox" id="allow_cross_degree" {% if user.allow_cross_degree %}checked{% endif %}>
-            <span data-i18n="qn.crossDegree">愿意跨学历匹配</span>
-        </label>
-        <p class="hint" data-i18n="qn.crossDegree.hint">不勾选 = 只配同学历（本配本、硕配硕、博配博）。勾选后仅会与「也勾选了跨学历」的对方配对。</p>
+        <label data-i18n="qn.acceptDegree">愿意匹配的学历</label>
+        <p class="hint" data-i18n="qn.acceptDegree.hint">可多选。默认只含你自己的学历，也可以取消自己的、只选更高或更低。对方的学历要在你勾选的范围内，你的学历也要在对方勾选的范围内。</p>
+        <div id="accept-degrees-list" class="choice-chips"></div>
     </div>
 </div>
 
@@ -128,13 +127,15 @@
 
     <div class="card" style="text-align:center;">
         <p class="hint" style="margin:0 0 12px;line-height:1.6;" data-i18n="qn.noguarantee">每周一对一有额度；池子偏小、取向不合或硬性底线冲突时，可能配不上——填完问卷不等于保证有对象。</p>
-        <button type="button" class="btn btn-match" id="submit-btn" onclick="submitAll()" data-i18n="qn.submit">提交问卷，下一步预约揭晓</button>
+        <p class="hint" style="margin:0 0 12px;line-height:1.6;" data-i18n="qn.beforeSubmit">交卷不会马上开始匹配。参与匹配开着时，第一次提交会自动预约本周。从下周起，每一周都要到匹配页点「预约本周匹配」才进当周池，不点就不匹配。</p>
+        <button type="button" class="btn btn-match" id="submit-btn" onclick="submitAll()" data-i18n="qn.submit">提交问卷</button>
         <p id="save-status" style="margin-top:8px;"></p>
     </div>
 </form>
 
 <div class="card" id="express-submit-card" style="text-align:center;display:none;">
     <p class="hint" style="margin:0 0 12px;line-height:1.6;" data-i18n="qn.express.submitHint">不填 39 题，匹配主要看这段自我介绍。能进池，但会排在问卷用户后面；对方会看到你是隐私用户。想被优先匹配，请改填完整问卷。</p>
+    <p class="hint" style="margin:0 0 12px;line-height:1.6;" data-i18n="qn.express.book">保存不会马上配对。参与匹配开着时，第一次会自动预约本周。之后每周都要到匹配页点「预约本周匹配」，不点就不进当周池。</p>
     <button type="button" class="btn btn-match" id="express-submit-btn" onclick="submitExpress()" data-i18n="qn.express.submit">保存隐私资料并进池</button>
     <p id="express-save-status" style="margin-top:8px;"></p>
 </div>
@@ -166,9 +167,9 @@
             </details>
             <p class="hint lp-disc-corner lp-no-capture" data-i18n="lp.shareDisc">问卷规则生成 · 仅供娱乐</p>
         </div>
+        <p class="hint" data-i18n="lp.bookRule" style="margin:0 0 10px;line-height:1.65;text-align:center;">匹配还没开始。请到匹配页看本周是否已预约：没预约就要点「预约本周匹配」才进本周池。参与匹配开着时，只有第一次提交会自动预约本周；从下周起每周都要自己点，不点就不匹配。</p>
         <div class="personality-actions" style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;">
-            <a class="btn btn-primary" href="/matches#reveal-box" data-i18n="lp.goMatches">去预约本周匹配</a>
-            <a class="btn btn-secondary" href="/matches" data-i18n="lp.peekMatches">先看看匹配页</a>
+            <a class="btn btn-primary" href="/matches#reveal-box" data-i18n="lp.goMatches">去匹配页看本周预约</a>
             <button type="button" class="btn btn-secondary" id="lp-modal-share" data-i18n="lp.share">分享报告</button>
         </div>
     </div>
@@ -182,6 +183,8 @@ const ALL_SCHOOLS = {{ schools | tojson }};
 const MY_SCHOOL = {{ user.school | tojson }};
 const EXISTING_CROSS = {{ user.get_cross_schools() | tojson }};
 const CROSS_ENABLED = {{ cross_school_enabled | default(true) | tojson }};
+const INITIAL_ACCEPT = {{ user.accepted_degree_list() | tojson }};
+const DEGREE_LEVELS = ['bachelor', 'master', 'doctorate'];
 
 const dimColors = {
     'values': '#1c1b19', 'lifestyle': '#1c1b19',
@@ -238,6 +241,55 @@ function selectedCrossSchools() {
     return out;
 }
 renderCrossSchools();
+
+var acceptTouched = false;
+var lastEduForAccept = '';
+
+function renderAcceptDegrees(selected) {
+    var list = document.getElementById('accept-degrees-list');
+    if (!list) return;
+    var set = {};
+    (selected || []).forEach(function (x) { set[x] = true; });
+    var html = '';
+    DEGREE_LEVELS.forEach(function (lv) {
+        html += '<label class="choice-chip"><input type="checkbox" class="accept-degree-cb" value="' + lv + '"'
+            + (set[lv] ? ' checked' : '') + '> <span data-i18n="edu.' + lv + '">' + t('edu.' + lv) + '</span></label>';
+    });
+    list.innerHTML = html;
+    list.querySelectorAll('.accept-degree-cb').forEach(function (el) {
+        el.addEventListener('change', function () { acceptTouched = true; });
+    });
+}
+
+function selectedAcceptDegrees() {
+    var out = [];
+    document.querySelectorAll('#accept-degrees-list .accept-degree-cb:checked').forEach(function (el) {
+        out.push(el.value);
+    });
+    return out;
+}
+
+function syncAcceptWithEducation() {
+    var eduEl = document.getElementById('education_level');
+    if (!eduEl) return;
+    var edu = eduEl.value;
+    var current = selectedAcceptDegrees();
+    if (!acceptTouched && (current.length === 0 || (current.length === 1 && current[0] === lastEduForAccept))) {
+        renderAcceptDegrees(edu ? [edu] : []);
+    }
+    lastEduForAccept = edu;
+}
+
+(function initAcceptDegrees() {
+    var eduEl = document.getElementById('education_level');
+    var edu = eduEl ? eduEl.value : '';
+    var initial = (INITIAL_ACCEPT && INITIAL_ACCEPT.length) ? INITIAL_ACCEPT.slice() : (edu ? [edu] : []);
+    renderAcceptDegrees(initial);
+    lastEduForAccept = edu;
+    if (!(initial.length === 1 && initial[0] === edu)) acceptTouched = initial.length > 0;
+    if (eduEl) eduEl.addEventListener('change', syncAcceptWithEducation);
+    window.addEventListener('cm:lang', function () { renderAcceptDegrees(selectedAcceptDegrees()); });
+})();
 
 function isAnswered(q) {
     if (q.optional || q.type === 'text') return true;
@@ -503,6 +555,11 @@ async function submitAll() {
         document.getElementById('profile-card').scrollIntoView({ behavior: 'smooth', block: 'center' });
         return;
     }
+    if (!selectedAcceptDegrees().length) {
+        alert(t('qn.needAcceptDegree'));
+        document.getElementById('accept-degrees-list').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+    }
     if (!wechat && window.CM_PROFILE_UI !== 'express') {
         alert(t('qn.needWechat'));
         document.getElementById('wechat_id').focus();
@@ -527,7 +584,7 @@ async function submitAll() {
         name: name, gender: gender, looking_for: lookingFor, wechat_id: wechat, bio: bio,
         ...ageData,
         education_level: education,
-        allow_cross_degree: document.getElementById('allow_cross_degree').checked,
+        accepted_degrees: selectedAcceptDegrees(),
         open_to_match: document.getElementById('open_to_match').checked,
         cross_schools: selectedCrossSchools()
     });
@@ -714,6 +771,10 @@ async function submitExpress() {
         document.getElementById('education_level').focus();
         return;
     }
+    if (!selectedAcceptDegrees().length) {
+        alert(t('qn.needAcceptDegree'));
+        return;
+    }
     if (bio.length < EXPRESS_BIO_MIN) {
         alert(tf('qn.express.needBio', { n: EXPRESS_BIO_MIN }));
         document.getElementById('bio').focus();
@@ -725,7 +786,7 @@ async function submitExpress() {
         name: name, gender: gender, looking_for: lookingFor, wechat_id: wechat, bio: bio,
         ...ageData,
         education_level: education,
-        allow_cross_degree: document.getElementById('allow_cross_degree').checked,
+        accepted_degrees: selectedAcceptDegrees(),
         open_to_match: document.getElementById('open_to_match').checked,
         cross_schools: selectedCrossSchools()
     });
@@ -736,7 +797,7 @@ async function submitExpress() {
         return;
     }
     status.innerHTML = '<span class="t-ok">' + esc(r.message || t('qn.express.saved')) + '</span>';
-    setTimeout(function () { location.href = '/matches'; }, 600);
+    setTimeout(function () { location.href = '/matches#reveal-box'; }, 600);
 }
 
 render();

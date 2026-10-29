@@ -1,0 +1,845 @@
+/* ════════════════════════════════════════════════════════════════════════
+   CampusMatch — 万圣节全篇幅夜场限定皮肤 v3 (2026-10-22 ~ 2026-11-01)
+   开源全彩矢量插画：Microsoft Fluent Emoji (MIT) + Twemoji (CC-BY 4.0)
+   开源展示字体：Google Fonts Creepster (SIL OFL 1.1)
+   ════════════════════════════════════════════════════════════════════════ */
+
+@font-face {
+    font-family: "CM Creepster";
+    src: url("/static/fonts/Creepster-Regular.ttf") format("truetype");
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+
+/* ── 1. 全站暗夜变量与底色重构 ── */
+body.fest-halloween {
+    --hw-bg-0: #080510;
+    --hw-bg-1: #0f091d;
+    --hw-bg-2: #170e2b;
+    --hw-panel: rgba(23, 14, 42, 0.84);
+    --hw-panel-solid: #170e2a;
+    --hw-panel-soft: rgba(34, 20, 60, 0.78);
+    --hw-border: rgba(255, 117, 24, 0.24);
+    --hw-border-strong: rgba(255, 138, 36, 0.55);
+    --hw-orange: #ff6b1a;
+    --hw-orange-bright: #ff8c24;
+    --hw-amber: #ffc857;
+    --hw-purple: #9333ea;
+    --hw-violet: #c084fc;
+    --hw-bone: #f8efe4;
+    --hw-muted: #b9a8d4;
+    --hw-dim: #8a77a8;
+
+    --bg-top: #090512;
+    --bg-mid: #100920;
+    --bg-bot: #170d2c;
+    --card-bg: rgba(23, 14, 42, 0.86);
+    --card-border: rgba(255, 117, 24, 0.24);
+    --card-border-hover: rgba(255, 140, 36, 0.52);
+
+    --text: #f8efe4;
+    --text-secondary: #b9a8d4;
+    --accent: #ff7518;
+    --accent-deep: #ff9a3c;
+    --accent-2: #c084fc;
+    --match: #ff6b1a;
+    --match-2: #9333ea;
+    --border: rgba(255, 117, 24, 0.22);
+    --primary: #ff6b1a;
+    --primary-hover: #ff8533;
+    --grad: linear-gradient(135deg, #ff6b1a 0%, #d946ef 100%);
+    --grad-match: linear-gradient(135deg, #ff6b1a 0%, #9333ea 100%);
+
+    background-color: var(--hw-bg-0) !important;
+    background-image:
+        radial-gradient(circle at 86% 14%, rgba(255, 94, 26, 0.26), transparent 36%),
+        radial-gradient(circle at 14% 24%, rgba(147, 51, 234, 0.24), transparent 42%),
+        radial-gradient(circle at 50% 94%, rgba(255, 107, 26, 0.16), transparent 48%),
+        radial-gradient(rgba(255, 168, 76, 0.08) 1px, transparent 1.2px),
+        linear-gradient(180deg, #07040e 0%, #110922 52%, #190d30 100%) !important;
+    background-size: auto, auto, auto, 26px 26px, auto !important;
+    background-attachment: fixed;
+    color: var(--hw-bone) !important;
+}
+
+body.fest-halloween ::selection {
+    background: rgba(255, 107, 26, 0.35);
+    color: #fff8ee;
+}
+
+/* ── 2. 顶部导航与全站公告栏（直接用全彩立体南瓜） ── */
+body.fest-halloween .nav,
+body.page-landing.fest-halloween .nav {
+    background: rgba(11, 6, 22, 0.86) !important;
+    backdrop-filter: blur(14px) !important;
+    -webkit-backdrop-filter: blur(14px) !important;
+    border-bottom: 1px solid rgba(255, 117, 24, 0.32) !important;
+    box-shadow: 0 10px 32px rgba(0, 0, 0, 0.48), 0 1px 0 rgba(255, 117, 24, 0.14);
+}
+
+body.fest-halloween .nav-brand,
+body.page-landing.fest-halloween .nav-brand {
+    color: var(--hw-bone) !important;
+    -webkit-text-fill-color: var(--hw-bone) !important;
+    text-shadow: 0 0 18px rgba(255, 107, 26, 0.45);
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+}
+
+body.fest-halloween .nav-brand::before,
+body.page-landing.fest-halloween .nav-brand::before {
+    content: "";
+    width: 26px !important;
+    height: 26px !important;
+    border-radius: 0 !important;
+    background: url("/static/festival/halloween/fluent-pumpkin.svg") center / contain no-repeat !important;
+    filter: drop-shadow(0 0 8px rgba(255, 107, 26, 0.85));
+}
+
+body.fest-halloween .nav-brand::after {
+    content: "HALLOWEEN";
+    font-family: "CM Creepster", cursive, sans-serif;
+    font-size: 0.76em;
+    font-weight: 400;
+    letter-spacing: 0.1em;
+    padding: 2px 9px;
+    border-radius: 999px;
+    background: rgba(255, 107, 26, 0.18);
+    border: 1px solid rgba(255, 117, 24, 0.5);
+    color: var(--hw-amber);
+    -webkit-text-fill-color: var(--hw-amber);
+}
+
+body.fest-halloween .nav-link,
+body.page-landing.fest-halloween .nav-link {
+    color: #d6c7ee !important;
+}
+body.fest-halloween .nav-link:hover,
+body.page-landing.fest-halloween .nav-link:hover {
+    color: var(--hw-amber) !important;
+    text-shadow: 0 0 12px rgba(255, 140, 36, 0.55);
+}
+
+body.fest-halloween .nav-cta,
+body.page-landing.fest-halloween .nav-cta {
+    background: linear-gradient(135deg, #ff6b1a, #c2410c) !important;
+    color: #fff8ee !important;
+    font-weight: 800;
+    box-shadow: 0 0 18px rgba(255, 107, 26, 0.45);
+}
+body.fest-halloween .nav-cta:hover,
+body.page-landing.fest-halloween .nav-cta:hover {
+    background: linear-gradient(135deg, #ff8c24, #ea580c) !important;
+    color: #fff !important;
+}
+
+body.fest-halloween .lang-select,
+body.page-landing.fest-halloween .lang-select {
+    background-color: rgba(28, 16, 48, 0.9) !important;
+    border: 1px solid rgba(255, 117, 24, 0.35) !important;
+    color: var(--hw-bone) !important;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23ffc857' stroke-width='1.6' fill='none' stroke-linecap='round'/%3E%3C/svg%3E") !important;
+}
+
+body.fest-halloween .site-announcement,
+body.page-landing.fest-halloween .site-announcement {
+    background: linear-gradient(90deg, rgba(45, 18, 77, 0.95), rgba(88, 28, 19, 0.92), rgba(45, 18, 77, 0.95)) !important;
+    border-bottom: 1px solid rgba(255, 117, 24, 0.38) !important;
+    color: #fdebd2 !important;
+    box-shadow: inset 0 -1px 0 rgba(255, 140, 36, 0.2);
+}
+body.fest-halloween .site-announcement-toggle,
+body.page-landing.fest-halloween .site-announcement-toggle {
+    color: var(--hw-amber) !important;
+}
+
+body.fest-halloween .incomplete-banner {
+    background: rgba(124, 45, 18, 0.42) !important;
+    border-bottom: 1px solid rgba(255, 117, 24, 0.4) !important;
+}
+body.fest-halloween .incomplete-banner-inner {
+    color: var(--hw-amber) !important;
+}
+
+/* ── 3. 全屏万圣夜剧场装饰层 (.fest-hw) — 直接渲染开源全彩大图 ── */
+.fest-hw {
+    position: fixed;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    overflow: hidden;
+}
+
+body.fest-halloween .main,
+body.fest-halloween .footer {
+    position: relative;
+    z-index: 2;
+}
+
+.hw-sky-glow {
+    position: absolute;
+    inset: 0;
+    background:
+        radial-gradient(ellipse 52% 38% at 86% 14%, rgba(255, 102, 24, 0.28), transparent 70%),
+        radial-gradient(ellipse 46% 34% at 14% 22%, rgba(168, 85, 247, 0.2), transparent 72%);
+}
+
+/* 左右顶角开源精细蛛网 SVG */
+.hw-corner-web {
+    position: absolute;
+    top: 44px;
+    width: 230px;
+    height: 230px;
+    opacity: 0.46;
+    filter: drop-shadow(0 0 12px rgba(255, 140, 36, 0.35)) invert(0.92) sepia(0.25) hue-rotate(220deg);
+}
+.hw-corner-web-tl { left: -34px; transform: rotate(8deg); }
+
+/* 垂丝全彩立体大蜘蛛 */
+.hw-spider-drop {
+    position: absolute;
+    top: 56px;
+    left: 44px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    animation: hwSpiderYoYo 6.5s ease-in-out infinite;
+}
+.hw-spider-thread {
+    width: 2px;
+    height: 78px;
+    background: linear-gradient(180deg, rgba(248, 239, 228, 0.75), rgba(255, 140, 36, 0.9));
+    box-shadow: 0 0 8px rgba(255, 140, 36, 0.5);
+}
+.hw-spider-img {
+    width: 52px;
+    height: 52px;
+    filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.75)) drop-shadow(0 0 12px rgba(255, 107, 26, 0.55));
+}
+
+/* ── 右上角超显眼巨型血月 + 3只展翅立体大蝙蝠掠月 ── */
+.hw-blood-moon-stage {
+    position: absolute;
+    top: 72px;
+    right: 2.5%;
+    width: 220px;
+    height: 220px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.hw-blood-halo {
+    position: absolute;
+    inset: -26px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(255, 94, 26, 0.52) 0%, rgba(220, 38, 38, 0.28) 45%, rgba(147, 51, 234, 0.16) 68%, transparent 78%);
+    filter: blur(8px);
+    animation: hwMoonPulse 4.5s ease-in-out infinite alternate;
+}
+
+.hw-blood-disc {
+    position: relative;
+    width: 164px;
+    height: 164px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 32% 28%, #fff6d6 0%, #ffb74d 34%, #ff5722 68%, #991b1b 100%);
+    box-shadow:
+        0 0 48px 14px rgba(255, 102, 24, 0.62),
+        0 0 120px 42px rgba(185, 28, 28, 0.38),
+        inset -14px -18px 28px rgba(88, 12, 12, 0.55);
+    overflow: hidden;
+}
+
+.hw-moon-art {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    mix-blend-mode: multiply;
+    opacity: 0.72;
+    filter: sepia(0.55) saturate(2.1) hue-rotate(-18deg) contrast(1.15);
+}
+
+.hw-moon-bat {
+    position: absolute;
+    display: block;
+    filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.85)) drop-shadow(0 0 12px rgba(255, 117, 24, 0.75));
+}
+.hw-moon-bat-main {
+    width: 112px;
+    height: 112px;
+    top: 38px;
+    left: 16px;
+    transform: rotate(-12deg);
+    animation: hwBatHoverMain 3.8s ease-in-out infinite alternate;
+}
+.hw-moon-bat-top {
+    width: 66px;
+    height: 66px;
+    top: -4px;
+    right: 6px;
+    transform: rotate(15deg);
+    animation: hwBatHoverSub 4.6s ease-in-out infinite alternate-reverse;
+}
+.hw-moon-bat-low {
+    width: 58px;
+    height: 58px;
+    bottom: 8px;
+    left: -10px;
+    transform: rotate(-22deg) scaleX(-1);
+    animation: hwBatHoverSub 5.2s ease-in-out infinite alternate;
+}
+
+/* ── 两侧游荡的全彩立体大幽灵 ── */
+.hw-float-ghost {
+    position: absolute;
+    display: block;
+    filter: drop-shadow(0 0 22px rgba(192, 132, 252, 0.65)) drop-shadow(0 10px 24px rgba(0, 0, 0, 0.6));
+    animation: hwGhostFloat 5.6s ease-in-out infinite;
+}
+.hw-float-ghost-l {
+    top: 290px;
+    left: 1.4%;
+    width: 84px;
+    height: 84px;
+}
+.hw-float-ghost-r {
+    top: 430px;
+    right: 1.8%;
+    width: 74px;
+    height: 74px;
+    transform: scaleX(-1);
+    animation-delay: -2.8s;
+}
+
+/* ── 底部两侧巨型立体南瓜灯阵 + 黑猫 + 墓碑 + 糖果 ── */
+.hw-ground-cluster {
+    position: absolute;
+    bottom: 14px;
+    display: flex;
+    align-items: flex-end;
+    gap: 6px;
+    z-index: 2;
+}
+.hw-ground-left { left: 1.2%; }
+.hw-ground-right { right: 1.2%; flex-direction: row-reverse; }
+
+.hw-lantern-hero {
+    width: 108px;
+    height: 108px;
+    filter: drop-shadow(0 0 26px rgba(255, 117, 24, 0.92)) drop-shadow(0 10px 20px rgba(0, 0, 0, 0.75));
+    animation: hwPumpkinBob 3.8s ease-in-out infinite alternate;
+}
+.hw-lantern-side {
+    width: 68px;
+    height: 68px;
+    margin-left: -18px;
+    margin-bottom: 4px;
+    filter: drop-shadow(0 0 18px rgba(255, 140, 36, 0.8)) drop-shadow(0 8px 16px rgba(0, 0, 0, 0.7));
+    animation: hwPumpkinBob 4.5s ease-in-out infinite alternate-reverse;
+}
+.hw-ground-right .hw-lantern-side {
+    margin-left: 0;
+    margin-right: -18px;
+}
+.hw-ground-tomb,
+.hw-ground-cat {
+    width: 64px;
+    height: 64px;
+    margin-bottom: 6px;
+    filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.8));
+}
+.hw-ground-candy {
+    width: 44px;
+    height: 44px;
+    margin-bottom: 6px;
+    filter: drop-shadow(0 0 10px rgba(255, 140, 36, 0.55));
+}
+
+/* ── 空中巡游彩色大蝙蝠 ── */
+.hw-roam-bat {
+    position: absolute;
+    width: 48px;
+    height: 48px;
+    filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.75)) drop-shadow(0 0 10px rgba(255, 117, 24, 0.45));
+    opacity: 0.85;
+    animation: hwBatFly 18s linear infinite;
+}
+.hw-roam-bat-a { left: 16%; animation-delay: -2s; }
+.hw-roam-bat-b { left: 48%; width: 38px; height: 38px; animation-duration: 22s; animation-delay: -9s; }
+.hw-roam-bat-c { left: 72%; width: 44px; height: 44px; animation-duration: 19s; animation-delay: -13s; }
+
+/* 漂浮火星 */
+.hw-ember {
+    position: absolute;
+    bottom: -12px;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: radial-gradient(circle, #ffe8a3 0%, #ff6b1a 70%, transparent 100%);
+    box-shadow: 0 0 12px #ff6b1a;
+    animation: hwEmberRise 13s linear infinite;
+}
+.hw-ember-1 { left: 11%; animation-delay: -1s; }
+.hw-ember-2 { left: 29%; animation-delay: -6s; width: 8px; height: 8px; }
+.hw-ember-3 { left: 53%; animation-delay: -3.5s; }
+.hw-ember-4 { left: 74%; animation-delay: -9s; width: 7px; height: 7px; }
+.hw-ember-5 { left: 91%; animation-delay: -4.8s; }
+
+/* 底部哥特古堡剪影 */
+.hw-skyline {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    height: 110px;
+    color: rgba(7, 3, 14, 0.94);
+    filter: drop-shadow(0 -6px 18px rgba(255, 107, 26, 0.2));
+}
+
+/* ── 4. 首页英雄区与卡片上直接挂的大号立体南瓜灯 / 蝙蝠 / 水晶球 ── */
+.hw-hero-ribbon {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 7px 16px;
+    margin-bottom: 12px;
+    border-radius: 999px;
+    background: linear-gradient(135deg, rgba(255, 107, 26, 0.24), rgba(147, 51, 234, 0.32));
+    border: 1px solid rgba(255, 138, 36, 0.55);
+    box-shadow: 0 0 28px rgba(255, 107, 26, 0.28), inset 0 0 12px rgba(255, 117, 24, 0.16);
+    color: var(--hw-bone);
+    font-size: 0.84rem;
+    font-weight: 700;
+}
+.hw-creepy-tag {
+    font-family: "CM Creepster", cursive, sans-serif;
+    font-size: 1.22rem;
+    letter-spacing: 0.1em;
+    color: var(--hw-amber);
+    text-shadow: 0 0 12px rgba(255, 117, 24, 0.75);
+}
+.hw-ribbon-sep { opacity: 0.6; color: var(--hw-amber); }
+.hw-ribbon-img {
+    width: 26px;
+    height: 26px;
+    flex-shrink: 0;
+    filter: drop-shadow(0 0 8px rgba(255, 117, 24, 0.65));
+}
+
+/* 首页主面板（ed-board）与底部 CTA 边缘直接挂立体大南瓜灯 */
+body.page-landing.fest-halloween .ed-board {
+    position: relative;
+    overflow: visible !important;
+    background: #07040d !important;
+    border: 1px solid rgba(255, 117, 24, 0.44) !important;
+    box-shadow:
+        0 22px 60px rgba(0, 0, 0, 0.68),
+        0 0 46px rgba(255, 107, 26, 0.18),
+        inset 0 0 0 1px rgba(192, 132, 252, 0.16) !important;
+}
+body.page-landing.fest-halloween .ed-stage {
+    border-radius: 19px 0 0 19px;
+    background: radial-gradient(circle at 75% 24%, #1e0b2e 0%, #07040d 72%) !important;
+}
+body.page-landing.fest-halloween .ed-dock {
+    border-radius: 0 19px 19px 0;
+    background: linear-gradient(165deg, rgba(26, 15, 46, 0.96) 0%, rgba(16, 9, 30, 0.98) 100%) !important;
+    border-left: 1px solid rgba(255, 117, 24, 0.26) !important;
+}
+
+.hw-board-pumpkin {
+    position: absolute;
+    top: -34px;
+    right: 22px;
+    width: 72px;
+    height: 72px;
+    z-index: 6;
+    pointer-events: none;
+    filter: drop-shadow(0 0 20px rgba(255, 117, 24, 0.92)) drop-shadow(0 8px 16px rgba(0, 0, 0, 0.7));
+    animation: hwPumpkinBob 3.6s ease-in-out infinite alternate;
+}
+.hw-board-bat {
+    position: absolute;
+    top: -26px;
+    left: 24px;
+    width: 62px;
+    height: 62px;
+    z-index: 6;
+    pointer-events: none;
+    transform: rotate(-12deg);
+    filter: drop-shadow(0 0 14px rgba(192, 132, 252, 0.65));
+    animation: hwBatHoverSub 4.2s ease-in-out infinite alternate;
+}
+
+body.page-landing.fest-halloween .ed-cta {
+    position: relative;
+    overflow: visible !important;
+    background: linear-gradient(135deg, #271042 0%, #3b1329 52%, #1a0b2e 100%) !important;
+    border: 1px solid rgba(255, 138, 36, 0.48) !important;
+    box-shadow: 0 16px 44px rgba(0, 0, 0, 0.55), 0 0 28px rgba(255, 107, 26, 0.22) !important;
+}
+.hw-cta-pumpkin {
+    position: absolute;
+    top: -26px;
+    left: 22px;
+    width: 56px;
+    height: 56px;
+    pointer-events: none;
+    filter: drop-shadow(0 0 16px rgba(255, 117, 24, 0.85));
+}
+.hw-cta-crystal {
+    position: absolute;
+    bottom: -18px;
+    right: 170px;
+    width: 48px;
+    height: 48px;
+    pointer-events: none;
+    filter: drop-shadow(0 0 16px rgba(192, 132, 252, 0.75));
+}
+
+body.page-landing.fest-halloween .ed-kicker,
+body.fest-halloween .kicker {
+    color: var(--hw-amber) !important;
+    text-shadow: 0 0 14px rgba(255, 117, 24, 0.35);
+}
+
+body.page-landing.fest-halloween .ed-hero h1,
+body.fest-halloween .hero h1,
+body.fest-halloween h1,
+body.fest-halloween h2,
+body.fest-halloween h3 {
+    color: var(--hw-bone) !important;
+}
+
+body.page-landing.fest-halloween .ed-mark {
+    background: linear-gradient(120deg, #ffd166 0%, #ff7518 52%, #e879f9 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent !important;
+    text-decoration-color: #ff7518 !important;
+    filter: drop-shadow(0 0 18px rgba(255, 107, 26, 0.32));
+}
+
+body.page-landing.fest-halloween .ed-hero-aside {
+    border-left-color: rgba(255, 117, 24, 0.32) !important;
+}
+body.page-landing.fest-halloween .ed-lead {
+    color: #dbccef !important;
+}
+body.page-landing.fest-halloween .ed-stat {
+    color: var(--hw-muted) !important;
+}
+body.page-landing.fest-halloween .ed-stat strong {
+    color: var(--hw-amber) !important;
+    text-shadow: 0 0 12px rgba(255, 140, 36, 0.45);
+}
+
+body.fest-halloween .live-dot {
+    background: #ff7518 !important;
+    box-shadow: 0 0 10px rgba(255, 117, 24, 0.95), 0 0 0 3px rgba(255, 117, 24, 0.24) !important;
+}
+
+/* ── 5. 其余面板与卡片容器 ── */
+body.page-landing.fest-halloween .ed-scan {
+    background: linear-gradient(90deg, transparent, rgba(255, 117, 24, 0.12), rgba(192, 132, 252, 0.08), transparent) !important;
+}
+body.page-landing.fest-halloween .ed-dock .ed-panel h2 {
+    color: var(--hw-amber) !important;
+}
+body.page-landing.fest-halloween .ed-dock #step2-card {
+    border-top-color: rgba(255, 117, 24, 0.24) !important;
+}
+
+body.page-landing.fest-halloween .ed-section,
+body.page-landing.fest-halloween .ed-notes,
+body.page-landing.fest-halloween .ed-roadmap,
+body.fest-halloween .card:not(.lp-share-card):not(.personality-card) {
+    background: linear-gradient(165deg, rgba(25, 15, 46, 0.88) 0%, rgba(16, 9, 31, 0.92) 100%) !important;
+    border: 1px solid rgba(255, 117, 24, 0.28) !important;
+    box-shadow:
+        0 14px 36px rgba(0, 0, 0, 0.46),
+        inset 0 1px 0 rgba(255, 180, 102, 0.12) !important;
+    color: var(--hw-bone) !important;
+}
+
+/* 匹配中心 / 问卷 / 广场的首卡右上角自动挂一颗立体南瓜灯 */
+body.fest-halloween:not(.page-landing) .main > .card:first-of-type {
+    position: relative;
+}
+body.fest-halloween:not(.page-landing) .main > .card:first-of-type::after {
+    content: "";
+    position: absolute;
+    top: -22px;
+    right: 18px;
+    width: 54px;
+    height: 54px;
+    background: url("/static/festival/halloween/fluent-pumpkin.svg") center / contain no-repeat;
+    filter: drop-shadow(0 0 14px rgba(255, 117, 24, 0.85));
+    pointer-events: none;
+}
+
+body.page-landing.fest-halloween .ed-steps li + li,
+body.page-landing.fest-halloween .ed-features,
+body.page-landing.fest-halloween .ed-features article,
+body.page-landing.fest-halloween .ed-roadmap td,
+body.page-landing.fest-halloween .ed-trust {
+    border-color: rgba(255, 117, 24, 0.18) !important;
+}
+
+body.page-landing.fest-halloween .ed-num {
+    font-family: "CM Creepster", cursive, sans-serif;
+    font-size: 1.75rem;
+    letter-spacing: 0.04em;
+    color: var(--hw-orange-bright) !important;
+    text-shadow: 0 0 12px rgba(255, 107, 26, 0.5);
+}
+
+body.page-landing.fest-halloween .ed-steps p,
+body.page-landing.fest-halloween .ed-features p,
+body.page-landing.fest-halloween .ed-notes ul,
+body.page-landing.fest-halloween .ed-roadmap td,
+body.page-landing.fest-halloween .ed-agree,
+body.fest-halloween .hint {
+    color: var(--hw-muted) !important;
+}
+
+body.page-landing.fest-halloween .ed-schools li,
+body.fest-halloween .school-pill,
+body.fest-halloween .stat-chip {
+    background: rgba(39, 22, 68, 0.82) !important;
+    border: 1px solid rgba(255, 117, 24, 0.3) !important;
+    color: var(--hw-bone) !important;
+}
+body.page-landing.fest-halloween .ed-schools .cnt,
+body.fest-halloween .school-pill .cnt {
+    color: var(--hw-amber) !important;
+}
+
+/* ── 6. 表单、输入框、按钮、胶囊标签 ── */
+body.fest-halloween input[type="email"],
+body.fest-halloween input[type="text"],
+body.fest-halloween input[type="number"],
+body.fest-halloween select,
+body.fest-halloween textarea,
+body.page-landing.fest-halloween input[type="email"],
+body.page-landing.fest-halloween input[type="text"] {
+    background: rgba(12, 7, 24, 0.92) !important;
+    border: 1px solid rgba(255, 117, 24, 0.34) !important;
+    color: var(--hw-bone) !important;
+}
+body.fest-halloween input::placeholder,
+body.fest-halloween textarea::placeholder {
+    color: #8470a3 !important;
+}
+body.fest-halloween input:focus,
+body.fest-halloween select:focus,
+body.fest-halloween textarea:focus {
+    outline: 2px solid var(--hw-orange-bright) !important;
+    border-color: var(--hw-orange-bright) !important;
+    box-shadow: 0 0 0 3px rgba(255, 107, 26, 0.22) !important;
+}
+
+body.fest-halloween .form-group label,
+body.page-landing.fest-halloween .form-group label {
+    color: #e6d8f8 !important;
+}
+
+body.fest-halloween .btn-primary,
+body.fest-halloween .btn-match,
+body.page-landing.fest-halloween .btn-primary,
+body.page-landing.fest-halloween .ed-cta .btn-primary {
+    background: linear-gradient(135deg, #ff7518 0%, #ea580c 55%, #b91c1c 100%) !important;
+    color: #fffaf2 !important;
+    border: 1px solid rgba(255, 209, 102, 0.45) !important;
+    box-shadow: 0 6px 22px rgba(255, 107, 26, 0.38), inset 0 1px 0 rgba(255, 255, 255, 0.22) !important;
+}
+body.fest-halloween .btn-primary:hover:not(:disabled),
+body.fest-halloween .btn-match:hover:not(:disabled),
+body.page-landing.fest-halloween .btn-primary:hover:not(:disabled) {
+    background: linear-gradient(135deg, #ff8c24 0%, #f97316 55%, #dc2626 100%) !important;
+    box-shadow: 0 8px 28px rgba(255, 117, 24, 0.55) !important;
+}
+
+body.fest-halloween .btn-secondary,
+body.page-landing.fest-halloween .btn-secondary {
+    background: rgba(38, 22, 66, 0.72) !important;
+    color: var(--hw-bone) !important;
+    border: 1px solid rgba(255, 117, 24, 0.38) !important;
+}
+body.fest-halloween .btn-secondary:hover:not(:disabled) {
+    background: rgba(255, 107, 26, 0.18) !important;
+    border-color: var(--hw-amber) !important;
+}
+
+body.fest-halloween .choice-chip,
+body.fest-halloween .multi-tag,
+body.fest-halloween .likert-btn {
+    background: rgba(20, 11, 38, 0.9) !important;
+    border: 1px solid rgba(255, 117, 24, 0.32) !important;
+    color: var(--hw-bone) !important;
+}
+body.fest-halloween .choice-chip.is-on,
+body.fest-halloween .choice-chip:has(input:checked),
+body.fest-halloween .multi-tag.on,
+body.fest-halloween .likert-btn.on {
+    background: linear-gradient(135deg, #ff6b1a, #9333ea) !important;
+    border-color: var(--hw-amber) !important;
+    color: #fff8ee !important;
+    box-shadow: 0 0 16px rgba(255, 107, 26, 0.42) !important;
+}
+
+body.fest-halloween .box-info,
+body.fest-halloween .box-ice,
+body.fest-halloween .box-warn,
+body.fest-halloween .box-dim,
+body.fest-halloween .ice-card,
+body.fest-halloween .progress-sticky {
+    background: rgba(29, 17, 52, 0.88) !important;
+    border-color: rgba(255, 117, 24, 0.26) !important;
+    color: var(--hw-bone) !important;
+}
+body.fest-halloween .ice-send-text {
+    background: rgba(12, 7, 24, 0.92) !important;
+    border-color: rgba(255, 117, 24, 0.35) !important;
+    color: var(--hw-amber) !important;
+}
+body.fest-halloween .wechat-line {
+    color: var(--hw-amber) !important;
+}
+body.fest-halloween .progress-bar-fill {
+    background: linear-gradient(90deg, #ff6b1a, #c084fc) !important;
+}
+
+/* ── 7. 校园广场 (Community) 暗夜适配 ── */
+body.fest-halloween .community-shell {
+    color: var(--hw-bone) !important;
+}
+body.fest-halloween .community-shell h1,
+body.fest-halloween .community-shell h2 {
+    color: var(--hw-bone) !important;
+}
+body.fest-halloween .community-hero p,
+body.fest-halloween .community-excerpt,
+body.fest-halloween .community-guide p,
+body.fest-halloween .community-meta,
+body.fest-halloween .community-muted {
+    color: var(--hw-muted) !important;
+}
+body.fest-halloween .community-card,
+body.fest-halloween .community-guide,
+body.fest-halloween .community-locked,
+body.fest-halloween .community-notice {
+    background: rgba(23, 14, 42, 0.88) !important;
+    border: 1px solid rgba(255, 117, 24, 0.26) !important;
+    color: var(--hw-bone) !important;
+}
+body.fest-halloween .community-tabs a {
+    background: rgba(29, 17, 52, 0.85) !important;
+    color: var(--hw-muted) !important;
+    border: 1px solid rgba(255, 117, 24, 0.2);
+}
+body.fest-halloween .community-tabs a[aria-current=page],
+body.fest-halloween .community-primary {
+    background: linear-gradient(135deg, #ff6b1a, #c2410c) !important;
+    color: #fff8ee !important;
+    border-color: var(--hw-amber) !important;
+}
+body.fest-halloween .community-tag {
+    background: rgba(255, 107, 26, 0.18) !important;
+    color: var(--hw-amber) !important;
+}
+body.fest-halloween .community-form button,
+body.fest-halloween .community-tools button,
+body.fest-halloween .community-filters button,
+body.fest-halloween .community-card details button {
+    background: rgba(38, 22, 66, 0.85) !important;
+    border-color: rgba(255, 117, 24, 0.35) !important;
+    color: var(--hw-bone) !important;
+}
+
+/* ── 8. 链接与页脚 ── */
+body.page-landing.fest-halloween .ed-panel a,
+body.page-landing.fest-halloween .ed-notes a,
+body.page-landing.fest-halloween .footer a,
+body.fest-halloween .footer a,
+body.fest-halloween .card a:not(.btn) {
+    color: var(--hw-amber) !important;
+}
+body.fest-halloween .footer {
+    border-top-color: rgba(255, 117, 24, 0.22) !important;
+    color: var(--hw-muted) !important;
+}
+
+/* ── 9. 动画关键帧 ── */
+@keyframes hwMoonPulse {
+    from { transform: scale(0.96); opacity: 0.85; }
+    to { transform: scale(1.08); opacity: 1; }
+}
+
+@keyframes hwBatHoverMain {
+    from { transform: translate(0, 0) rotate(-14deg) scale(1); }
+    to { transform: translate(8px, -10px) rotate(-6deg) scale(1.06); }
+}
+
+@keyframes hwBatHoverSub {
+    from { transform: translateY(0) rotate(12deg); }
+    to { transform: translateY(-9px) rotate(4deg); }
+}
+
+@keyframes hwSpiderYoYo {
+    0%, 100% { transform: translateY(-14px); }
+    50% { transform: translateY(24px); }
+}
+
+@keyframes hwGhostFloat {
+    0%, 100% { transform: translateY(0) rotate(-4deg); }
+    50% { transform: translateY(-16px) rotate(5deg); }
+}
+
+@keyframes hwPumpkinBob {
+    from { transform: translateY(0) scale(1); filter: drop-shadow(0 0 18px rgba(255, 107, 26, 0.75)); }
+    to { transform: translateY(-7px) scale(1.06); filter: drop-shadow(0 0 30px rgba(255, 140, 36, 1)); }
+}
+
+@keyframes hwBatFly {
+    0% { top: -48px; opacity: 0; transform: translateX(0) rotate(-8deg) scale(0.85); }
+    12% { opacity: 0.88; }
+    50% { transform: translateX(38px) rotate(6deg) scale(1); }
+    88% { opacity: 0.75; }
+    100% { top: 68%; opacity: 0; transform: translateX(-28px) rotate(-6deg) scale(0.9); }
+}
+
+@keyframes hwEmberRise {
+    0% { transform: translateY(0) translateX(0) scale(0.7); opacity: 0; }
+    18% { opacity: 0.85; }
+    82% { opacity: 0.55; }
+    100% { transform: translateY(-88vh) translateX(28px) scale(0.2); opacity: 0; }
+}
+
+@media (max-width: 900px) {
+    body.page-landing.fest-halloween .ed-stage { border-radius: 19px 19px 0 0; }
+    body.page-landing.fest-halloween .ed-dock { border-radius: 0 0 19px 19px; }
+    .hw-blood-moon-stage { width: 138px; height: 138px; top: 62px; right: 8px; }
+    .hw-blood-disc { width: 108px; height: 108px; }
+    .hw-moon-bat-main { width: 74px; height: 74px; top: 24px; left: 10px; }
+    .hw-moon-bat-top, .hw-moon-bat-low { width: 42px; height: 42px; }
+    .hw-corner-web { width: 130px; height: 130px; }
+    .hw-float-ghost-r, .hw-ground-left, .hw-roam-bat-b, .hw-spider-drop, .hw-cta-crystal { display: none; }
+    .hw-lantern-hero { width: 72px; height: 72px; }
+    .hw-lantern-side, .hw-ground-cat { width: 46px; height: 46px; }
+    .hw-board-pumpkin { width: 52px; height: 52px; top: -24px; right: 12px; }
+    .hw-board-bat { width: 46px; height: 46px; top: -18px; left: 12px; }
+    .hw-skyline { height: 64px; }
+    body.fest-halloween .nav-brand::after { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .hw-blood-halo, .hw-moon-bat, .hw-spider-drop, .hw-float-ghost, .hw-lantern-hero, .hw-lantern-side, .hw-roam-bat, .hw-ember {
+        animation: none !important;
+    }
+    .hw-roam-bat, .hw-ember { display: none !important; }
+}

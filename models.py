@@ -76,6 +76,8 @@ class User(db.Model):
     # 愿意跨学历：不同学历需双方都勾选；未勾 = 只同学历。新用户默认 False；
     # 功能上线前且未填学历的老用户启动时回填 True。
     allow_cross_degree = db.Column(db.Boolean, default=False)
+    # 愿意匹配的学历 JSON 列表。空则按 allow_cross_degree / 本人学历回退。
+    accepted_degrees_json = db.Column(db.Text)
     wechat_id = db.Column(db.String(128))  # 附加联系方式（必填，如微信）；学校邮箱配对成功后也会互见
     bio = db.Column(db.Text)
 
@@ -95,6 +97,17 @@ class User(db.Model):
     last_matched_at = db.Column(db.DateTime, nullable=True)
     # 本周预约匹配：ISO 周键，如 "2026-W31"；与当前周相同表示已 opt-in
     opt_in_week = db.Column(db.String(16))
+    # 对「下一周」的回答：yes 有 / no 无 / later 再说。只作用于 next_availability_week。
+    next_availability = db.Column(db.String(8))
+    next_availability_week = db.Column(db.String(16))
+    # 第一次进池时自动预约过的时间；有值后不再自动续周
+    debut_opted_at = db.Column(db.DateTime, nullable=True)
+    # 连续三周未出现、提醒信已发出的时间。登录或再次预约后清空，才会再提醒。
+    dormant_notice_at = db.Column(db.DateTime, nullable=True)
+    # 每周预约规则变更说明信发出的时间。只发一次。
+    weekly_rule_notice_at = db.Column(db.DateTime, nullable=True)
+    # 上线时给老用户保留的过渡周（ISO 周键）。有值后不再自动续。
+    rhythm_grace_week = db.Column(db.String(16))
     # 运营补偿：仅在 quota_bonus_week 等于当前 ISO 周时，加在每周上限上
     quota_bonus = db.Column(db.Integer, default=0)
     quota_bonus_week = db.Column(db.String(16))
@@ -254,6 +267,41 @@ class User(db.Model):
     def education_known(self):
         return (self.education_level or "") in EDUCATION_LEVELS
 
+    def accepted_degree_list(self):
+        """愿意匹配的学历。未单独保存时：开过跨学历=三种都要，否则只含本人学历。"""
+        if self.accepted_degrees_json:
+            try:
+                raw = json.loads(self.accepted_degrees_json)
+            except (TypeError, ValueError, json.JSONDecodeError):
+                raw = []
+            out = []
+            for x in raw or []:
+                name = str(x).strip()
+                if name in EDUCATION_LEVELS and name not in out:
+                    out.append(name)
+            return [x for x in EDUCATION_LEVELS if x in out]
+        if self.allow_cross_degree:
+            return list(EDUCATION_LEVELS)
+        level = (self.education_level or "").strip()
+        if level in EDUCATION_LEVELS:
+            return [level]
+        return []
+
+    def set_accepted_degrees(self, levels):
+        """至少一种。返回是否写入成功。同步旧的 allow_cross_degree，供尚未迁移的脚本读取。"""
+        picked = []
+        for x in levels or []:
+            name = str(x).strip()
+            if name in EDUCATION_LEVELS and name not in picked:
+                picked.append(name)
+        out = [x for x in EDUCATION_LEVELS if x in picked]
+        if not out:
+            return False
+        self.accepted_degrees_json = json.dumps(out)
+        own = (self.education_level or "").strip()
+        self.allow_cross_degree = out != [own]
+        return True
+
     def ready_to_match(self):
         """资料是否齐全（不含是否愿意进池）。老用户未填学历仍可进池。"""
         if not (
@@ -321,6 +369,7 @@ class User(db.Model):
             "looking_for": self.effective_looking_for(),
             "education_level": self.education_level if (self.education_level or "") in EDUCATION_LEVELS else None,
             "allow_cross_degree": bool(self.allow_cross_degree),
+            "accepted_degrees": self.accepted_degree_list(),
             "wechat_id": self.wechat_id,
             "bio": self.bio,
             "tags": [t.tag for t in self.tags],

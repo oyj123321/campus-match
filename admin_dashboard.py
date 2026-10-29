@@ -28,7 +28,7 @@ from config import (
     RESEND_DAILY_LIMIT,
     SECRET_KEY,
 )
-from models import AccountDeletion, Match, TrafficDay, TrafficVisitor, User, db
+from models import AccountDeletion, Match, PoolEvent, TrafficDay, TrafficVisitor, User, db
 from operations_analytics import operations_data
 
 
@@ -180,7 +180,7 @@ def login():
             error, status = "页面已过期，请刷新后重试。", 400
         elif not _login_allowed():
             error, status = "尝试次数过多，请 15 分钟后再试。", 429
-        elif not secrets.compare_digest((request.form.get("password") or "").encode("utf-8"), ADMIN_SECRET.encode("utf-8")):
+        elif not secrets.compare_digest((request.form.get("password") or "").strip().encode("utf-8"), ADMIN_SECRET.encode("utf-8")):
             error, status = "管理员密码不正确。", 401
         else:
             session["admin_fingerprint"] = _admin_fingerprint()
@@ -412,3 +412,139 @@ def _dashboard_data():
 @admin_required
 def dashboard():
     return render_template("admin_dashboard.html", data=_dashboard_data(), admin_csrf=_csrf_token())
+
+
+EVENT_KIND_LABELS = {"pause": "退出参与", "resume": "恢复参与", "feedback": "退出反馈"}
+
+
+def _live_snapshot():
+    """轻量快照：给实时屏轮询，不拉匹配分析、不打 Resend。不含邮箱和备注。"""
+    from mail_operations import summary
+
+    now = datetime.utcnow()
+    today = _macau_today()
+    today_start = datetime.combine(today, dt_time.min) - timedelta(hours=8)
+    week_start = week_window_start(now)
+    week_key = current_week_key(now)
+    nxt = next_batch_datetime()
+    users = User.query.order_by(User.id).all()
+    verified = [u for u in users if u.email_verified]
+    ready = [u for u in verified if u.ready_to_match()]
+    pool = [u for u in ready if u.is_open_to_match()]
+    gender = _gender_summary("当前匹配池", pool)
+    waiting = operations_data(users, week_key, now).get("waiting_total") or 0
+
+    try:
+        mail_budget = summary()
+        mail_budget["enabled"] = MAIL_ENABLED and MAIL_PROVIDER in ("resend", "aliyun", "hybrid")
+        mail_budget["provider"] = MAIL_PROVIDER
+    except Exception:
+        mail_budget = None
+
+    events = PoolEvent.query.order_by(PoolEvent.created_at.desc()).limit(16).all()
+    matches = Match.query.order_by(Match.created_at.desc()).limit(8).all()
+    needed = {e.user_id for e in events}
+    for m in matches:
+        needed.update((m.user1_id, m.user2_id))
+    by_id = {}
+    if needed:
+        by_id = {u.id: u for u in User.query.filter(User.id.in_(needed)).all()}
+
+    feed = []
+    for e in events:
+        owner = by_id.get(e.user_id)
+        feed.append((e.created_at or datetime.min, {
+            "time": (e.created_at + timedelta(hours=8)).strftime("%m-%d %H:%M") if e.created_at else "—",
+            "title": EVENT_KIND_LABELS.get(e.kind, e.kind),
+            "meta": (owner.school if owner else "账号已注销"),
+            "tone": "warn" if e.kind == "pause" else "ok",
+        }))
+    for m in matches:
+        a, b = by_id.get(m.user1_id), by_id.get(m.user2_id)
+        feed.append((m.created_at or datetime.min, {
+            "time": (m.created_at + timedelta(hours=8)).strftime("%m-%d %H:%M") if m.created_at else "—",
+            "title": "新配对" if m.active else "配对已失效",
+            "meta": f"{(a.school if a else '—')} × {(b.school if b else '—')}",
+            "tone": "ok" if m.active else "muted",
+        }))
+    feed.sort(key=lambda row: row[0], reverse=True)
+    feed = [row[1] for row in feed[:18]]
+
+    traffic_rows = []
+    traffic_by_day = {
+        row.day: row for row in TrafficDay.query.filter(TrafficDay.day >= today - timedelta(days=6)).all()
+    }
+    for offset in range(6, -1, -1):
+        day = today - timedelta(days=offset)
+        row = traffic_by_day.get(day)
+        traffic_rows.append({
+            "day": day.strftime("%m-%d"),
+            "page_views": int(row.page_views or 0) if row else 0,
+            "visitors": int(row.unique_visitors or 0) if row else 0,
+        })
+
+    school_rows = []
+    grouped = defaultdict(list)
+    for user in verified:
+        grouped[user.school].append(user)
+    for school, members in sorted(grouped.items(), key=lambda row: (-len(row[1]), row[0])):
+        school_rows.append({
+            "school": school,
+            "verified": len(members),
+            "pool": sum(1 for user in members if user in ready and user.is_open_to_match()),
+            "opted": sum(1 for user in members if user.opt_in_week == week_key),
+        })
+
+    alerts = []
+    if not BATCH_SCHEDULER_ENABLED:
+        alerts.append({"level": "warn", "text": "自动批次未开启，揭晓要靠手动跑。"})
+    if mail_budget and mail_budget.get("warning"):
+        alerts.append({"level": "warn", "text": "邮件用量接近上限。"})
+    if mail_budget and (mail_budget.get("failed") or mail_budget.get("stalled")):
+        alerts.append({"level": "warn", "text": "有发送失败或结果不明的邮件。"})
+    if waiting:
+        alerts.append({"level": "info", "text": f"连续至少两周未配上 {waiting} 人。"})
+    if not alerts:
+        alerts.append({"level": "ok", "text": "当前没有需要立刻处理的告警。"})
+
+    opted = sum(1 for user in pool if user.opt_in_week == week_key)
+    return {
+        "now": (now + timedelta(hours=8)).strftime("%Y-%m-%d %H:%M:%S"),
+        "week_key": week_key,
+        "next_batch": nxt.strftime("%Y-%m-%d %H:%M"),
+        "seconds_to_batch": max(0, int((nxt - datetime.now()).total_seconds())),
+        "metrics": {
+            "verified_total": len(verified),
+            "verified_today": sum(1 for u in verified if u.created_at and u.created_at >= today_start),
+            "open_pool": len(pool),
+            "opted_week": opted,
+            "matches_week": Match.query.filter(Match.created_at >= week_start).count(),
+            "active_matches": Match.query.filter(Match.active.is_(True)).count(),
+            "mail_used": (mail_budget or {}).get("used"),
+            "mail_limit": (mail_budget or {}).get("limit"),
+            "paused": sum(1 for u in users if not u.is_open_to_match()),
+        },
+        "gender": {"male": gender["male"], "female": gender["female"], "unknown": gender["unknown"]},
+        "traffic": traffic_rows,
+        "traffic_max": max([row["page_views"] for row in traffic_rows] + [1]),
+        "schools": school_rows,
+        "feed": feed,
+        "alerts": alerts,
+        "system": {
+            "mail": "开" if MAIL_ENABLED else "关",
+            "provider": MAIL_PROVIDER,
+            "scheduler": "开" if BATCH_SCHEDULER_ENABLED else "关",
+        },
+    }
+
+
+@bp.route("/admin/live")
+@admin_required
+def live_deck():
+    return render_template("admin_live.html", snapshot=_live_snapshot(), admin_csrf=_csrf_token())
+
+
+@bp.route("/admin/live.json")
+@admin_required
+def live_deck_json():
+    return {"ok": True, "data": _live_snapshot()}
