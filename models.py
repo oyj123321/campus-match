@@ -420,6 +420,40 @@ class Match(db.Model):
     user2 = db.relationship("User", foreign_keys=[user2_id])
 
 
+class IcebreakerPackOrder(db.Model):
+    """破冰扩展包订单。mock/admin 只表示测试或人工开通，不是支付宝回单。"""
+
+    __tablename__ = "icebreaker_pack_orders"
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    match_id = db.Column(db.Integer, db.ForeignKey("matches.id"), nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
+    amount_cents = db.Column(db.Integer, nullable=False, default=660)
+    currency = db.Column(db.String(8), nullable=False, default="CNY")
+    # pending | granted | cancelled。没有 live paid：未接商户下单。
+    status = db.Column(db.String(16), nullable=False, default="pending")
+    # mock | admin | none。alipay 预留，当前不会写入。
+    provider = db.Column(db.String(16), nullable=False, default="none")
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    paid_at = db.Column(db.DateTime)
+
+
+class IcebreakerPackEntitlement(db.Model):
+    """一次揭晓、一位购买者一份。不带到下一对，也不写进对方的卡。"""
+
+    __tablename__ = "icebreaker_pack_entitlements"
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    match_id = db.Column(db.Integer, db.ForeignKey("matches.id"), nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
+    order_id = db.Column(db.Integer, db.ForeignKey("icebreaker_pack_orders.id"), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+    __table_args__ = (
+        db.UniqueConstraint("match_id", "user_id", name="uq_ice_pack_per_reveal"),
+    )
+
+
 class Blocklist(db.Model):
     """不想再匹配的人（双向生效：任一方拉黑则不再配对）。
     历史上配过的人由匹配算法硬排除，不必再进黑名单；拉黑主要用于尚未配过的人，或立刻失效当前配对。"""

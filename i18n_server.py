@@ -245,6 +245,36 @@ M = {
         "zh": "密钥错误", "tw": "密鑰錯誤",
         "en": "Invalid secret", "pt": "Segredo inválido",
     },
+    "pack.disabled": {
+        "zh": "这项开口提示还没开放",
+        "tw": "這項開口提示還沒開放",
+        "en": "These opening prompts are not available yet",
+        "pt": "Estas sugestões para abrir conversa ainda não estão disponíveis",
+    },
+    "pack.missing": {
+        "zh": "找不到这次配对",
+        "tw": "找不到這次配對",
+        "en": "That match could not be found",
+        "pt": "Não foi possível encontrar este par",
+    },
+    "pack.inactive": {
+        "zh": "这次配对已失效，不能加开口提示",
+        "tw": "這次配對已失效，不能加開口提示",
+        "en": "This match is no longer active, so opening prompts cannot be added",
+        "pt": "Este par já não está ativo, por isso não é possível acrescentar sugestões",
+    },
+    "pack.pay_unavailable": {
+        "zh": "支付宝还没接上。免费匹配不变，配对对象也不会变。",
+        "tw": "支付寶還沒接上。免費匹配不變，配對對象也不會變。",
+        "en": "Alipay is not connected yet. Free matching stays the same, and your match does not change.",
+        "pt": "O Alipay ainda não está ligado. A correspondência gratuita mantém-se e o teu par não muda.",
+    },
+    "pack.mock_off": {
+        "zh": "现在不能直接加上这组开口提示",
+        "tw": "現在不能直接加上這組開口提示",
+        "en": "These opening prompts cannot be added directly right now",
+        "pt": "Estas sugestões não podem ser acrescentadas diretamente agora",
+    },
     "err.express_name": {
         "zh": "请填写昵称", "tw": "請填寫暱稱",
         "en": "Please enter a nickname", "pt": "Indica uma alcunha",

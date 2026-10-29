@@ -35,12 +35,20 @@ from config import (
     CROSS_DEGREE_LEGACY_BEFORE,
     festival_autumn_active, festival_halloween_active,
 )
-from models import db, User, UserTag, Match, Blocklist, AccountDeletion, EXPRESS_BIO_MIN, EDUCATION_LEVELS, EXIT_REASON_CODES
+from models import (
+    db, User, UserTag, Match, Blocklist, AccountDeletion, EXPRESS_BIO_MIN, EDUCATION_LEVELS,
+    EXIT_REASON_CODES, IcebreakerPackOrder, IcebreakerPackEntitlement,
+)
 from models import PoolEvent, WeeklyParticipation
 from operations_analytics import set_pool_participation, record_exit_feedback
 
 from age_rules import apply_age_fields
 from questionnaire import QUESTIONS, build_feature_vector, build_express_vector, get_compatibility_insight, get_open_letter
+from icebreaker_pack import (
+    ALIPAY_PRODUCT,
+    apply_pack_view, grant_icebreaker_pack, has_icebreaker_pack as has_pack,
+    mock_grant_allowed, icebreaker_pack_enabled, payment_scaffold_status,
+)
 from personality import build_love_personality
 from matcher import real_time_match, batch_match_school
 from i18n_server import api_err, t_api, request_lang
@@ -565,6 +573,55 @@ def serialize_match_payload(other, score, insight, active=True):
         "shared_tags": insight.get("shared_tags", [])[:6] if active else [],
         "differences_count": insight.get("total_differences", 0) if active else 0,
     }
+
+
+def _pair_match(user_id, other_id, match=None):
+    if match is not None:
+        return match
+    return (
+        Match.query.filter(
+            ((Match.user1_id == user_id) & (Match.user2_id == other_id))
+            | ((Match.user1_id == other_id) & (Match.user2_id == user_id))
+        )
+        .order_by(Match.id.desc())
+        .first()
+    )
+
+
+def _present_match_item(viewer, other, score, insight, active=True, match=None):
+    """匹配卡 JSON。扩展包开关关闭时与原来的字段一致。"""
+    item = serialize_match_payload(other, score, insight, active=active)
+    record = _pair_match(viewer.id, other.id, match=match) if active else match
+    return apply_pack_view(
+        item,
+        insight,
+        record,
+        viewer.id,
+        getattr(viewer, "school", None),
+        getattr(other, "school", None) if active else None,
+        active=bool(active and record is not None and record.active),
+    )
+
+
+def _viewer_match(match_id, user):
+    try:
+        mid = int(match_id)
+    except (TypeError, ValueError):
+        return None
+    record = db.session.get(Match, mid)
+    if record is None or user.id not in (record.user1_id, record.user2_id):
+        return None
+    return record
+
+
+def _pay_unavailable():
+    resp, status = api_err("pack.pay_unavailable", 503)
+    data = resp.get_json()
+    data["payment"] = "noop"
+    data["provider"] = "alipay"
+    data["product"] = ALIPAY_PRODUCT
+    data["reason"] = payment_scaffold_status()
+    return jsonify(data), status
 
 
 def _match_explain_text(mode):
@@ -1505,7 +1562,7 @@ def api_match():
         "ok": True,
         "mode": mode,
         "matches": [
-            serialize_match_payload(u, s, insight, active=True)
+            _present_match_item(user, u, s, insight, active=True)
             for u, s, insight in saved
         ],
         "total_candidates": len(candidates),
@@ -1615,7 +1672,7 @@ def api_get_matches():
             )
             m.insight_json = json.dumps(insight, ensure_ascii=False)
             db.session.commit()
-        item = serialize_match_payload(other, m.score, insight, active=bool(m.active))
+        item = _present_match_item(user, other, m.score, insight, active=bool(m.active), match=m)
         item["matched_at"] = m.created_at.isoformat() if m.created_at else None
         item["mode"] = m.mode
         item["notified"] = bool(m.notified)
@@ -1628,6 +1685,68 @@ def api_get_matches():
         "quota": match_quota_status(user),
         "note": t_api("match.list_note"),
     })
+
+
+@app.route("/api/matches/<int:match_id>/icebreaker-pack/checkout", methods=["POST"])
+@login_required
+def api_icebreaker_pack_checkout(match_id):
+    """支付宝手机网站支付占位。密钥未齐或未接网关时返回 503，不下单，也不开通。"""
+    if not icebreaker_pack_enabled():
+        return api_err("pack.disabled", 404)
+    user = get_current_user()
+    record = _viewer_match(match_id, user)
+    if record is None:
+        return api_err("pack.missing", 404)
+    if not record.active:
+        return api_err("pack.inactive", 400)
+    if has_pack(record.id, user.id):
+        return jsonify({
+            "ok": True,
+            "already": True,
+            "entitled": True,
+            "match_id": record.id,
+            "payment": "noop",
+        })
+    return _pay_unavailable()
+
+
+@app.route("/api/matches/<int:match_id>/icebreaker-pack/mock-grant", methods=["POST"])
+@login_required
+def api_icebreaker_pack_mock_grant(match_id):
+    """开发用：ICEBREAKER_PACK_MOCK_GRANT=true 时给当前用户写下模拟权益。"""
+    if not icebreaker_pack_enabled():
+        return api_err("pack.disabled", 404)
+    if not mock_grant_allowed():
+        return api_err("pack.mock_off", 403)
+    user = get_current_user()
+    record = _viewer_match(match_id, user)
+    if record is None:
+        return api_err("pack.missing", 404)
+    if not record.active:
+        return api_err("pack.inactive", 400)
+    _ent, created = grant_icebreaker_pack(record, user.id, "mock")
+    return jsonify({
+        "ok": True,
+        "entitled": True,
+        "already": not created,
+        "match_id": record.id,
+        "provider": "mock",
+    })
+
+
+@app.route("/api/pay/alipay/icebreaker-pack/notify", methods=["POST"])
+def api_alipay_icebreaker_pack_notify():
+    """支付宝异步通知占位。不验签、不开通。应用号或密钥未设置时 503。"""
+    reason = payment_scaffold_status()
+    if reason == "unconfigured":
+        return jsonify({"ok": False, "payment": "noop", "provider": "alipay", "reason": reason}), 503
+    return jsonify({
+        "ok": True,
+        "payment": "noop",
+        "provider": "alipay",
+        "product": ALIPAY_PRODUCT,
+        "reason": reason,
+    }), 200
 
 
 # ============================================================
@@ -1720,6 +1839,21 @@ def _purge_user_account(user):
 
     from models import ProductJourney
     ProductJourney.query.filter_by(user_id=uid).delete(synchronize_session=False)
+    match_ids = [
+        row[0]
+        for row in db.session.query(Match.id).filter(
+            (Match.user1_id == uid) | (Match.user2_id == uid)
+        ).all()
+    ]
+    if match_ids:
+        IcebreakerPackEntitlement.query.filter(
+            IcebreakerPackEntitlement.match_id.in_(match_ids)
+        ).delete(synchronize_session=False)
+        IcebreakerPackOrder.query.filter(
+            IcebreakerPackOrder.match_id.in_(match_ids)
+        ).delete(synchronize_session=False)
+    IcebreakerPackEntitlement.query.filter_by(user_id=uid).delete(synchronize_session=False)
+    IcebreakerPackOrder.query.filter_by(user_id=uid).delete(synchronize_session=False)
     Match.query.filter((Match.user1_id == uid) | (Match.user2_id == uid)).delete(synchronize_session=False)
     Blocklist.query.filter(
         (Blocklist.user_id == uid) | (Blocklist.blocked_user_id == uid)
@@ -1946,6 +2080,37 @@ def api_admin_nudge_incomplete():
         dry_run=dry_run,
     )
     return jsonify({"ok": True, "result": result})
+
+
+@app.route("/api/admin/icebreaker-pack/grant", methods=["POST"])
+def api_admin_icebreaker_pack_grant():
+    """人工开通某一张已揭晓配对上的破冰扩展包。需要 Header: X-Admin-Secret。"""
+    if not ADMIN_SECRET:
+        return api_err("err.admin_secret_missing", 403)
+    body = request.get_json(silent=True) or {}
+    secret = request.headers.get("X-Admin-Secret") or body.get("secret")
+    if secret != ADMIN_SECRET:
+        return api_err("err.admin_secret_bad", 403)
+    try:
+        match_id = int(body.get("match_id"))
+        user_id = int(body.get("user_id"))
+    except (TypeError, ValueError):
+        return api_err("pack.missing", 404)
+    record = db.session.get(Match, match_id)
+    viewer = db.session.get(User, user_id)
+    if record is None or viewer is None or user_id not in (record.user1_id, record.user2_id):
+        return api_err("pack.missing", 404)
+    if not record.active:
+        return api_err("pack.inactive", 400)
+    _ent, created = grant_icebreaker_pack(record, user_id, "admin")
+    return jsonify({
+        "ok": True,
+        "entitled": True,
+        "already": not created,
+        "match_id": record.id,
+        "user_id": user_id,
+        "provider": "admin",
+    })
 
 
 # ============================================================
