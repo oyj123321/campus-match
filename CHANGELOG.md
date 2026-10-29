@@ -2,6 +2,20 @@
 
 All notable changes to CampusMatch.
 
+## [1.9.73] — 2026-10-29
+
+### 问题（上次）
+- 文案已经说揭晓后可以选「破冰扩展包」，匹配卡上却还没有入口，也没有订单和权益。揭晓后仍只有 3 条破冰话题，不能复制开场句，已经算好的「需要包容的差异」也不在这张卡上。
+- 在线付款还没接。这条应走支付宝手机网站支付（同学在手机浏览器里打开站点），不要走微信商户；应用号和密钥没配齐时不能下单。
+
+### 改动
+- **Added**：可选「破冰扩展包」，`ICEBREAKER_PACK_ENABLED` 默认 `false`。关闭时匹配页和 `/api/matches` 与原来一样，不出现购买入口；已经写入的权益也不会把卡片展开。
+- **Added**：打开后，有效配对的破冰话题下面出现「再要 3 条破冰话题（含可复制开场句）」，标价 ¥6.6，旁边写支付宝，并写明「免费匹配不变。这是开口提示，不改变你的配对对象。」开通后同一张卡变成 6 条，每条带可复制开场句，并显示匹配时已经算好的差异。权益按「这一次揭晓 + 购买者」保存，刷新还在。对方的卡、配对对象、排序和联系方式都不变。
+- **Added**：新表 `icebreaker_pack_orders`、`icebreaker_pack_entitlements`。管理接口 `POST /api/admin/icebreaker-pack/grant`（请求头 `X-Admin-Secret`）或 `ICEBREAKER_PACK_MOCK_GRANT=true` 时的模拟开通，用来验收展开后的界面。
+- **Added**：结算预留支付宝手机网站支付 `alipay.trade.wap.pay`（不是当面扫码）。`POST /api/matches/<id>/icebreaker-pack/checkout` 和通知 `POST /api/pay/alipay/icebreaker-pack/notify` 在 `ALIPAY_APP_ID`、`ALIPAY_APP_PRIVATE_KEY`、`ALIPAY_PUBLIC_KEY` 未齐时返回 503。三项都写了也不会请求支付宝网关，也不开通。赞助页的赞赏码不动。
+- **Added**：新文案有简体、繁体、英文、葡文（`static/i18n.js`、`i18n_server.py`）。
+- **Deploy**：拉代码重启即可，启动时 `create_all` 会建两张新表。默认开关关闭，现有配对卡不变。生产不要打开 `ICEBREAKER_PACK_MOCK_GRANT`。不要为了这个功能配置支付宝密钥。`i18n.js` 缓存版本改为 `pack-alipay-20261029`。
+
 ## [1.9.72] — 2026-10-29
 
 ### 问题（上次）

@@ -126,6 +126,14 @@ ICEBREAKER_FOLLOWUP_DAYS = int(os.environ.get("ICEBREAKER_FOLLOWUP_DAYS", "3"))
 # 「暂未配对」提醒 + 破冰随访（匹配成功始终发信）
 MAIL_NO_MATCH_ENABLED = os.environ.get("MAIL_NO_MATCH_ENABLED", "true").lower() == "true"
 ICEBREAKER_FOLLOWUP_ENABLED = os.environ.get("ICEBREAKER_FOLLOWUP_ENABLED", "true").lower() == "true"
+# 揭晓后可选「破冰扩展包」。默认关。打开也只显示入口与模拟/人工开通，不调用支付宝。
+ICEBREAKER_PACK_ENABLED = os.environ.get("ICEBREAKER_PACK_ENABLED", "false").lower() in (
+    "1", "true", "on", "yes",
+)
+ICEBREAKER_PACK_MOCK_GRANT = os.environ.get("ICEBREAKER_PACK_MOCK_GRANT", "false").lower() in (
+    "1", "true", "on", "yes",
+)
+ICEBREAKER_PACK_PRICE_CENTS = 660  # 展示价 ¥6.6
 # 未完成问卷催填邮件（脚本/管理 API；脚本需显式 --send 才会发）
 MAIL_INCOMPLETE_NUDGE_ENABLED = os.environ.get("MAIL_INCOMPLETE_NUDGE_ENABLED", "true").lower() == "true"
 INCOMPLETE_NUDGE_COOLDOWN_DAYS = int(os.environ.get("INCOMPLETE_NUDGE_COOLDOWN_DAYS", "3"))

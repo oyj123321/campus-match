@@ -697,11 +697,13 @@ body.fest-halloween .box-ice,
 body.fest-halloween .box-warn,
 body.fest-halloween .box-dim,
 body.fest-halloween .ice-card,
+body.fest-halloween .ice-pack,
 body.fest-halloween .progress-sticky {
     background: rgba(29, 17, 52, 0.88) !important;
     border-color: rgba(255, 117, 24, 0.26) !important;
     color: var(--hw-bone) !important;
 }
+body.fest-halloween .ice-pack-price { color: var(--hw-amber) !important; }
 body.fest-halloween .ice-send-text {
     background: rgba(12, 7, 24, 0.92) !important;
     border-color: rgba(255, 117, 24, 0.35) !important;
