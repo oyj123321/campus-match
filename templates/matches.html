@@ -428,23 +428,35 @@ function renderMatchCards(matches, headerHtml) {
                 }
                 html += '</div>';
             }
-            if (m.icebreaker_pack && m.icebreaker_pack.entitled) {
-                html += '<p class="hint" style="margin:10px 0 0;">' + t('pack.unlocked') + '</p>';
-            }
             html += '</div>';
         }
-        if (m.icebreaker_pack && m.icebreaker_pack.entitled) {
+        if (m.differences && m.differences.length) {
             html += '<div class="box box-warn" style="margin-top:12px;">'
-                + '<strong>' + t('card.diff') + '</strong>';
-            if (m.differences && m.differences.length) {
-                html += '<ul class="hint" style="padding-left:18px;margin:6px 0;">';
-                var maxD = Math.min(m.differences.length, 4);
-                for (var dj = 0; dj < maxD; dj++) {
-                    html += '<li>' + esc(m.differences[dj]) + '</li>';
+                + '<strong>' + t('card.diff') + '</strong>'
+                + '<ul class="hint" style="padding-left:18px;margin:6px 0;">';
+            var maxD = Math.min(m.differences.length, 4);
+            for (var dj = 0; dj < maxD; dj++) {
+                html += '<li>' + esc(m.differences[dj]) + '</li>';
+            }
+            html += '</ul></div>';
+        }
+        if (m.icebreaker_pack && m.icebreaker_pack.entitled && m.openers && m.openers.length) {
+            html += '<div class="box box-ice" style="margin-top:12px;">'
+                + '<strong>' + t('pack.openersTitle') + '</strong>'
+                + '<p class="hint" style="margin:6px 0 8px;">' + t('pack.unlocked') + '</p>';
+            var maxO = Math.min(m.openers.length, 3);
+            for (var oi = 0; oi < maxO; oi++) {
+                var op = m.openers[oi] || {};
+                var opTip = op.tip || '';
+                var opSend = op.send || '';
+                html += '<div class="ice-card">';
+                if (opTip) html += '<p class="hint" style="margin:0 0 6px;">' + esc(opTip) + '</p>';
+                if (opSend) {
+                    html += '<div class="ice-send"><span class="ice-send-label">' + t('card.ice.send') + '</span>'
+                        + '<code class="ice-send-text">' + esc(opSend) + '</code>'
+                        + '<button type="button" class="btn btn-secondary ice-copy" onclick="copyIce(this)">' + t('card.ice.copy') + '</button></div>';
                 }
-                html += '</ul>';
-            } else {
-                html += '<p class="hint" style="margin:6px 0 0;">' + t('pack.diffNone') + '</p>';
+                html += '</div>';
             }
             html += '</div>';
         }

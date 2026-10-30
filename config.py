@@ -126,7 +126,8 @@ ICEBREAKER_FOLLOWUP_DAYS = int(os.environ.get("ICEBREAKER_FOLLOWUP_DAYS", "3"))
 # 「暂未配对」提醒 + 破冰随访（匹配成功始终发信）
 MAIL_NO_MATCH_ENABLED = os.environ.get("MAIL_NO_MATCH_ENABLED", "true").lower() == "true"
 ICEBREAKER_FOLLOWUP_ENABLED = os.environ.get("ICEBREAKER_FOLLOWUP_ENABLED", "true").lower() == "true"
-# 揭晓后可选「破冰扩展包」。默认关。打开也只显示入口与模拟/人工开通，不调用支付宝。
+# 揭晓后可选「破冰扩展包」：3 句按该次问卷和共同标签写的开场白。差异说明免费。默认关。
+# 打开也只显示入口与模拟/人工开通，不调用支付宝。
 ICEBREAKER_PACK_ENABLED = os.environ.get("ICEBREAKER_PACK_ENABLED", "false").lower() in (
     "1", "true", "on", "yes",
 )
