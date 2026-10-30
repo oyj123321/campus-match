@@ -1,4 +1,4 @@
-"""破冰扩展包：默认关闭；模拟开通只加开口提示，不改配对。"""
+"""破冰扩展包：默认关闭；开通后只加 3 句问卷开场白，不改配对。差异免费。"""
 
 import json
 import os
@@ -25,7 +25,7 @@ from icebreaker_pack import (
     ALIPAY_PRODUCT,
     PACK_PRICE_CENTS,
     PACK_PRICE_LABEL,
-    build_pack_icebreakers,
+    build_match_openers,
     icebreaker_pack_enabled,
 )
 from icebreakers import pick_icebreakers
@@ -75,6 +75,12 @@ class IcebreakerPackTests(unittest.TestCase):
             active=True,
             insight_json=self.raw_insight,
         )
+        self.viewer.answers = {
+            9: 1, 11: 5, 25: ["科幻/奇幻", "喜剧"], 5: 1,
+        }
+        self.partner.answers = {
+            9: 5, 11: 1, 25: ["科幻/奇幻"], 5: 5,
+        }
         db.session.add(self.match)
         db.session.commit()
         self.client = app.test_client()
@@ -135,6 +141,7 @@ class IcebreakerPackTests(unittest.TestCase):
         card = self._cards()[0]
         self.assertNotIn("icebreaker_pack", card)
         self.assertNotIn("match_id", card)
+        self.assertNotIn("openers", card)
         self.assertEqual(card["icebreakers"], ICE)
         self.assertEqual(card["differences"], [DIFF])
         self.assertEqual(card["id"], self.partner.id)
@@ -148,7 +155,7 @@ class IcebreakerPackTests(unittest.TestCase):
         self.assertEqual(IcebreakerPackOrder.query.count(), 0)
         self._assert_pair_untouched()
 
-    def test_flag_on_locked_hides_differences_without_changing_partner(self):
+    def test_flag_on_locked_keeps_free_diffs_and_hides_openers(self):
         os.environ["ICEBREAKER_PACK_ENABLED"] = "true"
         card = self._cards()[0]
         self.assertTrue(card["icebreaker_pack"]["enabled"])
@@ -161,8 +168,10 @@ class IcebreakerPackTests(unittest.TestCase):
         self.assertEqual(card["match_id"], self.match.id)
         self.assertEqual(card["icebreakers"], ICE)
         self.assertTrue(all(isinstance(line, str) for line in card["icebreakers"]))
-        self.assertEqual(card["differences"], [])
-        self.assertEqual(card["differences_count"], 0)
+        self.assertEqual(card["openers"], [])
+        self.assertEqual(card["differences"], [DIFF])
+        self.assertEqual(card["differences_count"], 1)
+        self.assertNotIn("我更靠近早睡", json.dumps(card, ensure_ascii=False))
         self.assertEqual(card["id"], self.partner.id)
         self.assertEqual(card["wechat_id"], "wx-2")
         self._assert_pair_untouched()
@@ -236,11 +245,25 @@ class IcebreakerPackTests(unittest.TestCase):
         first = self._cards()[0]
         second = self._cards()[0]
         self.assertEqual(first["icebreakers"], second["icebreakers"])
-        self.assertEqual(len(first["icebreakers"]), 6)
-        sends = [item["send"] for item in first["icebreakers"]]
-        self.assertEqual(sends[:3], ICE)
-        self.assertEqual(len(set(sends)), 6)
-        self.assertTrue(all(item.get("tip") and item.get("send") for item in first["icebreakers"]))
+        self.assertEqual(first["icebreakers"], ICE)
+        self.assertEqual(first["openers"], second["openers"])
+        self.assertEqual(len(first["openers"]), 3)
+        sends = [item["send"] for item in first["openers"]]
+        self.assertEqual(len(set(sends)), 3)
+        self.assertIn("科幻/奇幻", sends[0])
+        self.assertIn("我更靠近早睡", sends[1])
+        self.assertIn("夜猫子", sends[1])
+        self.assertIn("几乎不运动", sends[2])
+        self.assertNotIn("结婚", "\n".join(sends))
+        self.assertNotIn("婚姻", "\n".join(sends))
+        pool = pick_icebreakers(
+            shared_tags=["科幻/奇幻"], seed=(self.viewer.id, self.partner.id), n=12,
+            my_school="澳门大学", their_school="澳门大学",
+        )
+        for send in sends:
+            self.assertNotIn(send, pool)
+            self.assertNotIn(send, ICE)
+        self.assertTrue(all(item.get("tip") and item.get("send") for item in first["openers"]))
         self.assertEqual(first["differences"], [DIFF])
         self.assertTrue(first["icebreaker_pack"]["entitled"])
         self.assertFalse(first["icebreaker_pack"]["mock_grant"])
@@ -250,7 +273,8 @@ class IcebreakerPackTests(unittest.TestCase):
 
         partner_card = self._cards(self.partner_client)[0]
         self.assertEqual(partner_card["icebreakers"], ICE)
-        self.assertEqual(partner_card["differences"], [])
+        self.assertEqual(partner_card["openers"], [])
+        self.assertEqual(partner_card["differences"], [DIFF])
         self.assertFalse(partner_card["icebreaker_pack"]["entitled"])
         self.assertEqual(partner_card["id"], self.viewer.id)
 
@@ -285,8 +309,12 @@ class IcebreakerPackTests(unittest.TestCase):
         partner = self._cards(self.partner_client)[0]
         self.assertFalse(buyer["icebreaker_pack"]["entitled"])
         self.assertEqual(len(buyer["icebreakers"]), 3)
+        self.assertEqual(buyer["openers"], [])
+        self.assertEqual(buyer["differences"], [DIFF])
         self.assertTrue(partner["icebreaker_pack"]["entitled"])
-        self.assertEqual(len(partner["icebreakers"]), 6)
+        self.assertEqual(len(partner["icebreakers"]), 3)
+        self.assertEqual(len(partner["openers"]), 3)
+        self.assertIn("我更靠近夜猫子", partner["openers"][1]["send"])
         self.assertEqual(partner["differences"], [DIFF])
         repeat = self.client.post(
             "/api/admin/icebreaker-pack/grant",
@@ -325,23 +353,46 @@ class IcebreakerPackTests(unittest.TestCase):
         self.assertEqual(IcebreakerPackOrder.query.count(), 0)
         self.assertIsNotNone(db.session.get(User, self.partner.id))
 
-    def test_pack_lines_keep_the_free_three(self):
-        packed = build_pack_icebreakers(
-            ICE, ["科幻/奇幻"], seed=(4, 8),
+    def test_openers_come_from_answers_and_tags_not_the_static_pool(self):
+        mine = {9: 1, 11: 5, 25: ["科幻/奇幻"], 5: 1}
+        theirs = {9: 5, 11: 1, 25: ["科幻/奇幻"], 5: 5}
+        first = build_match_openers(mine, theirs, ["科幻/奇幻"], seed=(4, 8), avoid=ICE)
+        second = build_match_openers(mine, theirs, ["科幻/奇幻"], seed=(4, 8), avoid=ICE)
+        self.assertEqual(first, second)
+        self.assertEqual(len(first), 3)
+        sends = [item["send"] for item in first]
+        self.assertIn("科幻/奇幻", sends[0])
+        self.assertIn("我更靠近早睡", sends[1])
+        self.assertIn("夜猫子", sends[1])
+        self.assertIn("几乎不运动", sends[2])
+        blob = "\n".join(sends)
+        for banned in ("结婚", "婚姻", "出轨", "吸烟", "前任"):
+            self.assertNotIn(banned, blob)
+        pool = pick_icebreakers(
+            shared_tags=["科幻/奇幻"], seed=(4, 8), n=12,
             my_school="澳门大学", their_school="澳门大学",
         )
-        self.assertEqual([item["send"] for item in packed[:3]], ICE)
-        self.assertEqual(len(packed), 6)
-        same = pick_icebreakers(
-            shared_tags=["科幻/奇幻"], seed=(4, 8), n=3,
-            my_school="澳门大学", their_school="澳门大学",
-        )
-        longer = pick_icebreakers(
-            shared_tags=["科幻/奇幻"], seed=(4, 8), n=6,
-            my_school="澳门大学", their_school="澳门大学",
-        )
-        self.assertEqual(same, longer[:3])
-        self.assertGreaterEqual(len(longer), 6)
+        for send in sends:
+            self.assertNotIn(send, pool)
+        swapped = build_match_openers(theirs, mine, ["科幻/奇幻"], seed=(8, 4), avoid=ICE)
+        self.assertIn("我更靠近夜猫子", swapped[1]["send"])
+        self.assertNotIn("我更靠近早睡", swapped[1]["send"])
+
+        same_side = build_match_openers({9: 1, 10: 5}, {9: 2, 10: 4}, [], seed=1)
+        self.assertIn("都更靠近早睡", same_side[0]["send"])
+        self.assertIn("都更靠近无辣不欢", same_side[1]["send"])
+        self.assertIn("问卷上能对上的具体点不多", same_side[2]["send"])
+
+        sparse = build_match_openers({}, {}, ["喜剧"], seed=3)
+        self.assertIn("喜剧", sparse[0]["send"])
+        self.assertEqual(len(sparse), 3)
+        avoided = build_match_openers({}, {}, ["喜剧"], seed=3, avoid=[sparse[0]["send"]])
+        self.assertNotIn(sparse[0]["send"], [item["send"] for item in avoided])
+        self.assertEqual(len(avoided), 3)
+
+        empty = build_match_openers({}, {}, [], seed=1)
+        self.assertEqual(len(empty), 3)
+        self.assertEqual(len({item["send"] for item in empty}), 3)
 
     def test_copy_has_no_forbidden_claims(self):
         root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -359,20 +410,40 @@ class IcebreakerPackTests(unittest.TestCase):
         self.assertIn("requestIcePack", page)
         self.assertIn("pack.note", page)
         self.assertIn("card.diff", page)
+        self.assertIn("m.differences && m.differences.length", page)
+        self.assertIn("pack.openersTitle", page)
+        self.assertIn("m.openers", page)
+        self.assertNotIn("icebreaker_pack.entitled) {\n            html += '<div class=\"box box-warn\"", page)
         joined = "\n".join(chunks)
         for phrase in FORBIDDEN:
             self.assertNotIn(phrase, joined)
-        self.assertEqual(joined.count("'pack.cta'"), 4)
-        self.assertIn("再要 3 条破冰话题（含可复制开场句）", joined)
-        self.assertIn("免费匹配不变。这是开口提示，不改变你的配对对象。", joined)
+        cta_lines = [line for line in chunks if "pack.cta" in line]
+        self.assertEqual(len(cta_lines), 4)
+        self.assertIn("要 3 句按这次问卷写的开场白", "\n".join(cta_lines))
+        self.assertNotIn("再要 3 条", "\n".join(cta_lines))
+        note_lines = [line for line in chunks if "pack.note" in line]
+        self.assertIn("免费的破冰话题和差异说明都还在", "\n".join(note_lines))
         self.assertEqual(joined.count("'pack.rail'"), 4)
+        self.assertEqual(joined.count("'pack.openersTitle'"), 4)
         import inspect
         import icebreaker_pack as pack_mod
         source = inspect.getsource(pack_mod)
+        self.assertNotIn("pick_icebreakers", source)
         self.assertNotIn("openapi.alipay.com", source)
         self.assertNotIn("weixin", source.lower())
         self.assertNotIn("urllib", source)
         self.assertNotIn("requests", source)
+        old_bits = (
+            "更多破冰话题、可复制的开场白、差异说明",
+            "只增加破冰话题、可复制开场白和差异说明",
+            "extra icebreakers, copyable openers, and differences",
+            "mais tópicos, frases de abertura para copiar e diferenças",
+        )
+        for name in ("static/i18n.js", "templates/support.html", "templates/privacy.html"):
+            with open(os.path.join(root, name), encoding="utf-8") as handle:
+                text = handle.read()
+            for bit in old_bits:
+                self.assertNotIn(bit, text, name)
 
 
 if __name__ == "__main__":
