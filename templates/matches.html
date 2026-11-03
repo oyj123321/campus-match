@@ -17,9 +17,6 @@
     <a href="/questionnaire" class="btn btn-secondary" data-i18n="m.privacySelfCta">去填完整问卷</a>
 </div>
 {% endif %}
-<div id="optin-gap-banner" class="box box-warn" style="margin-bottom:14px;text-align:left;{% if not (user.ready_to_match() and user.is_open_to_match() and quota.reveal_require_opt_in and not quota.opted_in) %}display:none;{% endif %}">
-    <p style="margin:0;font-weight:700;line-height:1.65;" data-i18n="m.optinGap">本周还没进池。点「预约本周匹配」才会参加本周揭晓；不点就不匹配。</p>
-</div>
 <div class="card" style="text-align:center;">
     <h2><span data-school="{{ user.school }}">{{ user.school }}</span> · <span data-i18n="m.center">匹配中心</span></h2>
     <p class="hint" style="font-size:0.9em;">
@@ -67,7 +64,7 @@
 
     <div id="pool-box" class="card box-dim" style="margin-top:14px;text-align:left;">
         <h3 style="margin-bottom:8px;" data-i18n="pace.title">你的节奏与账号</h3>
-        <p class="hint" style="margin:0 0 12px;" data-i18n="pace.hint">暂停匹配不会删资料，也不扣本周额度；已经正式配对成功的仍计入额度。删号会清掉账号与配对记录，需再次确认。</p>
+        <p class="hint" style="margin:0 0 12px;" data-i18n="pace.hint">暂停匹配不会删资料；删号会清掉账号与配对记录，需再次确认。</p>
 
         <label class="check-row" for="want-followup" style="margin-bottom:4px;">
             <input type="checkbox" id="want-followup" {% if user.want_match_followup %}checked{% endif %} onchange="saveFollowupPref()">
@@ -125,7 +122,7 @@
         <p style="margin:8px 0;"><span data-i18n="rv.next">下次揭晓：</span><strong id="q-next-label">{{ quota.next_batch_label }}</strong>
             · <span id="q-countdown" data-i18n="rv.calc">计算中…</span></p>
         <p class="hint"><span data-i18n="rv.optin">本周预约状态：</span><strong id="q-optin">…</strong></p>
-        <p class="hint" data-i18n="rv.weekRule">从第二周起，每周都要自己点「预约本周匹配」才会进当周池。连续三周不来，会发一封邮件提醒。</p>
+        <p class="hint" data-i18n="rv.weekRule">从第二周起，每周都要自己点下面的确认才会匹配。连续三周不来，会发一封邮件提醒。</p>
         <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">
             <button type="button" class="btn btn-primary" id="optin-btn" onclick="toggleOptIn()" data-i18n="btn.optin">预约本周匹配</button>
             <button type="button" class="btn btn-secondary" onclick="loadHistory()" data-i18n="btn.current">查看当前配对</button>
@@ -171,7 +168,6 @@
         <span data-i18n="q.mode">模式：</span><strong id="q-mode">{{ quota.match_mode }}</strong>
         · <span data-i18n="q.quota">本周额度：</span><strong id="q-remain">{{ quota.weekly_remaining }}</strong> / {{ quota.weekly_limit }}
         · <span data-i18n="q.cool">冷却</span> {{ quota.cooldown_hours }} <span data-i18n="q.hours">小时</span>
-        <span data-i18n="q.quotaHint" style="display:block;margin-top:4px;">仅在正式配对成功时扣 1 次；暂停、取消预约不扣；邀请成功可 +1。</span>
     </div>
 
     <div style="margin-top:12px;" id="instant-wrap">
@@ -204,7 +200,7 @@
 <div id="result" style="margin-top:12px;"></div>
 
 <p class="hint" style="margin-top:14px;text-align:center;line-height:1.7;">
-    <span data-i18n="sup.entry">这个站是学生一个人做的。核心匹配永久免费；揭晓后的「破冰扩展包」可选，不改变配对结果。</span>
+    <span data-i18n="sup.entry">这个站是学生一个人做的，服务器和邮件自费，一直免费也不放广告。</span>
     <a href="/support" data-i18n="sup.entryLink">觉得好玩？支持一下开发者 →</a>
 </p>
 
@@ -234,27 +230,6 @@ async function copyIce(btn) {
     } catch (e) {
         prompt(t('card.ice.copyManual'), text);
     }
-}
-
-async function requestIcePack(matchId, btn) {
-    var box = btn && btn.closest ? btn.closest('.ice-pack') : null;
-    var status = box ? box.querySelector('.ice-pack-status') : null;
-    var useMock = btn && btn.getAttribute('data-mock') === '1';
-    if (btn) btn.disabled = true;
-    if (status) {
-        status.style.display = '';
-        status.textContent = t('pack.working');
-    }
-    var url = useMock
-        ? '/api/matches/' + matchId + '/icebreaker-pack/mock-grant'
-        : '/api/matches/' + matchId + '/icebreaker-pack/checkout';
-    var d = await api('POST', url, {});
-    if (d && d.ok && (d.entitled || d.already)) {
-        await loadHistory();
-        return;
-    }
-    if (status) status.textContent = (d && d.error) ? d.error : t('al.fail');
-    if (btn) btn.disabled = false;
 }
 
 function fmtCountdown(sec) {
@@ -291,8 +266,6 @@ function renderQuota(q) {
     optBtn.textContent = q.opted_in ? t('btn.optout') : t('btn.optin');
     optBtn.className = q.opted_in ? 'btn btn-secondary' : 'btn btn-primary';
     optBtn.disabled = !openOn;
-    var gap = document.getElementById('optin-gap-banner');
-    if (gap) gap.style.display = (q.reveal_require_opt_in && openOn && !q.opted_in) ? '' : 'none';
     ['yes', 'no', 'later'].forEach(function (choice) {
         var el = document.getElementById('next-' + choice);
         if (!el) return;
@@ -418,9 +391,8 @@ function renderMatchCards(matches, headerHtml) {
                 var ice = m.icebreakers[ib];
                 var tip = (ice && typeof ice === 'object') ? (ice.tip || '') : String(ice || '');
                 var send = (ice && typeof ice === 'object') ? (ice.send || '') : '';
-                if (send && tip === send) tip = '';
-                html += '<div class="ice-card">';
-                if (tip) html += '<p class="hint" style="margin:0 0 6px;">' + esc(tip) + '</p>';
+                html += '<div class="ice-card">'
+                    + '<p class="hint" style="margin:0 0 6px;">' + esc(tip) + '</p>';
                 if (send) {
                     html += '<div class="ice-send"><span class="ice-send-label">' + t('card.ice.send') + '</span>'
                         + '<code class="ice-send-text">' + esc(send) + '</code>'
@@ -428,38 +400,7 @@ function renderMatchCards(matches, headerHtml) {
                 }
                 html += '</div>';
             }
-            if (m.icebreaker_pack && m.icebreaker_pack.entitled) {
-                html += '<p class="hint" style="margin:10px 0 0;">' + t('pack.unlocked') + '</p>';
-            }
             html += '</div>';
-        }
-        if (m.icebreaker_pack && m.icebreaker_pack.entitled) {
-            html += '<div class="box box-warn" style="margin-top:12px;">'
-                + '<strong>' + t('card.diff') + '</strong>';
-            if (m.differences && m.differences.length) {
-                html += '<ul class="hint" style="padding-left:18px;margin:6px 0;">';
-                var maxD = Math.min(m.differences.length, 4);
-                for (var dj = 0; dj < maxD; dj++) {
-                    html += '<li>' + esc(m.differences[dj]) + '</li>';
-                }
-                html += '</ul>';
-            } else {
-                html += '<p class="hint" style="margin:6px 0 0;">' + t('pack.diffNone') + '</p>';
-            }
-            html += '</div>';
-        }
-        if (m.icebreaker_pack && m.icebreaker_pack.enabled && !m.icebreaker_pack.entitled
-            && m.active !== false && m.match_id) {
-            var packPrice = m.icebreaker_pack.price_label || t('pack.price');
-            var packMock = m.icebreaker_pack.mock_grant ? '1' : '0';
-            html += '<div class="ice-pack">'
-                + '<button type="button" class="btn btn-secondary" data-mock="' + packMock
-                + '" onclick="requestIcePack(' + Number(m.match_id) + ', this)">' + t('pack.cta') + '</button>'
-                + '<span class="ice-pack-price">' + esc(packPrice) + '</span>'
-                + '<span class="hint ice-pack-rail">' + t('pack.rail') + '</span>'
-                + '<p class="hint pack-note">' + t('pack.note') + '</p>'
-                + '<p class="hint ice-pack-status" style="display:none;"></p>'
-                + '</div>';
         }
 
         html += '<div class="wechat-line">' + t('card.email') + esc(m.email || t('card.nowechat')) + '</div>';

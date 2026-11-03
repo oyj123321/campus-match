@@ -245,36 +245,6 @@ M = {
         "zh": "密钥错误", "tw": "密鑰錯誤",
         "en": "Invalid secret", "pt": "Segredo inválido",
     },
-    "pack.disabled": {
-        "zh": "这项开口提示还没开放",
-        "tw": "這項開口提示還沒開放",
-        "en": "These opening prompts are not available yet",
-        "pt": "Estas sugestões para abrir conversa ainda não estão disponíveis",
-    },
-    "pack.missing": {
-        "zh": "找不到这次配对",
-        "tw": "找不到這次配對",
-        "en": "That match could not be found",
-        "pt": "Não foi possível encontrar este par",
-    },
-    "pack.inactive": {
-        "zh": "这次配对已失效，不能加开口提示",
-        "tw": "這次配對已失效，不能加開口提示",
-        "en": "This match is no longer active, so opening prompts cannot be added",
-        "pt": "Este par já não está ativo, por isso não é possível acrescentar sugestões",
-    },
-    "pack.pay_unavailable": {
-        "zh": "支付宝还没接上。免费匹配不变，配对对象也不会变。",
-        "tw": "支付寶還沒接上。免費匹配不變，配對對象也不會變。",
-        "en": "Alipay is not connected yet. Free matching stays the same, and your match does not change.",
-        "pt": "O Alipay ainda não está ligado. A correspondência gratuita mantém-se e o teu par não muda.",
-    },
-    "pack.mock_off": {
-        "zh": "现在不能直接加上这组开口提示",
-        "tw": "現在不能直接加上這組開口提示",
-        "en": "These opening prompts cannot be added directly right now",
-        "pt": "Estas sugestões não podem ser acrescentadas diretamente agora",
-    },
     "err.express_name": {
         "zh": "请填写昵称", "tw": "請填寫暱稱",
         "en": "Please enter a nickname", "pt": "Indica uma alcunha",
@@ -337,10 +307,10 @@ M = {
     },
     "ok.survey_saved": {"zh": "问卷已保存", "tw": "問卷已儲存", "en": "Questionnaire saved", "pt": "Questionário guardado"},
     "ok.express_saved": {
-        "zh": "隐私资料已保存。参与匹配开着时，第一次会自动预约本周；从下周起要点「预约本周匹配」才进当周池。完整问卷用户会优先匹配，想提高优先级请改填问卷。",
-        "tw": "隱私資料已儲存。參與配對開著時，第一次會自動預約本週；從下週起要點「預約本週配對」才進當週池。完整問卷用戶會優先配對，想提高優先級請改填問卷。",
-        "en": "Privacy profile saved. With matching on, the first save books this week; from next week tap “Opt in this week” or you will not enter that pool. Questionnaire users are matched first; fill the survey to rank higher.",
-        "pt": "Perfil de privacidade guardado. Com o matching ligado, a primeira gravação reserva esta semana; a partir da seguinte, toca em “Inscrever esta semana” ou não entras nesse pool. Quem fez o questionário é emparelhado primeiro; preenche-o para subir de prioridade.",
+        "zh": "隐私资料已保存，已进池。完整问卷用户会优先匹配，想提高优先级请改填问卷。",
+        "tw": "隱私資料已儲存，已進池。完整問卷用戶會優先配對，想提高優先級請改填問卷。",
+        "en": "Privacy profile saved — you are in the pool. Questionnaire users are matched first; fill the survey to rank higher.",
+        "pt": "Perfil de privacidade guardado — estás no pool. Quem fez o questionário é emparelhado primeiro; preenche-o para subir de prioridade.",
     },
     "ok.optin": {
         "zh": "已预约本周匹配，将在 {when} 揭晓",
@@ -355,10 +325,10 @@ M = {
         "pt": "{name} foi bloqueado e não voltará a fazer match",
     },
     "ok.paused": {
-        "zh": "已暂停参与匹配，不扣本周额度。历史配对仍可查看，资料不会删除；已经配对成功的仍计入额度。",
-        "tw": "已暫停參與配對，不扣本週額度。歷史配對仍可查看，資料不會刪除；已經配對成功的仍計入額度。",
-        "en": "Matching paused — this week's quota is not used. History stays and your profile is kept. Matches that already succeeded still count.",
-        "pt": "Matching em pausa — a quota desta semana não é consumida. O histórico fica e o perfil mantém-se. Matches já bem-sucedidos continuam a contar.",
+        "zh": "已暂停参与匹配。历史配对仍可查看，资料不会删除。",
+        "tw": "已暫停參與配對。歷史配對仍可查看，資料不會刪除。",
+        "en": "Matching paused. History stays; your profile is kept.",
+        "pt": "Matching em pausa. O histórico fica; o perfil mantém-se.",
     },
     "ok.exit_feedback": {
         "zh": "谢谢反馈，我们会用来改进。",
