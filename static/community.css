@@ -17,7 +17,7 @@
 .community-meta time{margin-left:auto}
 .community-tag{padding:5px 9px;border-radius:6px;background:#efe8d9;color:#3f3c36;font-weight:600}
 .community-facts{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
-.community-facts span{font-size:13px;padding:4px 8px;border-radius:999px;background:#efe8d9;color:#3f3c36}
+.community-facts>span{font-size:13px;padding:4px 8px;border-radius:999px;background:#efe8d9;color:#3f3c36}
 .community-members{list-style:none;padding:0;margin:12px 0;display:grid;gap:8px}
 .community-members li{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:14px}
 .community-members form{margin:0}
@@ -42,6 +42,9 @@
 .community-form>.community-primary{justify-self:start}
 .community-tools{display:flex;flex-wrap:wrap;gap:12px;align-items:start;margin-top:18px}
 .community-tools form{margin:0}
+.community-join{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.community-join label{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600}
+.community-join select{border:1px solid rgba(28,27,25,.14);border-radius:9px;background:#fffdf8;padding:8px 10px;font:inherit}
 .community-tools details{min-width:80px}
 .community-tools details[open]{flex-basis:100%}
 .community-card summary{cursor:pointer;color:#6b665c;font-size:13px;padding:8px 0}

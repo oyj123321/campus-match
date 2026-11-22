@@ -1,3 +1,28 @@
+document.addEventListener('DOMContentLoaded', () => {
+    const flex = document.querySelector('input[name="flexible"]');
+    const start = document.querySelector('input[name="starts_at"]');
+    const audience = document.querySelector('select[name="audience"]');
+    const mine = document.querySelector('#my-gender-field');
+    const mineSelect = mine ? mine.querySelector('select') : null;
+    const syncTime = () => {
+        if (!flex || !start) return;
+        start.disabled = flex.checked;
+        start.required = !flex.checked;
+        if (flex.checked) start.value = '';
+    };
+    const syncGender = () => {
+        if (!audience || !mine || !mineSelect) return;
+        const limited = audience.value === 'male' || audience.value === 'female';
+        mine.hidden = !limited;
+        mineSelect.required = limited;
+        if (!limited) mineSelect.value = '';
+    };
+    if (flex) flex.addEventListener('change', syncTime);
+    if (audience) audience.addEventListener('change', syncGender);
+    syncTime();
+    syncGender();
+});
+
 document.addEventListener('submit', async (event) => {
     const form = event.target;
     if (!form.matches('form[data-community-action]')) return;

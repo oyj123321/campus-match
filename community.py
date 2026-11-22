@@ -350,7 +350,7 @@ def create():
     starts_at = None if flexible else parse_start(request.form.get("starts_at", ""))
     rate_limit("post", 60)
     post = Entry(author_id=g.community_user.id, school=g.community_user.school, category=category,
-                 title=title, body=body or "就这样，细则在留言里补。", place=place, capacity=int(raw_cap),
+                 title=title, body=body, place=place, capacity=int(raw_cap),
                  fee=fee, audience=audience, starts_at=starts_at, flexible=flexible,
                  anonymous=False, status="published")
     db.session.add(post)

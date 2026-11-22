@@ -7,23 +7,24 @@
 {% endmacro %}
 {% block community_content %}
 <article class="community-card">
-    <div class="community-meta"><span class="community-tag">{{ categories.get(post.category, post.category) }}</span><span>{{ states[post.status] }}</span>{% if post.cancelled %}<span data-i18n="cm.cancelled">已取消</span>{% elif post.capacity and not plan_active(post) %}<span data-i18n="cm.ended">已结束</span>{% endif %}<time>{{ plan_when(post) }}</time></div>
+    <div class="community-meta"><span class="community-tag">{{ categories.get(post.category, post.category) }}</span>{% if post.status!='published' %}<span>{{ states[post.status] }}</span>{% endif %}{% if post.cancelled %}<span data-i18n="cm.cancelled">已取消</span>{% elif post.capacity and not plan_active(post) %}<span data-i18n="cm.ended">已结束</span>{% endif %}<time>{{ plan_when(post) }}</time></div>
     <h2 class="community-title">{{ post.title }}</h2>
     <p class="community-muted">{{ '匿名同学' if post.anonymous else (post.author.name or '校园同学') }}{% if not post.anonymous and post.author.gender in ('male','female') %} · <span data-i18n="g.{{ post.author.gender }}">{{ '男' if post.author.gender=='male' else '女' }}</span>{% endif %} · {{ post.school }}</p>
     {% if post.capacity %}
     <div class="community-facts">
         {% if post.place %}<span>{{ post.place }}</span>{% endif %}
-        <span>{{ 1 + going.get(post.id,0) }}/{{ post.capacity }}</span>
+        <span><span data-i18n-skip>{{ 1 + going.get(post.id,0) }}/{{ post.capacity }}</span> <span data-i18n="cm.people">人</span></span>
         {% if post.fee in fees %}<span>{{ fees[post.fee] }}</span>{% endif %}
-        {% if post.audience in audiences %}<span data-i18n="cm.who.{{ post.audience }}">{{ audiences[post.audience] }}</span>{% endif %}
+        {% if post.audience in ('male','female') %}<span data-i18n="cm.who.{{ post.audience }}">{{ audiences[post.audience] }}</span>{% endif %}
         {% if waiting.get(post.id) %}<span>{{ waiting.get(post.id) }} 人候补</span>{% endif %}
     </div>
     {% endif %}
-    <div class="community-body">{{ post.body }}</div>
+    {% if post.body %}<div class="community-body">{{ post.body }}</div>{% endif %}
     {% if post.cancelled %}<p class="community-notice" data-i18n="cm.cancelNote">发起人已取消这场局。</p>{% endif %}
     {% if post.status!='published' %}<p class="community-notice">{{ '正在等待管理员审核，其他同学暂不可见。' if post.status=='pending' else '此内容已被管理员隐藏，其他同学暂不可见。' }}</p>{% endif %}
-    {% if members %}
+    {% if post.capacity or members %}
     <ul class="community-members">
+        {% if post.capacity %}<li><strong>{{ '匿名同学' if post.anonymous else (post.author.name or '校园同学') }}</strong>{% if not post.anonymous and post.author.gender in ('male','female') %} · <span data-i18n="g.{{ post.author.gender }}">{{ '男' if post.author.gender=='male' else '女' }}</span>{% endif %} · {{ post.school }} · <span data-i18n="cm.host">发起人</span></li>{% endif %}
         {% for member in members %}
         <li><strong>{{ member.user.name or '校园同学' }}</strong>{% if member.user.gender in ('male','female') %} · <span data-i18n="g.{{ member.user.gender }}">{{ '男' if member.user.gender=='male' else '女' }}</span>{% endif %} · {{ member.user.school }} · {{ '候补' if member.state=='waitlist' else '已加入' }}
             {% if community_user and post.author_id==community_user.id %}
@@ -44,7 +45,7 @@
             {% if post.audience in ('male','female') and community_user.gender in ('male','female') and community_user.gender != post.audience %}
             <p class="community-notice" data-i18n="cm.who.blocked.{{ post.audience }}">{{ '这场局只限男生。' if post.audience=='male' else '这场局只限女生。' }}</p>
             {% else %}
-            <form method="post" action="{{ url_for('community.join', post_id=post.id) }}"><input type="hidden" name="csrf" value="{{ community_csrf }}">{% if post.audience in ('male','female') and community_user.gender not in ('male','female') %}<label><span data-i18n="cm.form.myGender">我的性别</span><select name="my_gender" required><option value="male" data-i18n="g.male">男</option><option value="female" data-i18n="g.female">女</option></select></label>{% endif %}<button type="submit" class="community-primary">{{ '加入候补' if (1 + going.get(post.id,0)) >= post.capacity else '加入' }}</button></form>
+            <form class="community-join" method="post" action="{{ url_for('community.join', post_id=post.id) }}"><input type="hidden" name="csrf" value="{{ community_csrf }}">{% if post.audience in ('male','female') and community_user.gender not in ('male','female') %}<label><span data-i18n="cm.form.myGender">我的性别</span><select name="my_gender" required><option value="male" data-i18n="g.male">男</option><option value="female" data-i18n="g.female">女</option></select></label>{% endif %}<button type="submit" class="community-primary">{{ '加入候补' if (1 + going.get(post.id,0)) >= post.capacity else '加入' }}</button></form>
             {% endif %}
             {% endif %}
         {% endif %}

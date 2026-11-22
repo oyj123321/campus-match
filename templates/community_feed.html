@@ -17,13 +17,13 @@
         <h2><a href="{{ url_for('community.detail',post_id=post.id) }}">{{ post.title }}</a></h2>
         <div class="community-facts">
             {% if post.place %}<span>{{ post.place }}</span>{% endif %}
-            {% if post.capacity %}<span data-i18n-skip>{{ 1 + going.get(post.id,0) }}/{{ post.capacity }}</span>{% endif %}
+            {% if post.capacity %}<span><span data-i18n-skip>{{ 1 + going.get(post.id,0) }}/{{ post.capacity }}</span> <span data-i18n="cm.people">人</span></span>{% endif %}
             {% if post.fee in fees %}<span data-i18n="cm.fee.{{ post.fee }}">{{ fees[post.fee] }}</span>{% endif %}
-            {% if post.audience in audiences %}<span data-i18n="cm.who.{{ post.audience }}">{{ audiences[post.audience] }}</span>{% endif %}
+            {% if post.audience in ('male','female') %}<span data-i18n="cm.who.{{ post.audience }}">{{ audiences[post.audience] }}</span>{% endif %}
             {% if waiting.get(post.id) %}<span>{{ waiting.get(post.id) }} <span data-i18n="cm.waitCount">人候补</span></span>{% endif %}
         </div>
-        {% set excerpt_len = 90 if not community_user else 180 %}
-        <p class="community-excerpt">{{ post.body[:excerpt_len] }}{% if post.body|length>excerpt_len %}…{% endif %}</p>
+        {% if post.body %}{% set excerpt_len = 90 if not community_user else 180 %}
+        <p class="community-excerpt">{{ post.body[:excerpt_len] }}{% if post.body|length>excerpt_len %}…{% endif %}</p>{% endif %}
         <div class="community-meta"><span>{{ '匿名同学' if post.anonymous else (post.author.name or '校园同学') }}{% if not post.anonymous and post.author.gender in ('male','female') %} · <span data-i18n="g.{{ post.author.gender }}">{{ '男' if post.author.gender=='male' else '女' }}</span>{% endif %} · {{ post.school }}</span><a href="{{ url_for('community.detail',post_id=post.id) }}">{{ comment_counts.get(post.id,0) }} <span data-i18n="cm.comments">条留言</span></a></div>
     </article>
     {% else %}<div class="community-card community-empty"><span class="community-eyebrow" data-i18n="cm.empty.eye">从一场局开始</span><h2>{% if view=='saved' %}<span data-i18n="cm.empty.saved">还没有标成想去的局</span>{% elif view=='joined' %}<span data-i18n="cm.empty.joined">你还没有加入任何局</span>{% elif view=='mine' %}<span data-i18n="cm.empty.mine">你还没有发起过局</span>{% else %}<span data-i18n="cm.empty.hello">这几天还没有人组局</span>{% endif %}</h2><p data-i18n="cm.empty.body">写清时间、地点和还差几人。过期的局不会留在这里。</p><a href="{{ '/community/new' if community_user else '/#step1-card' }}">{% if community_user %}<span data-i18n="cm.empty.ctaUser">发起一场局 →</span>{% else %}<span data-i18n="cm.empty.ctaGuest">注册后发起一场局 →</span>{% endif %}</a></div>{% endfor %}

@@ -178,6 +178,15 @@ class CommunityTests(unittest.TestCase):
         self.assertIn("Hidden Name", html)
         self.assertNotIn("private-one", html)
 
+    def test_blank_note_is_not_replaced_with_a_sentence(self):
+        self.assertEqual(self.submit("/community/new", **self.plan_form(body="")).status_code, 302)
+        post = Entry.query.one()
+        self.assertEqual(post.body, "")
+        html = self.client.get(f"/community/posts/{post.id}").get_data(as_text=True)
+        self.assertNotIn("就这样", html)
+        self.assertIn("发起人", html)
+        self.assertNotIn(">已发布<", html)
+
     def test_anonymous_does_not_expose_name_or_email_and_html_is_escaped(self):
         post = self.post(anonymous=True)
         post.body = "<script>alert('x')</script>"
