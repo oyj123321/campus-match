@@ -1,4 +1,4 @@
-"""Same-college roommate cards. Separate from romantic matching. One confirmed pair per academic year."""
+"""Roommate cards. Undergraduates match inside one college. Master's and PhD students match in the graduate dorm, not a college."""
 import secrets
 from datetime import datetime, timedelta, timezone
 
@@ -23,6 +23,7 @@ COLLEGES = (
     "绍邦书院",
 )
 DEGREES = {"bachelor": "本科", "master": "硕士", "doctorate": "博士"}
+GRAD_DORM = "研究生宿舍"
 SLEEPS = {"early": "23 点前睡", "flex": "不固定", "late": "24 点后睡"}
 TIDIES = {"high": "喜欢整齐", "mid": "普通", "low": "不太收拾"}
 SOCIALS = {"quiet": "希望安静", "either": "都可以", "chatty": "喜欢聊天"}
@@ -75,6 +76,7 @@ def shared():
         roommate_user=user, roommate_csrf=session.get("roommate_csrf", ""),
         colleges=COLLEGES, degrees=DEGREES, sleeps=SLEEPS, tidies=TIDIES,
         socials=SOCIALS, smokes=SMOKES, guests=GUESTS, um_school=UM,
+        grad_dorm=GRAD_DORM, housing=housing,
     )
 
 
@@ -97,8 +99,8 @@ def board():
         query = Profile.query.filter(Profile.season == season, Profile.user_id != user.id)
         rows = [row for row in query.all()
                 if row.user.school == user.school and row.user.gender == user.gender
-                and row.college == mine.college and not pair_for(row.user_id, season)]
-        if degree == "same":
+                and housing(row) == housing(mine) and not pair_for(row.user_id, season)]
+        if mine.degree == "bachelor" or degree == "same":
             rows = [row for row in rows if row.degree == mine.degree]
         wished = {row.to_id for row in Wish.query.filter_by(season=season, from_id=user.id)}
         incoming = {row.from_id for row in Wish.query.filter_by(season=season, to_id=user.id)}
@@ -106,6 +108,13 @@ def board():
     return render_template(
         "roommates.html", season=season, mine=mine, pair=pair, partner=partner,
         cards=cards, wished=wished, incoming=incoming, degree=degree)
+
+
+def housing(profile):
+    """Undergraduates live in a college. Master's and PhD students live in the graduate dorm."""
+    if not profile or profile.degree == "bachelor":
+        return profile.college if profile else ""
+    return GRAD_DORM
 
 
 def habit_score(mine, other):
@@ -129,15 +138,18 @@ def clean_choice(name):
 def save():
     user = g.roommate_user
     season = current_season()
-    college = request.form.get("college", "").strip()
-    if user.school == UM:
-        if college not in COLLEGES:
-            abort(400, "请选择书院。")
-    elif not 2 <= len(college) <= 32:
-        abort(400, "请填写宿舍或书院名称。")
     degree = request.form.get("degree", "")
     if degree not in DEGREES:
         abort(400, "请选择学历。")
+    if degree == "bachelor":
+        college = request.form.get("college", "").strip()
+        if user.school == UM:
+            if college not in COLLEGES:
+                abort(400, "请选择书院。")
+        elif not 2 <= len(college) <= 32:
+            abort(400, "请填写宿舍或书院名称。")
+    else:
+        college = GRAD_DORM
     picked = request.form.get("my_gender", "").strip()
     if picked and picked not in ("male", "female"):
         abort(400, "请选择你的性别。")
@@ -157,7 +169,8 @@ def save():
     profile.updated_at = datetime.utcnow()
     db.session.add(profile)
     db.session.commit()
-    flash("作息已保存。同一书院、同性别的同学能看到这张卡片。")
+    where = "同一书院的本科生" if degree == "bachelor" else "研究生宿舍里的同学"
+    flash(f"作息已保存。同性别、{where}能看到这张卡片。")
     return redirect(url_for("roommates.board"))
 
 
@@ -169,8 +182,8 @@ def wish(user_id):
     theirs = db.session.get(Profile, (user_id, season))
     if not mine or not theirs or user_id == user.id:
         abort(404, "找不到这位同学的舍友卡片。")
-    if theirs.user.school != user.school or theirs.user.gender != user.gender or theirs.college != mine.college:
-        abort(403, "只能在同一学校、同一书院、同性别里选舍友。")
+    if theirs.user.school != user.school or theirs.user.gender != user.gender or housing(theirs) != housing(mine):
+        abort(403, "只能在同一处宿舍、同性别里选舍友。")
     if pair_for(user.id, season) or pair_for(user_id, season):
         abort(400, "本学年已经确认过舍友。解除后才能再选。")
     existing = db.session.get(Wish, (season, user.id, user_id))
