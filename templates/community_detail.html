@@ -8,7 +8,7 @@
 {% endmacro %}
 {% block community_content %}
 <article class="community-card">
-    <div class="community-meta"><span class="community-tag">{{ categories.get(post.category, post.category) }}</span>{% if post.status!='published' %}<span>{{ states[post.status] }}</span>{% endif %}{% if post.cancelled %}<span data-i18n="cm.cancelled">已取消</span>{% elif post.capacity and not plan_active(post) %}<span data-i18n="cm.ended">已结束</span>{% endif %}<time>{{ icon('clock') }}{{ plan_when(post) }}</time></div>
+    <div class="community-meta"><span class="community-tag">{{ categories.get(post.category, post.category) }}</span>{% if post.status!='published' %}<span>{{ states[post.status] }}</span>{% endif %}{% if post.cancelled %}<span data-i18n="cm.cancelled">已取消</span>{% elif post.capacity and not plan_active(post) %}<span data-i18n="cm.ended">已截止</span>{% endif %}<time>{{ icon('clock') }}{{ plan_when(post) }}</time></div>
     <h2 class="community-title">{{ post.title }}</h2>
     <p class="community-muted">{{ '匿名同学' if post.anonymous else (post.author.name or '校园同学') }}{% if not post.anonymous and post.author.gender in ('male','female') %} · <span data-i18n="g.{{ post.author.gender }}">{{ '男' if post.author.gender=='male' else '女' }}</span>{% endif %} · {{ post.school }}</p>
     {% if post.capacity %}

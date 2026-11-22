@@ -114,7 +114,7 @@ class CommunityTests(unittest.TestCase):
         self.assertIn("Preview 2", html)
         self.assertNotIn("Preview 1", html)
         self.assertNotIn("Preview 0", html)
-        self.assertRegex(html, r"还有</span>\s*2\s*<span[^>]*>场即将开始")
+        self.assertRegex(html, r"还有</span>\s*2\s*<span[^>]*>场正在找人")
         self.assertNotIn("下一页", html)
         self.assertNotIn("School C", html)
         newest = Entry.query.filter_by(title="Preview 4").one()
@@ -439,6 +439,16 @@ class CommunityTests(unittest.TestCase):
         self.assertEqual(self.submit(f"/community/posts/{live.id}/cancel").status_code, 302)
         self.assertNotIn("Still open", self.client.get("/community").get_data(as_text=True))
         self.assertIn("已取消", self.client.get(f"/community/posts/{live.id}").get_data(as_text=True))
+
+    def test_ongoing_plan_stays_on_the_open_list(self):
+        self.assertEqual(self.submit("/community/new", **self.plan_form(
+            title="长期开黑", ongoing="1", starts_at="")).status_code, 302)
+        post = Entry.query.filter_by(title="长期开黑").one()
+        self.assertTrue(post.ongoing)
+        self.assertIsNone(post.starts_at)
+        html = self.client.get("/community").get_data(as_text=True)
+        self.assertIn("长期开黑", html)
+        self.assertIn("一直找人", html)
 
     def test_cross_school_requires_mutual_opt_in(self):
         self.user.school = "澳门大学"

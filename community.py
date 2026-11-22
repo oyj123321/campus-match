@@ -39,6 +39,7 @@ COLUMN_ADDS = (
     ("fee", "VARCHAR(16) DEFAULT ''"),
     ("starts_at", "DATETIME"),
     ("flexible", "BOOLEAN DEFAULT 0"),
+    ("ongoing", "BOOLEAN DEFAULT 0"),
     ("cancelled", "BOOLEAN DEFAULT 0"),
     ("audience", "VARCHAR(16) DEFAULT 'any'"),
 )
@@ -162,24 +163,30 @@ def plan_active(post, now=None):
     if not post or post.cancelled or post.status != "published" or post.category not in PLAN_CATEGORIES:
         return False
     now = now or datetime.utcnow()
+    if post.ongoing:
+        return True
     if post.flexible:
         return post.created_at >= now - timedelta(days=7)
     return bool(post.starts_at and post.starts_at >= now)
 
 
 def plan_when(post):
+    if post.ongoing:
+        return "一直找人"
     if post.flexible:
         return "7 天内再议"
     if post.starts_at:
-        return local_time(post.starts_at)
+        return "截止 " + local_time(post.starts_at)
     return local_time(post.created_at)
 
 
 def active_clause(now=None):
     now = now or datetime.utcnow()
     return db.or_(
-        db.and_(Entry.flexible.is_(False), Entry.starts_at.isnot(None), Entry.starts_at >= now),
+        Entry.ongoing.is_(True),
         db.and_(Entry.flexible.is_(True), Entry.created_at >= now - timedelta(days=7)),
+        db.and_(Entry.flexible.is_(False), Entry.ongoing.is_(False),
+                Entry.starts_at.isnot(None), Entry.starts_at >= now),
     )
 
 
@@ -268,13 +275,13 @@ def parse_start(raw):
         except ValueError:
             continue
     if local is None:
-        abort(400, "请填写开始时间。")
+        abort(400, "请填写截止时间。")
     local = local.replace(second=0, microsecond=0)
     now = macau_now().replace(second=0, microsecond=0)
     if local < now:
-        abort(400, "开始时间要晚于现在。你填的是 "
+        abort(400, "截止时间要晚于现在。你填的是 "
               f"{local.strftime('%m-%d %H:%M')}，现在是 {now.strftime('%m-%d %H:%M')}（澳门时间）。"
-              "已经过了的话，把时间改晚，或勾选「时间再议」。")
+              "已经过了的话，把时间改晚，或勾选「一直找人」。")
     return local - timedelta(hours=8)
 
 
@@ -319,7 +326,8 @@ def feed():
         query = query.filter(Entry.category.in_(PLAN_CATEGORIES), Entry.cancelled.is_(False), active_clause())
         if when == "week":
             soon = datetime.utcnow() + timedelta(days=7)
-            query = query.filter(db.or_(Entry.flexible.is_(True), Entry.starts_at <= soon))
+            query = query.filter(db.or_(
+                Entry.ongoing.is_(True), Entry.flexible.is_(True), Entry.starts_at <= soon))
         if spots == "open":
             query = query.filter(Entry.capacity > 1 + going_count_query())
         if who == "mine":
@@ -392,12 +400,14 @@ def create():
     raw_cap = request.form.get("capacity", "").strip()
     if not raw_cap.isdigit() or not 2 <= int(raw_cap) <= 12:
         abort(400, "人数上限须在 2–12 人之间（含发起人）。")
-    flexible = request.form.get("flexible") == "1"
-    starts_at = None if flexible else parse_start(request.form.get("starts_at", ""))
+    ongoing = request.form.get("ongoing") == "1"
+    flexible = request.form.get("flexible") == "1" and not ongoing
+    starts_at = None if ongoing or flexible else parse_start(request.form.get("starts_at", ""))
     rate_limit("post", 60)
     post = Entry(author_id=g.community_user.id, school=g.community_user.school, category=category,
                  title=title, body=body, place=place, capacity=int(raw_cap),
                  fee=fee, audience=audience, starts_at=starts_at, flexible=flexible,
+                 ongoing=ongoing,
                  anonymous=False, status="published")
     db.session.add(post)
     db.session.commit()
@@ -449,7 +459,7 @@ def comment(post_id):
 def join(post_id):
     post = visible_post(post_id)
     if not plan_active(post):
-        abort(403, "这场局已结束或已取消，不能再加入。")
+        abort(403, "这场局已截止或已取消，不能再加入。")
     if post.author_id == g.community_user.id:
         abort(400, "你是发起人，名额里已经算上你。")
     if not schools_can_meet(g.community_user, post.author):

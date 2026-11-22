@@ -478,6 +478,7 @@ class CommunityEntry(db.Model):
     audience = db.Column(db.String(16), nullable=False, default="any")  # any / male / female
     starts_at = db.Column(db.DateTime)
     flexible = db.Column(db.Boolean, nullable=False, default=False)
+    ongoing = db.Column(db.Boolean, nullable=False, default=False)
     cancelled = db.Column(db.Boolean, nullable=False, default=False)
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, index=True)
     author = db.relationship("User", foreign_keys=[author_id], lazy="joined")

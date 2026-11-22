@@ -4,15 +4,17 @@ document.addEventListener('DOMContentLoaded', () => {
         form.addEventListener('change', () => form.requestSubmit());
     });
     const flex = document.querySelector('input[name="flexible"]');
+    const ongoing = document.querySelector('input[name="ongoing"]');
     const start = document.querySelector('input[name="starts_at"]');
     const audience = document.querySelector('select[name="audience"]');
     const mine = document.querySelector('#my-gender-field');
     const mineSelect = mine ? mine.querySelector('select') : null;
     const syncTime = () => {
-        if (!flex || !start) return;
-        start.disabled = flex.checked;
-        start.required = !flex.checked;
-        if (flex.checked) start.value = '';
+        if (!start) return;
+        const skip = (ongoing && ongoing.checked) || (flex && flex.checked);
+        start.disabled = skip;
+        start.required = !skip;
+        if (skip) start.value = '';
     };
     const syncGender = () => {
         if (!audience || !mine || !mineSelect) return;
@@ -21,7 +23,14 @@ document.addEventListener('DOMContentLoaded', () => {
         mineSelect.required = limited;
         if (!limited) mineSelect.value = '';
     };
-    if (flex) flex.addEventListener('change', syncTime);
+    if (flex) flex.addEventListener('change', () => {
+        if (flex.checked && ongoing) ongoing.checked = false;
+        syncTime();
+    });
+    if (ongoing) ongoing.addEventListener('change', () => {
+        if (ongoing.checked && flex) flex.checked = false;
+        syncTime();
+    });
     if (audience) audience.addEventListener('change', syncGender);
     syncTime();
     syncGender();
