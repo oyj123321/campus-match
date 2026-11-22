@@ -187,8 +187,8 @@ def festival_halloween_active():
     return FESTIVAL_HALLOWEEN_START <= today <= FESTIVAL_HALLOWEEN_END
 
 
-# 圣诞前一周到元旦：澳门时区。FESTIVAL_CHRISTMAS=on/off 可强制开关。
-FESTIVAL_CHRISTMAS_START = date(2026, 12, 18)
+# 圣诞冰雪季（11 月底到元旦）：澳门时区。FESTIVAL_CHRISTMAS=on/off 可强制开关。
+FESTIVAL_CHRISTMAS_START = date(2026, 11, 25)
 FESTIVAL_CHRISTMAS_END = date(2027, 1, 1)
 
 

@@ -1,88 +1,95 @@
 /* ════════════════════════════════════════════════════════════════════════
-   CampusMatch — 圣诞冰雪节限定皮肤 (2026-12-18 ~ 2027-01-01)
-   开源全彩矢量：Microsoft Fluent Emoji (MIT) + Twemoji (CC-BY 4.0)
-   线稿：Tabler Icons (MIT)
-   展示字体：Mountains of Christmas (Apache 2.0)
+   CampusMatch — 圣诞冰雪季主题 (2026-11-25 ~ 2027-01-01)
+   冰夜极光 × 磨砂玻璃 × 丝绒勃艮第红 × 香槟金
+   素材：Phosphor Icons (MIT) · Fluent Snowflake (MIT) · Tabler Icons (MIT)
+   展示字体：Cinzel (SIL OFL 1.1)
    ════════════════════════════════════════════════════════════════════════ */
 
 @font-face {
-    font-family: "CM Mountains";
-    src: url("/static/fonts/MountainsofChristmas-Regular.ttf") format("truetype");
-    font-weight: 400;
+    font-family: "CM Cinzel";
+    src: url("/static/fonts/Cinzel-Variable.ttf") format("truetype");
+    font-weight: 400 700;
     font-style: normal;
     font-display: swap;
 }
 
+/* ── 1. 全站冰夜变量与极光天空背景 ── */
 body.fest-christmas {
-    --xm-bg-0: #07131c;
-    --xm-bg-1: #0c1e2e;
-    --xm-bg-2: #123044;
-    --xm-snow: #f4fbff;
-    --xm-ice: #d7f3ff;
-    --xm-muted: #b7c9d6;
-    --xm-dim: #8aa4b8;
-    --xm-cyan: #7dd3fc;
-    --xm-cyan-deep: #38bdf8;
-    --xm-gold: #f5d48a;
-    --xm-berry: #d6455d;
-    --xm-pine: #1f6b4a;
+    --xm-bg-0: #050c17;
+    --xm-bg-1: #091728;
+    --xm-bg-2: #0f253c;
+    --xm-glass: rgba(11, 26, 44, 0.72);
+    --xm-glass-strong: rgba(9, 22, 38, 0.86);
+    --xm-border: rgba(186, 230, 253, 0.16);
+    --xm-border-strong: rgba(235, 210, 160, 0.36);
+    --xm-snow: #f1f7fc;
+    --xm-ice: #d6ecfb;
+    --xm-muted: #9eb5c9;
+    --xm-dim: #738da3;
+    --xm-cyan: #93d5fa;
+    --xm-aurora: #5eead4;
+    --xm-gold: #ebd2a0;
+    --xm-gold-soft: rgba(235, 210, 160, 0.2);
+    --xm-wine: #9e2038;
+    --xm-wine-deep: #741428;
+    --xm-wine-bright: #b82944;
 
-    --bg-top: #07131c;
-    --bg-mid: #0c1e2e;
-    --bg-bot: #123044;
-    --card-bg: rgba(12, 30, 46, 0.86);
-    --card-border: rgba(125, 211, 252, 0.28);
-    --card-border-hover: rgba(245, 212, 138, 0.55);
-    --text: #f4fbff;
-    --text-secondary: #b7c9d6;
-    --accent: #7dd3fc;
-    --accent-deep: #e8f7ff;
-    --accent-2: #f5d48a;
-    --match: #d6455d;
-    --match-2: #7dd3fc;
-    --border: rgba(125, 211, 252, 0.24);
-    --primary: #d6455d;
-    --primary-hover: #e11d48;
-    --grad: linear-gradient(135deg, #d6455d 0%, #7dd3fc 100%);
-    --grad-match: linear-gradient(135deg, #d6455d 0%, #38bdf8 100%);
+    --bg-top: #050c17;
+    --bg-mid: #091728;
+    --bg-bot: #0f253c;
+    --card-bg: rgba(11, 26, 44, 0.76);
+    --card-border: rgba(186, 230, 253, 0.16);
+    --card-border-hover: rgba(235, 210, 160, 0.42);
+    --text: #f1f7fc;
+    --text-secondary: #9eb5c9;
+    --accent: #93d5fa;
+    --accent-deep: #e2f2fe;
+    --accent-2: #ebd2a0;
+    --match: #9e2038;
+    --match-2: #93d5fa;
+    --border: rgba(186, 230, 253, 0.16);
+    --primary: #9e2038;
+    --primary-hover: #b82944;
+    --grad: linear-gradient(135deg, #9e2038 0%, #5b2338 55%, #1d4e73 100%);
+    --grad-match: linear-gradient(135deg, #9e2038 0%, #1d4e73 100%);
 
     background-color: var(--xm-bg-0) !important;
     background-image:
-        radial-gradient(circle at 84% 12%, rgba(186, 230, 253, 0.22), transparent 34%),
-        radial-gradient(circle at 12% 22%, rgba(56, 189, 248, 0.16), transparent 40%),
-        radial-gradient(circle at 50% 96%, rgba(245, 212, 138, 0.1), transparent 46%),
-        radial-gradient(rgba(244, 251, 255, 0.16) 1px, transparent 1.4px),
-        linear-gradient(180deg, #061018 0%, #0c1e2e 48%, #16344a 100%) !important;
-    background-size: auto, auto, auto, 28px 28px, auto !important;
+        radial-gradient(ellipse 68% 44% at 78% 8%, rgba(147, 213, 250, 0.14), transparent 68%),
+        radial-gradient(ellipse 52% 38% at 18% 14%, rgba(94, 234, 212, 0.08), transparent 66%),
+        radial-gradient(ellipse 60% 34% at 50% 100%, rgba(186, 230, 253, 0.1), transparent 68%),
+        linear-gradient(180deg, #050c17 0%, #091728 52%, #0e243a 100%) !important;
     background-attachment: fixed;
     color: var(--xm-snow) !important;
 }
 
 body.fest-christmas .bg-decor,
 body.fest-christmas .grid-overlay,
-body.fest-christmas .gba-hero {
-    opacity: 0;
+body.fest-christmas .gba-hero,
+body.fest-christmas .sea {
+    opacity: 0 !important;
+    pointer-events: none;
 }
 
 body.fest-christmas ::selection {
-    background: rgba(125, 211, 252, 0.35);
-    color: #07131c;
+    background: rgba(147, 213, 250, 0.3);
+    color: #ffffff;
 }
 
+/* ── 2. 顶部导航与全站公告 ── */
 body.fest-christmas .nav,
 body.page-landing.fest-christmas .nav {
-    background: rgba(7, 19, 28, 0.88) !important;
-    backdrop-filter: blur(14px) !important;
-    -webkit-backdrop-filter: blur(14px) !important;
-    border-bottom: 1px solid rgba(125, 211, 252, 0.32) !important;
-    box-shadow: 0 10px 32px rgba(0, 0, 0, 0.42), 0 1px 0 rgba(245, 212, 138, 0.16);
+    background: rgba(6, 15, 27, 0.78) !important;
+    backdrop-filter: blur(18px) saturate(140%) !important;
+    -webkit-backdrop-filter: blur(18px) saturate(140%) !important;
+    border-bottom: 1px solid rgba(186, 230, 253, 0.14) !important;
+    box-shadow: 0 10px 32px rgba(0, 0, 0, 0.34), inset 0 -1px 0 rgba(235, 210, 160, 0.08);
 }
 
 body.fest-christmas .nav-brand,
 body.page-landing.fest-christmas .nav-brand {
     color: var(--xm-snow) !important;
     -webkit-text-fill-color: var(--xm-snow) !important;
-    text-shadow: 0 0 18px rgba(125, 211, 252, 0.4);
     display: inline-flex;
     align-items: center;
     gap: 9px;
@@ -91,63 +98,74 @@ body.page-landing.fest-christmas .nav-brand {
 body.fest-christmas .nav-brand::before,
 body.page-landing.fest-christmas .nav-brand::before {
     content: "";
-    width: 26px !important;
-    height: 26px !important;
+    width: 24px !important;
+    height: 24px !important;
     border-radius: 0 !important;
-    background: url("/static/festival/christmas/fluent-snowflake.svg") center / contain no-repeat !important;
-    filter: drop-shadow(0 0 8px rgba(186, 230, 253, 0.9));
+    background: url("/static/festival/christmas/ph-snowflake-ice.svg") center / contain no-repeat !important;
+    filter: drop-shadow(0 0 8px rgba(147, 213, 250, 0.65));
 }
 
 body.fest-christmas .nav-brand::after {
-    content: "SNOW";
-    font-family: "CM Mountains", cursive, sans-serif;
-    font-size: 0.92em;
-    font-weight: 400;
-    letter-spacing: 0.06em;
-    padding: 1px 10px 3px;
+    content: "WINTER";
+    font-family: "CM Cinzel", Georgia, serif;
+    font-size: 0.62em;
+    font-weight: 600;
+    letter-spacing: 0.2em;
+    padding: 3px 9px 2px 10px;
     border-radius: 999px;
-    background: rgba(125, 211, 252, 0.14);
-    border: 1px solid rgba(245, 212, 138, 0.55);
+    background: rgba(235, 210, 160, 0.08);
+    border: 1px solid rgba(235, 210, 160, 0.34);
     color: var(--xm-gold);
     -webkit-text-fill-color: var(--xm-gold);
 }
 
 body.fest-christmas .nav-link,
 body.page-landing.fest-christmas .nav-link {
-    color: #d5e7f2 !important;
+    color: #c8dce9 !important;
 }
 body.fest-christmas .nav-link:hover,
 body.page-landing.fest-christmas .nav-link:hover {
     color: var(--xm-gold) !important;
-    text-shadow: 0 0 12px rgba(125, 211, 252, 0.55);
 }
 
 body.fest-christmas .nav-cta,
 body.page-landing.fest-christmas .nav-cta {
-    background: linear-gradient(135deg, #e11d48, #9f1239) !important;
-    color: #fff8f6 !important;
-    font-weight: 800;
-    box-shadow: 0 0 18px rgba(214, 69, 93, 0.4);
+    background: linear-gradient(135deg, var(--xm-wine-bright), var(--xm-wine-deep)) !important;
+    color: #fdf7f2 !important;
+    border: 1px solid rgba(235, 210, 160, 0.38) !important;
+    font-weight: 600;
+    box-shadow: 0 4px 16px rgba(116, 20, 40, 0.42), inset 0 1px 0 rgba(255, 255, 255, 0.16);
 }
 body.fest-christmas .nav-cta:hover,
 body.page-landing.fest-christmas .nav-cta:hover {
-    background: linear-gradient(135deg, #fb7185, #be123c) !important;
-    color: #fff !important;
+    background: linear-gradient(135deg, #c9334f, #881830) !important;
+    color: #ffffff !important;
 }
 
+/* 修复 landing-editorial.css 的 background 简写覆盖导致箭头平铺的问题 */
 body.fest-christmas .lang-select,
 body.page-landing.fest-christmas .lang-select {
-    background-color: rgba(12, 30, 46, 0.92) !important;
-    border: 1px solid rgba(125, 211, 252, 0.35) !important;
+    background-color: rgba(12, 28, 46, 0.85) !important;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23ebd2a0' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E") !important;
+    background-repeat: no-repeat !important;
+    background-position: right 10px center !important;
+    background-size: 10px 6px !important;
+    border: 1px solid rgba(186, 230, 253, 0.24) !important;
     color: var(--xm-snow) !important;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23f5d48a' stroke-width='1.6' fill='none' stroke-linecap='round'/%3E%3C/svg%3E") !important;
+    padding: 5px 28px 5px 12px !important;
+    height: auto !important;
+}
+body.fest-christmas .lang-select:hover,
+body.fest-christmas .lang-select:focus {
+    border-color: rgba(235, 210, 160, 0.5) !important;
+    box-shadow: 0 0 0 3px rgba(147, 213, 250, 0.14) !important;
 }
 
 body.fest-christmas .site-announcement,
 body.page-landing.fest-christmas .site-announcement {
-    background: linear-gradient(90deg, rgba(12, 42, 62, 0.96), rgba(88, 28, 42, 0.9), rgba(12, 42, 62, 0.96)) !important;
-    border-bottom: 1px solid rgba(125, 211, 252, 0.32) !important;
-    color: var(--xm-ice) !important;
+    background: linear-gradient(90deg, rgba(8, 22, 38, 0.92), rgba(22, 38, 58, 0.88), rgba(8, 22, 38, 0.92)) !important;
+    border-bottom: 1px solid rgba(186, 230, 253, 0.14) !important;
+    color: #cfe3f2 !important;
 }
 body.fest-christmas .site-announcement-toggle,
 body.page-landing.fest-christmas .site-announcement-toggle {
@@ -155,20 +173,20 @@ body.page-landing.fest-christmas .site-announcement-toggle {
 }
 
 body.fest-christmas .incomplete-banner {
-    background: rgba(30, 58, 82, 0.55) !important;
-    border-bottom: 1px solid rgba(125, 211, 252, 0.35) !important;
+    background: rgba(158, 32, 56, 0.24) !important;
+    border-bottom: 1px solid rgba(235, 210, 160, 0.28) !important;
 }
 body.fest-christmas .incomplete-banner-inner {
     color: var(--xm-gold) !important;
 }
 
+/* ── 3. 极夜冬雪氛围层 (.fest-xm) ── */
 .fest-xm {
     position: fixed;
     inset: 0;
     z-index: 1;
     pointer-events: none;
     overflow: hidden;
-    color: #e0f2fe;
 }
 
 body.fest-christmas .main,
@@ -177,240 +195,182 @@ body.fest-christmas .footer {
     z-index: 2;
 }
 
-.xm-sky-glow {
+/* 柔和极光幕 */
+.xm-aurora {
     position: absolute;
-    inset: 0;
-    background:
-        radial-gradient(ellipse 48% 36% at 82% 16%, rgba(224, 242, 254, 0.28), transparent 70%),
-        radial-gradient(ellipse 40% 30% at 16% 24%, rgba(56, 189, 248, 0.16), transparent 72%);
+    border-radius: 50%;
+    filter: blur(72px);
+    opacity: 0.45;
+    animation: xmAuroraDrift 16s ease-in-out infinite alternate;
+}
+.xm-aurora-a {
+    top: -12%;
+    left: 8%;
+    width: 58vw;
+    height: 36vh;
+    background: radial-gradient(ellipse at center, rgba(94, 234, 212, 0.18) 0%, rgba(56, 189, 248, 0.14) 46%, transparent 74%);
+}
+.xm-aurora-b {
+    top: -6%;
+    right: -6%;
+    width: 48vw;
+    height: 40vh;
+    background: radial-gradient(ellipse at center, rgba(186, 230, 253, 0.18) 0%, rgba(235, 210, 160, 0.08) 48%, transparent 74%);
+    animation-duration: 20s;
+    animation-direction: alternate-reverse;
 }
 
-.xm-corner {
+/* 两侧极淡冰晶水印 */
+.xm-watermark {
     position: absolute;
-    top: 52px;
-    width: 180px;
-    height: 180px;
-    opacity: 0.55;
-    filter: drop-shadow(0 0 16px rgba(186, 230, 253, 0.45));
+    opacity: 0.075;
+    filter: drop-shadow(0 0 18px rgba(186, 230, 253, 0.35));
 }
-.xm-corner-tl { left: -28px; }
-.xm-corner-tr { right: -28px; transform: scaleX(-1); }
-
-.xm-hang {
-    position: absolute;
-    top: 58px;
-    left: 11%;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    animation: xmSwing 5.5s ease-in-out infinite;
-    transform-origin: top center;
+.xm-watermark-l {
+    top: 86px;
+    left: -74px;
+    width: 240px;
+    height: 240px;
+    transform: rotate(-12deg);
 }
-.xm-thread {
-    width: 2px;
-    height: 72px;
-    background: linear-gradient(180deg, rgba(245, 212, 138, 0.2), rgba(245, 212, 138, 0.9));
-}
-.xm-bell {
-    width: 54px;
-    height: 54px;
-    margin-top: -4px;
-    filter: drop-shadow(0 8px 14px rgba(0, 0, 0, 0.45)) drop-shadow(0 0 12px rgba(245, 212, 138, 0.55));
-}
-.xm-ornament {
-    width: 28px;
-    height: 28px;
-    margin-top: 6px;
-    color: #f5d48a;
-}
-
-.xm-moon-stage {
-    position: absolute;
-    top: 78px;
-    right: 4%;
+.xm-watermark-r {
+    bottom: 120px;
+    right: -66px;
     width: 210px;
     height: 210px;
+    transform: rotate(18deg);
+}
+
+/* 右上角清冷银白冬月 + 三颗克制星芒 */
+.xm-moon-stage {
+    position: absolute;
+    top: 86px;
+    right: 4.5%;
+    width: 156px;
+    height: 156px;
 }
 .xm-moon-halo {
     position: absolute;
-    inset: -28px;
+    inset: -38px;
     border-radius: 50%;
-    background: radial-gradient(circle, rgba(224, 242, 254, 0.55) 0%, rgba(125, 211, 252, 0.22) 46%, transparent 74%);
-    filter: blur(6px);
-    animation: xmMoonPulse 5s ease-in-out infinite alternate;
+    background: radial-gradient(circle, rgba(224, 242, 254, 0.34) 0%, rgba(147, 213, 250, 0.12) 45%, transparent 72%);
+    animation: xmMoonPulse 7s ease-in-out infinite alternate;
 }
 .xm-moon-disc {
     position: absolute;
     top: 22px;
     left: 22px;
-    width: 156px;
-    height: 156px;
-    border-radius: 50%;
-    overflow: hidden;
-    background: radial-gradient(circle at 32% 30%, #ffffff 0%, #e0f2fe 42%, #7dd3fc 100%);
-    box-shadow:
-        0 0 42px 12px rgba(186, 230, 253, 0.55),
-        inset -16px -18px 28px rgba(14, 116, 144, 0.28);
-}
-.xm-moon-art {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    mix-blend-mode: soft-light;
-    opacity: 0.85;
-}
-.xm-moon-star {
-    position: absolute;
-    filter: drop-shadow(0 0 10px rgba(245, 212, 138, 0.75));
-}
-.xm-moon-star-a { width: 52px; height: 52px; top: 4px; left: 0; animation: xmTwinkle 3.6s ease-in-out infinite; }
-.xm-moon-star-b { width: 40px; height: 40px; top: 18px; right: 0; animation: xmTwinkle 4.4s ease-in-out infinite reverse; }
-.xm-moon-star-c { width: 46px; height: 46px; bottom: 18px; left: 8px; animation: xmTwinkle 5s ease-in-out infinite; }
-
-.xm-float {
-    position: absolute;
-    filter: drop-shadow(0 10px 18px rgba(0, 0, 0, 0.35));
-    animation: xmDrift 6.2s ease-in-out infinite;
-}
-.xm-float-cloud { top: 280px; left: 2%; width: 92px; height: 92px; }
-.xm-float-spark { top: 390px; right: 3%; width: 64px; height: 64px; animation-delay: -2.4s; }
-
-.xm-ground {
-    position: absolute;
-    bottom: 18px;
-    display: flex;
-    align-items: flex-end;
-    gap: 4px;
-    z-index: 2;
-}
-.xm-ground-left { left: 1.2%; }
-.xm-ground-right { right: 1.2%; flex-direction: row-reverse; }
-.xm-tree {
     width: 108px;
     height: 108px;
-    filter: drop-shadow(0 0 18px rgba(52, 211, 153, 0.35)) drop-shadow(0 10px 16px rgba(0, 0, 0, 0.45));
-    animation: xmBob 4s ease-in-out infinite alternate;
+    border-radius: 50%;
+    background:
+        radial-gradient(circle at 28% 26%, rgba(255, 255, 255, 0.96) 0%, rgba(224, 242, 254, 0.88) 44%, rgba(147, 213, 250, 0.62) 82%, rgba(96, 165, 215, 0.44) 100%);
+    box-shadow:
+        0 0 36px 8px rgba(186, 230, 253, 0.35),
+        0 0 88px 24px rgba(147, 213, 250, 0.16),
+        inset -16px -14px 26px rgba(15, 42, 72, 0.28);
 }
-.xm-snowman, .xm-deer, .xm-santa {
-    width: 78px;
-    height: 78px;
-    filter: drop-shadow(0 8px 14px rgba(0, 0, 0, 0.4));
+.xm-star {
+    position: absolute;
+    filter: drop-shadow(0 0 8px rgba(235, 210, 160, 0.7));
 }
-.xm-gift, .xm-ice, .xm-pine, .xm-cookie {
-    width: 48px;
-    height: 48px;
-    margin-bottom: 6px;
-    filter: drop-shadow(0 0 10px rgba(245, 212, 138, 0.35));
+.xm-star-a { width: 18px; height: 18px; top: 8px; left: 4px; animation: xmTwinkle 4.2s ease-in-out infinite; }
+.xm-star-b { width: 14px; height: 14px; top: 34px; right: 2px; animation: xmTwinkle 5.4s ease-in-out infinite reverse; }
+.xm-star-c { width: 12px; height: 12px; bottom: 16px; left: -6px; animation: xmTwinkle 6.2s ease-in-out infinite; }
+
+/* 漫天细雪粒子 */
+.xm-snowfield {
+    position: absolute;
+    inset: 0;
 }
+.xm-dot {
+    position: absolute;
+    top: -16px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.95) 0%, rgba(214, 236, 251, 0.55) 60%, transparent 100%);
+    animation: xmSnowFall linear infinite;
+}
+.xm-dot-1  { left: 6%;  width: 4px; height: 4px; animation-duration: 15s; animation-delay: -2s; opacity: 0.7; }
+.xm-dot-2  { left: 14%; width: 3px; height: 3px; animation-duration: 19s; animation-delay: -9s; opacity: 0.45; }
+.xm-dot-3  { left: 22%; width: 5px; height: 5px; animation-duration: 14s; animation-delay: -5s; opacity: 0.55; filter: blur(0.6px); }
+.xm-dot-4  { left: 31%; width: 3px; height: 3px; animation-duration: 21s; animation-delay: -13s; opacity: 0.5; }
+.xm-dot-5  { left: 39%; width: 4px; height: 4px; animation-duration: 16s; animation-delay: -4s; opacity: 0.65; }
+.xm-dot-6  { left: 48%; width: 2.5px; height: 2.5px; animation-duration: 22s; animation-delay: -11s; opacity: 0.4; }
+.xm-dot-7  { left: 57%; width: 5px; height: 5px; animation-duration: 15s; animation-delay: -7s; opacity: 0.5; filter: blur(0.7px); }
+.xm-dot-8  { left: 65%; width: 3px; height: 3px; animation-duration: 18s; animation-delay: -1s; opacity: 0.55; }
+.xm-dot-9  { left: 73%; width: 4px; height: 4px; animation-duration: 17s; animation-delay: -12s; opacity: 0.65; }
+.xm-dot-10 { left: 81%; width: 3px; height: 3px; animation-duration: 20s; animation-delay: -6s; opacity: 0.45; }
+.xm-dot-11 { left: 89%; width: 5px; height: 5px; animation-duration: 14s; animation-delay: -10s; opacity: 0.55; filter: blur(0.5px); }
+.xm-dot-12 { left: 95%; width: 3px; height: 3px; animation-duration: 19s; animation-delay: -3s; opacity: 0.5; }
 
 .xm-flake {
     position: absolute;
-    top: -40px;
-    width: 22px;
-    height: 22px;
-    opacity: 0.85;
-    animation: xmFall 16s linear infinite;
+    top: -32px;
+    opacity: 0.34;
+    animation: xmFlakeDrift linear infinite;
 }
-.xm-flake-a { left: 18%; animation-delay: -2s; }
-.xm-flake-b { left: 42%; width: 16px; height: 16px; animation-duration: 19s; animation-delay: -8s; }
-.xm-flake-c { left: 67%; animation-duration: 14s; animation-delay: -5s; }
-.xm-flake-d { left: 84%; width: 18px; height: 18px; animation-duration: 21s; animation-delay: -11s; }
+.xm-flake-a { left: 19%; width: 16px; height: 16px; animation-duration: 22s; animation-delay: -6s; }
+.xm-flake-b { left: 61%; width: 14px; height: 14px; animation-duration: 26s; animation-delay: -14s; }
+.xm-flake-c { left: 84%; width: 18px; height: 18px; animation-duration: 24s; animation-delay: -3s; }
 
-.xm-hills {
+/* 底部双层远山雪岭与极简冷杉林剪影 */
+.xm-landscape {
     position: absolute;
     left: 0;
     right: 0;
     bottom: 0;
     width: 100%;
-    height: 92px;
-    color: rgba(232, 246, 255, 0.16);
+    display: block;
+}
+.xm-landscape-far {
+    height: 148px;
+    color: rgba(147, 213, 250, 0.08);
+}
+.xm-landscape-near {
+    height: 132px;
+    color: rgba(4, 11, 21, 0.82);
+    filter: drop-shadow(0 -1px 10px rgba(186, 230, 253, 0.14));
 }
 
+/* ── 4. 首页英雄区、主舞台与 CTA（克制期刊质感） ── */
 .xm-hero-ribbon {
     display: inline-flex;
     align-items: center;
-    gap: 10px;
-    padding: 7px 16px;
-    margin-bottom: 12px;
+    gap: 9px;
+    padding: 6px 14px;
+    margin-bottom: 14px;
     border-radius: 999px;
-    background: linear-gradient(135deg, rgba(125, 211, 252, 0.18), rgba(214, 69, 93, 0.22));
-    border: 1px solid rgba(245, 212, 138, 0.55);
-    box-shadow: 0 0 24px rgba(125, 211, 252, 0.22);
-    color: var(--xm-snow);
-    font-size: 0.84rem;
-    font-weight: 700;
+    background: linear-gradient(135deg, rgba(15, 37, 60, 0.78), rgba(158, 32, 56, 0.2));
+    border: 1px solid rgba(235, 210, 160, 0.34);
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.26), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    color: var(--xm-ice);
+    font-size: 0.82rem;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
 }
 .xm-ribbon-tag {
-    font-family: "CM Mountains", cursive, sans-serif;
-    font-size: 1.35rem;
-    letter-spacing: 0.04em;
+    font-family: "CM Cinzel", Georgia, serif;
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 0.16em;
     color: var(--xm-gold);
-    text-shadow: 0 0 12px rgba(125, 211, 252, 0.55);
 }
-.xm-ribbon-sep { opacity: 0.65; color: var(--xm-gold); }
+.xm-ribbon-sep { opacity: 0.55; color: var(--xm-gold); }
 .xm-ribbon-img {
-    width: 26px;
-    height: 26px;
+    width: 16px;
+    height: 16px;
     flex-shrink: 0;
-    filter: drop-shadow(0 0 8px rgba(186, 230, 253, 0.7));
 }
-
-body.page-landing.fest-christmas .ed-board {
-    position: relative;
-    overflow: visible !important;
-    background: #07141e !important;
-    border: 1px solid rgba(125, 211, 252, 0.4) !important;
-    box-shadow:
-        0 22px 60px rgba(0, 0, 0, 0.55),
-        0 0 40px rgba(125, 211, 252, 0.14),
-        inset 0 0 0 1px rgba(245, 212, 138, 0.12) !important;
-}
-body.page-landing.fest-christmas .ed-stage {
-    border-radius: 19px 0 0 19px;
-    background: radial-gradient(circle at 78% 22%, #16344c 0%, #07141e 72%) !important;
-}
-body.page-landing.fest-christmas .ed-dock {
-    border-radius: 0 19px 19px 0;
-    background: linear-gradient(165deg, rgba(14, 36, 54, 0.96) 0%, rgba(8, 20, 32, 0.98) 100%) !important;
-    border-left: 1px solid rgba(125, 211, 252, 0.24) !important;
-}
-
-.xm-board-tree, .xm-board-flake {
-    position: absolute;
-    z-index: 6;
-    pointer-events: none;
-}
-.xm-board-tree {
-    top: -36px;
-    right: 18px;
-    width: 72px;
-    height: 72px;
-    filter: drop-shadow(0 8px 14px rgba(0, 0, 0, 0.45));
-}
-.xm-board-flake {
-    top: -22px;
-    left: 22px;
-    width: 54px;
-    height: 54px;
-    animation: xmTwinkle 4.2s ease-in-out infinite;
-}
-
-body.page-landing.fest-christmas .ed-cta {
-    position: relative;
-    overflow: visible !important;
-    background: linear-gradient(135deg, #10283a 0%, #1a3044 48%, #3a1a28 100%) !important;
-    border: 1px solid rgba(245, 212, 138, 0.4) !important;
-    box-shadow: 0 16px 44px rgba(0, 0, 0, 0.45) !important;
-}
-.xm-cta-gift, .xm-cta-star {
-    position: absolute;
-    pointer-events: none;
-}
-.xm-cta-gift { top: -22px; left: 22px; width: 52px; height: 52px; }
-.xm-cta-star { bottom: -16px; right: 168px; width: 44px; height: 44px; }
+.xm-ribbon-spark { width: 14px; height: 14px; opacity: 0.88; }
 
 body.page-landing.fest-christmas .ed-kicker,
-body.fest-christmas .kicker { color: var(--xm-gold) !important; }
+body.fest-christmas .kicker {
+    color: var(--xm-gold) !important;
+    letter-spacing: 0.08em;
+}
 
 body.page-landing.fest-christmas .ed-hero h1,
 body.fest-christmas .hero h1,
@@ -420,6 +380,7 @@ body.fest-christmas h3 {
     color: var(--xm-snow) !important;
 }
 
+/* 人格卡与分享卡保持原始浅色/主题配色，不被冰夜压暗 */
 body.fest-christmas .personality-card,
 body.fest-christmas .lp-share-card {
     color: var(--lp-ink, #1e293b) !important;
@@ -431,50 +392,103 @@ body.fest-christmas .lp-share-card :is(h1, h2, h3, p, a, .hint) {
 }
 
 body.page-landing.fest-christmas .ed-mark {
-    background: linear-gradient(120deg, #ffffff 0%, #7dd3fc 46%, #f5d48a 100%);
+    background: linear-gradient(115deg, #ffffff 0%, #c8e9fd 52%, #ebd2a0 100%);
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent !important;
-    text-decoration-color: #7dd3fc !important;
+    text-decoration-color: rgba(235, 210, 160, 0.55) !important;
 }
 
 body.page-landing.fest-christmas .ed-hero-aside {
-    border-left-color: rgba(125, 211, 252, 0.32) !important;
+    border-left-color: rgba(186, 230, 253, 0.22) !important;
 }
-body.page-landing.fest-christmas .ed-lead { color: #d5e7f2 !important; }
+body.page-landing.fest-christmas .ed-lead { color: #c7dceb !important; }
 body.page-landing.fest-christmas .ed-stat { color: var(--xm-muted) !important; }
 body.page-landing.fest-christmas .ed-stat strong { color: var(--xm-gold) !important; }
 
 body.fest-christmas .live-dot {
-    background: #7dd3fc !important;
-    box-shadow: 0 0 10px rgba(125, 211, 252, 0.95), 0 0 0 3px rgba(125, 211, 252, 0.24) !important;
+    background: #93d5fa !important;
+    box-shadow: 0 0 8px rgba(147, 213, 250, 0.85), 0 0 0 3px rgba(147, 213, 250, 0.18) !important;
+}
+
+/* 首页主舞台面板：冰霜玻璃双栏 */
+body.page-landing.fest-christmas .ed-board {
+    position: relative;
+    overflow: hidden !important;
+    background: rgba(7, 18, 31, 0.86) !important;
+    border: 1px solid rgba(186, 230, 253, 0.22) !important;
+    box-shadow:
+        0 26px 64px rgba(0, 0, 0, 0.52),
+        0 0 42px rgba(147, 213, 250, 0.08),
+        inset 0 1px 0 rgba(224, 242, 254, 0.16) !important;
+}
+body.page-landing.fest-christmas .ed-stage {
+    background: radial-gradient(circle at 76% 24%, #102b44 0%, #06111e 72%) !important;
+}
+body.page-landing.fest-christmas .ed-dock {
+    background: linear-gradient(168deg, rgba(13, 30, 49, 0.92) 0%, rgba(8, 19, 33, 0.96) 100%) !important;
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border-left: 1px solid rgba(186, 230, 253, 0.16) !important;
+}
+.xm-board-crest {
+    position: absolute;
+    top: 14px;
+    right: 16px;
+    width: 24px;
+    height: 24px;
+    opacity: 0.42;
+    z-index: 4;
+    pointer-events: none;
 }
 
 body.page-landing.fest-christmas .ed-scan {
-    background: linear-gradient(90deg, transparent, rgba(125, 211, 252, 0.16), rgba(245, 212, 138, 0.1), transparent) !important;
+    background: linear-gradient(90deg, transparent, rgba(186, 230, 253, 0.14), rgba(235, 210, 160, 0.08), transparent) !important;
 }
-body.page-landing.fest-christmas .ed-dock .ed-panel h2 { color: var(--xm-gold) !important; }
-body.page-landing.fest-christmas .ed-dock #step2-card { border-top-color: rgba(125, 211, 252, 0.24) !important; }
+body.page-landing.fest-christmas .ed-dock .ed-panel h2 {
+    color: var(--xm-snow) !important;
+}
+body.page-landing.fest-christmas .ed-dock #step2-card {
+    border-top-color: rgba(186, 230, 253, 0.16) !important;
+}
 
+/* ── 5. 磨砂冰晶卡片与区块 ── */
 body.page-landing.fest-christmas .ed-section,
 body.page-landing.fest-christmas .ed-notes,
 body.page-landing.fest-christmas .ed-roadmap,
 body.fest-christmas .card:not(.lp-share-card):not(.personality-card) {
-    background: linear-gradient(165deg, rgba(16, 40, 58, 0.9) 0%, rgba(8, 22, 34, 0.94) 100%) !important;
-    border: 1px solid rgba(125, 211, 252, 0.26) !important;
-    box-shadow: 0 14px 36px rgba(0, 0, 0, 0.36), inset 0 1px 0 rgba(244, 251, 255, 0.08) !important;
+    background: linear-gradient(168deg, rgba(13, 31, 51, 0.78) 0%, rgba(8, 20, 35, 0.86) 100%) !important;
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border: 1px solid rgba(186, 230, 253, 0.16) !important;
+    box-shadow:
+        0 16px 40px rgba(0, 0, 0, 0.34),
+        inset 0 1px 0 rgba(224, 242, 254, 0.12) !important;
     color: var(--xm-snow) !important;
 }
 
+/* 避免使用说明折叠时被右侧路线图拉出大片空白 */
+body.page-landing.fest-christmas .ed-lower {
+    align-items: start;
+}
+body.page-landing.fest-christmas .ed-notes summary {
+    color: var(--xm-snow) !important;
+}
+body.page-landing.fest-christmas .ed-notes summary::after {
+    color: var(--xm-gold) !important;
+}
+
+/* 内页首卡右上角一枚极克制的冰晶微标 */
 body.fest-christmas:not(.page-landing) .main > .card:first-of-type { position: relative; }
 body.fest-christmas:not(.page-landing) .main > .card:first-of-type::after {
     content: "";
     position: absolute;
-    top: -22px;
+    top: 16px;
     right: 18px;
-    width: 54px;
-    height: 54px;
-    background: url("/static/festival/christmas/fluent-christmas-tree.svg") center / contain no-repeat;
+    width: 24px;
+    height: 24px;
+    opacity: 0.4;
+    background: url("/static/festival/christmas/ph-snowflake-ice.svg") center / contain no-repeat;
     pointer-events: none;
 }
 
@@ -483,30 +497,69 @@ body.page-landing.fest-christmas .ed-features,
 body.page-landing.fest-christmas .ed-features article,
 body.page-landing.fest-christmas .ed-roadmap td,
 body.page-landing.fest-christmas .ed-trust {
-    border-color: rgba(125, 211, 252, 0.18) !important;
+    border-color: rgba(186, 230, 253, 0.13) !important;
 }
 body.page-landing.fest-christmas .ed-num {
-    font-family: "CM Mountains", cursive, sans-serif;
-    font-size: 1.9rem;
-    color: var(--xm-cyan) !important;
+    font-family: "CM Cinzel", Georgia, serif;
+    font-size: 1.55rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    color: var(--xm-gold) !important;
 }
 body.page-landing.fest-christmas .ed-steps p,
 body.page-landing.fest-christmas .ed-features p,
 body.page-landing.fest-christmas .ed-notes ul,
 body.page-landing.fest-christmas .ed-roadmap td,
 body.page-landing.fest-christmas .ed-agree,
-body.fest-christmas .hint { color: var(--xm-muted) !important; }
+body.fest-christmas .hint {
+    color: var(--xm-muted) !important;
+}
 
 body.page-landing.fest-christmas .ed-schools li,
 body.fest-christmas .school-pill,
 body.fest-christmas .stat-chip {
-    background: rgba(14, 40, 58, 0.82) !important;
-    border: 1px solid rgba(125, 211, 252, 0.3) !important;
-    color: var(--xm-snow) !important;
+    background: rgba(14, 34, 56, 0.72) !important;
+    border: 1px solid rgba(186, 230, 253, 0.18) !important;
+    color: var(--xm-ice) !important;
 }
 body.page-landing.fest-christmas .ed-schools .cnt,
-body.fest-christmas .school-pill .cnt { color: var(--xm-gold) !important; }
+body.fest-christmas .school-pill .cnt {
+    color: var(--xm-gold) !important;
+}
 
+/* 底部 CTA：深蓝过渡至丝绒勃艮第红 */
+body.page-landing.fest-christmas .ed-cta {
+    position: relative;
+    overflow: hidden !important;
+    background:
+        radial-gradient(ellipse 64% 120% at 92% 50%, rgba(158, 32, 56, 0.34), transparent 70%),
+        linear-gradient(135deg, rgba(11, 28, 46, 0.92) 0%, rgba(16, 36, 58, 0.9) 55%, rgba(44, 18, 32, 0.92) 100%) !important;
+    border: 1px solid rgba(235, 210, 160, 0.28) !important;
+    box-shadow: 0 20px 48px rgba(0, 0, 0, 0.42), inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+}
+body.page-landing.fest-christmas .ed-cta p {
+    color: #c8dce9 !important;
+}
+.xm-cta-crest {
+    position: absolute;
+    right: 14px;
+    bottom: -8px;
+    width: 78px;
+    height: 78px;
+    opacity: 0.11;
+    pointer-events: none;
+}
+.xm-cta-spark {
+    position: absolute;
+    top: 14px;
+    right: 22px;
+    width: 18px;
+    height: 18px;
+    opacity: 0.5;
+    pointer-events: none;
+}
+
+/* ── 6. 表单、输入框、按钮、胶囊标签 ── */
 body.fest-christmas input[type="email"],
 body.fest-christmas input[type="text"],
 body.fest-christmas input[type="number"],
@@ -514,35 +567,42 @@ body.fest-christmas select,
 body.fest-christmas textarea,
 body.page-landing.fest-christmas input[type="email"],
 body.page-landing.fest-christmas input[type="text"] {
-    background: rgba(7, 20, 32, 0.92) !important;
-    border: 1px solid rgba(125, 211, 252, 0.34) !important;
+    background: rgba(6, 16, 28, 0.82) !important;
+    border: 1px solid rgba(186, 230, 253, 0.22) !important;
     color: var(--xm-snow) !important;
 }
 body.fest-christmas input::placeholder,
-body.fest-christmas textarea::placeholder { color: #7f9aaf !important; }
+body.fest-christmas textarea::placeholder {
+    color: #6b859c !important;
+}
 body.fest-christmas input:focus,
 body.fest-christmas select:focus,
 body.fest-christmas textarea:focus {
-    outline: 2px solid var(--xm-cyan) !important;
+    outline: 2px solid rgba(147, 213, 250, 0.72) !important;
     border-color: var(--xm-cyan) !important;
-    box-shadow: 0 0 0 3px rgba(125, 211, 252, 0.2) !important;
+    box-shadow: 0 0 0 3px rgba(147, 213, 250, 0.16) !important;
 }
 body.fest-christmas .form-group label,
-body.page-landing.fest-christmas .form-group label { color: #e7f4fb !important; }
+body.page-landing.fest-christmas .form-group label {
+    color: #dcebf5 !important;
+}
 
+/* 丝绒勃艮第红主按钮 + 香槟金细边 */
 body.fest-christmas .btn-primary,
 body.fest-christmas .btn-match,
 body.page-landing.fest-christmas .btn-primary,
 body.page-landing.fest-christmas .ed-cta .btn-primary {
-    background: linear-gradient(135deg, #e11d48 0%, #be123c 58%, #9f1239 100%) !important;
-    color: #fffaf6 !important;
-    border: 1px solid rgba(245, 212, 138, 0.5) !important;
-    box-shadow: 0 6px 22px rgba(190, 18, 60, 0.35) !important;
+    background: linear-gradient(135deg, #ab243e 0%, #8f1a31 58%, #701326 100%) !important;
+    color: #fdf8f3 !important;
+    border: 1px solid rgba(235, 210, 160, 0.42) !important;
+    box-shadow: 0 8px 24px rgba(112, 19, 38, 0.42), inset 0 1px 0 rgba(255, 255, 255, 0.18) !important;
 }
 body.fest-christmas .btn-primary:hover:not(:disabled),
 body.fest-christmas .btn-match:hover:not(:disabled),
 body.page-landing.fest-christmas .btn-primary:hover:not(:disabled) {
-    background: linear-gradient(135deg, #fb7185 0%, #e11d48 60%, #be123c 100%) !important;
+    background: linear-gradient(135deg, #bf2b48 0%, #9e2038 58%, #7e162b 100%) !important;
+    border-color: rgba(235, 210, 160, 0.62) !important;
+    box-shadow: 0 10px 28px rgba(143, 26, 49, 0.52) !important;
 }
 body.fest-christmas .personality-card a.btn-primary,
 body.fest-christmas .personality-card a.btn-match,
@@ -556,28 +616,28 @@ body.fest-christmas .lp-share-card a.btn-match {
 
 body.fest-christmas .btn-secondary,
 body.page-landing.fest-christmas .btn-secondary {
-    background: rgba(14, 40, 58, 0.72) !important;
+    background: rgba(14, 34, 56, 0.72) !important;
     color: var(--xm-snow) !important;
-    border: 1px solid rgba(125, 211, 252, 0.38) !important;
+    border: 1px solid rgba(186, 230, 253, 0.26) !important;
 }
 body.fest-christmas .btn-secondary:hover:not(:disabled) {
-    background: rgba(125, 211, 252, 0.14) !important;
-    border-color: var(--xm-gold) !important;
+    background: rgba(147, 213, 250, 0.14) !important;
+    border-color: rgba(235, 210, 160, 0.52) !important;
 }
 
 body.fest-christmas .choice-chip,
 body.fest-christmas .multi-tag,
 body.fest-christmas .likert-btn {
-    background: rgba(8, 22, 34, 0.9) !important;
-    border: 1px solid rgba(125, 211, 252, 0.3) !important;
+    background: rgba(8, 20, 35, 0.84) !important;
+    border: 1px solid rgba(186, 230, 253, 0.22) !important;
     color: var(--xm-snow) !important;
 }
 body.fest-christmas .choice-chip.is-on,
 body.fest-christmas .choice-chip:has(input:checked),
 body.fest-christmas .multi-tag.on,
 body.fest-christmas .likert-btn.on {
-    background: linear-gradient(135deg, #0e7490, #1f6b4a) !important;
-    border-color: var(--xm-gold) !important;
+    background: linear-gradient(135deg, #164e63, #1f5c52) !important;
+    border-color: rgba(235, 210, 160, 0.65) !important;
     color: #f4fbff !important;
 }
 
@@ -587,113 +647,152 @@ body.fest-christmas .box-warn,
 body.fest-christmas .box-dim,
 body.fest-christmas .ice-card,
 body.fest-christmas .progress-sticky {
-    background: rgba(14, 36, 52, 0.88) !important;
-    border-color: rgba(125, 211, 252, 0.26) !important;
+    background: rgba(11, 28, 46, 0.84) !important;
+    border-color: rgba(186, 230, 253, 0.2) !important;
     color: var(--xm-snow) !important;
 }
 body.fest-christmas .ice-send-text {
-    background: rgba(7, 20, 32, 0.92) !important;
-    border-color: rgba(125, 211, 252, 0.35) !important;
+    background: rgba(6, 16, 28, 0.9) !important;
+    border-color: rgba(186, 230, 253, 0.24) !important;
     color: var(--xm-gold) !important;
 }
 body.fest-christmas .wechat-line { color: var(--xm-gold) !important; }
 body.fest-christmas .progress-bar-fill {
-    background: linear-gradient(90deg, #7dd3fc, #f5d48a) !important;
+    background: linear-gradient(90deg, #93d5fa, #ebd2a0) !important;
 }
 
+/* ── 7. 校园广场 (Community) 冰夜适配 ── */
 body.fest-christmas .community-shell,
 body.fest-christmas .community-shell h1,
-body.fest-christmas .community-shell h2 { color: var(--xm-snow) !important; }
+body.fest-christmas .community-shell h2 {
+    color: var(--xm-snow) !important;
+}
+body.fest-christmas .community-eyebrow {
+    color: var(--xm-gold) !important;
+}
 body.fest-christmas .community-hero p,
 body.fest-christmas .community-excerpt,
 body.fest-christmas .community-guide p,
 body.fest-christmas .community-meta,
-body.fest-christmas .community-muted { color: var(--xm-muted) !important; }
+body.fest-christmas .community-muted,
+body.fest-christmas .community-empty p {
+    color: var(--xm-muted) !important;
+}
+body.fest-christmas .community-guide strong {
+    color: var(--xm-snow) !important;
+}
+body.fest-christmas .community-guide hr {
+    border-color: rgba(186, 230, 253, 0.14) !important;
+}
 body.fest-christmas .community-card,
 body.fest-christmas .community-guide,
 body.fest-christmas .community-locked,
 body.fest-christmas .community-notice {
-    background: rgba(12, 32, 48, 0.88) !important;
-    border: 1px solid rgba(125, 211, 252, 0.26) !important;
+    background: linear-gradient(168deg, rgba(13, 31, 51, 0.78) 0%, rgba(8, 20, 35, 0.86) 100%) !important;
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border: 1px solid rgba(186, 230, 253, 0.16) !important;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.28), inset 0 1px 0 rgba(224, 242, 254, 0.1) !important;
     color: var(--xm-snow) !important;
 }
+body.fest-christmas .community-card a:not(.community-primary),
+body.fest-christmas .community-notice a,
+body.fest-christmas .community-empty a,
+body.fest-christmas .community-pagination a {
+    color: var(--xm-gold) !important;
+}
+body.fest-christmas .community-card h2 a {
+    color: var(--xm-snow) !important;
+}
+body.fest-christmas .community-card h2 a:hover {
+    color: var(--xm-gold) !important;
+}
 body.fest-christmas .community-tabs a {
-    background: rgba(14, 36, 52, 0.85) !important;
+    background: rgba(13, 31, 51, 0.78) !important;
     color: var(--xm-muted) !important;
-    border: 1px solid rgba(125, 211, 252, 0.2);
+    border: 1px solid rgba(186, 230, 253, 0.16);
 }
 body.fest-christmas .community-tabs a[aria-current=page],
 body.fest-christmas .community-primary {
-    background: linear-gradient(135deg, #e11d48, #9f1239) !important;
-    color: #fffaf6 !important;
-    border-color: var(--xm-gold) !important;
+    background: linear-gradient(135deg, #ab243e, #781529) !important;
+    color: #fdf8f3 !important;
+    border: 1px solid rgba(235, 210, 160, 0.42) !important;
 }
 body.fest-christmas .community-tag {
-    background: rgba(125, 211, 252, 0.14) !important;
+    background: rgba(147, 213, 250, 0.14) !important;
     color: var(--xm-gold) !important;
 }
 body.fest-christmas .community-form button,
 body.fest-christmas .community-tools button,
 body.fest-christmas .community-filters button,
 body.fest-christmas .community-card details button {
-    background: rgba(14, 40, 58, 0.85) !important;
-    border-color: rgba(125, 211, 252, 0.35) !important;
+    background: rgba(14, 34, 56, 0.82) !important;
+    border-color: rgba(186, 230, 253, 0.24) !important;
     color: var(--xm-snow) !important;
 }
+body.fest-christmas .community-filters label {
+    color: var(--xm-muted) !important;
+}
 
+/* ── 8. 链接与页脚 ── */
 body.page-landing.fest-christmas .ed-panel a,
 body.page-landing.fest-christmas .ed-notes a,
 body.page-landing.fest-christmas .footer a,
 body.fest-christmas .footer a,
-body.fest-christmas .card a:not(.btn) { color: var(--xm-gold) !important; }
+body.fest-christmas .card a:not(.btn) {
+    color: var(--xm-gold) !important;
+}
 body.fest-christmas .footer {
-    border-top-color: rgba(125, 211, 252, 0.22) !important;
+    border-top-color: rgba(186, 230, 253, 0.14) !important;
     color: var(--xm-muted) !important;
 }
 
-@keyframes xmMoonPulse {
-    from { transform: scale(0.96); opacity: 0.8; }
-    to { transform: scale(1.06); opacity: 1; }
+/* ── 9. 动画关键帧 ── */
+@keyframes xmAuroraDrift {
+    0%   { transform: translate3d(0, 0, 0) scale(1); opacity: 0.36; }
+    100% { transform: translate3d(3%, 2%, 0) scale(1.08); opacity: 0.56; }
 }
-@keyframes xmSwing {
-    0%, 100% { transform: rotate(-4deg); }
-    50% { transform: rotate(5deg); }
+@keyframes xmMoonPulse {
+    from { transform: scale(0.96); opacity: 0.78; }
+    to   { transform: scale(1.06); opacity: 1; }
 }
 @keyframes xmTwinkle {
-    0%, 100% { transform: translateY(0) scale(1); opacity: 0.85; }
-    50% { transform: translateY(-6px) scale(1.08); opacity: 1; }
+    0%, 100% { transform: scale(0.88); opacity: 0.45; }
+    50%      { transform: scale(1.12); opacity: 0.95; }
 }
-@keyframes xmDrift {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-14px); }
+@keyframes xmSnowFall {
+    0%   { transform: translate3d(0, -10px, 0); }
+    50%  { transform: translate3d(18px, 50vh, 0); }
+    100% { transform: translate3d(-10px, 102vh, 0); }
 }
-@keyframes xmBob {
-    from { transform: translateY(0); }
-    to { transform: translateY(-6px); }
-}
-@keyframes xmFall {
-    0% { transform: translateY(0) rotate(0deg); opacity: 0; }
-    12% { opacity: 0.9; }
-    100% { transform: translateY(92vh) rotate(180deg); opacity: 0.15; }
+@keyframes xmFlakeDrift {
+    0%   { transform: translate3d(0, -20px, 0) rotate(0deg); opacity: 0; }
+    10%  { opacity: 0.34; }
+    90%  { opacity: 0.22; }
+    100% { transform: translate3d(28px, 102vh, 0) rotate(140deg); opacity: 0; }
 }
 
 @media (max-width: 900px) {
-    body.page-landing.fest-christmas .ed-stage { border-radius: 19px 19px 0 0; }
-    body.page-landing.fest-christmas .ed-dock { border-radius: 0 0 19px 19px; }
-    .xm-moon-stage { width: 132px; height: 132px; top: 64px; right: 6px; }
-    .xm-moon-disc { width: 96px; height: 96px; top: 16px; left: 16px; }
-    .xm-corner { width: 110px; height: 110px; }
-    .xm-hang, .xm-float-spark, .xm-ground-left, .xm-flake-b, .xm-cta-star { display: none; }
-    .xm-tree { width: 72px; height: 72px; }
-    .xm-snowman, .xm-deer, .xm-santa { width: 54px; height: 54px; }
-    .xm-board-tree { width: 52px; height: 52px; top: -22px; right: 10px; }
-    .xm-board-flake { width: 40px; height: 40px; top: -14px; left: 10px; }
+    .xm-moon-stage { width: 108px; height: 108px; top: 68px; right: 10px; opacity: 0.72; }
+    .xm-moon-disc { width: 72px; height: 72px; top: 16px; left: 16px; }
+    .xm-watermark { opacity: 0.05; width: 140px; height: 140px; }
+    .xm-hero-ribbon {
+        font-size: 0.75rem;
+        padding: 5px 12px;
+        gap: 6px;
+        max-width: 100%;
+    }
+    .xm-ribbon-tag { font-size: 0.7rem; letter-spacing: 0.1em; }
+    .xm-ribbon-spark { display: none; }
+    .xm-landscape-far { height: 92px; }
+    .xm-landscape-near { height: 82px; }
+    .xm-flake-b, .xm-flake-c { display: none; }
     body.fest-christmas .nav-brand::after { display: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .xm-moon-halo, .xm-hang, .xm-moon-star, .xm-float, .xm-tree, .xm-flake, .xm-board-flake {
+    .xm-aurora, .xm-moon-halo, .xm-star, .xm-dot, .xm-flake {
         animation: none !important;
     }
-    .xm-flake { display: none !important; }
+    .xm-dot, .xm-flake { display: none !important; }
 }

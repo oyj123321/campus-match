@@ -14,8 +14,8 @@
     {% if festival_autumn %}<link rel="stylesheet" href="/static/festival-autumn.css?v=2">{% endif %}
     {% block extra_css %}{% endblock %}
     {% if festival_halloween %}<link rel="stylesheet" href="/static/festival-halloween.css?v=4">{% endif %}
-    {% if festival_christmas %}<link rel="stylesheet" href="/static/festival-christmas.css?v=1">{% endif %}
-    <script src="/static/i18n.js?v=landing-20261122a"></script>
+    {% if festival_christmas %}<link rel="stylesheet" href="/static/festival-christmas.css?v=2">{% endif %}
+    <script src="/static/i18n.js?v=landing-20261122b"></script>
     <script src="/static/love_personality_i18n.js?v=1968"></script>
     <script src="/static/vendor/html2canvas.min.js"></script>
     <script src="/static/vendor/qrcode-generator.min.js"></script>
@@ -142,44 +142,55 @@
     {% endif %}
     {% if festival_christmas %}
     <div class="fest-xm" aria-hidden="true">
-        <div class="xm-sky-glow"></div>
-        <img class="xm-corner xm-corner-tl" src="/static/festival/christmas/fluent-snowflake.svg" alt="">
-        <img class="xm-corner xm-corner-tr" src="/static/festival/christmas/tabler-snowflake.svg" alt="">
-        <div class="xm-hang">
-            <span class="xm-thread"></span>
-            <img class="xm-bell" src="/static/festival/christmas/fluent-bell.svg" alt="">
-            <img class="xm-ornament" src="/static/festival/christmas/tabler-ornament.svg" alt="">
-        </div>
+        <div class="xm-aurora xm-aurora-a"></div>
+        <div class="xm-aurora xm-aurora-b"></div>
+
+        <!-- 两侧极淡冰晶水印 -->
+        <img class="xm-watermark xm-watermark-l" src="/static/festival/christmas/ph-snowflake-thin.svg" alt="">
+        <img class="xm-watermark xm-watermark-r" src="/static/festival/christmas/ph-snowflake-thin.svg" alt="">
+
+        <!-- 右上角清冷冬月与星芒 -->
         <div class="xm-moon-stage">
             <div class="xm-moon-halo"></div>
-            <div class="xm-moon-disc">
-                <img class="xm-moon-art" src="/static/festival/christmas/fluent-night.svg" alt="">
-            </div>
-            <img class="xm-moon-star xm-moon-star-a" src="/static/festival/christmas/fluent-glowing-star.svg" alt="">
-            <img class="xm-moon-star xm-moon-star-b" src="/static/festival/christmas/fluent-sparkles.svg" alt="">
-            <img class="xm-moon-star xm-moon-star-c" src="/static/festival/christmas/fluent-shooting-star.svg" alt="">
+            <div class="xm-moon-disc"></div>
+            <img class="xm-star xm-star-a" src="/static/festival/christmas/ph-star-gold.svg" alt="">
+            <img class="xm-star xm-star-b" src="/static/festival/christmas/ph-sparkle-gold.svg" alt="">
+            <img class="xm-star xm-star-c" src="/static/festival/christmas/ph-star-gold.svg" alt="">
         </div>
-        <img class="xm-float xm-float-cloud" src="/static/festival/christmas/fluent-snow-cloud.svg" alt="">
-        <img class="xm-float xm-float-spark" src="/static/festival/christmas/fluent-sparkles.svg" alt="">
-        <div class="xm-ground xm-ground-left">
-            <img class="xm-snowman" src="/static/festival/christmas/fluent-snowman.svg" alt="">
-            <img class="xm-tree" src="/static/festival/christmas/fluent-christmas-tree.svg" alt="">
-            <img class="xm-gift" src="/static/festival/christmas/fluent-gift.svg" alt="">
-            <img class="xm-ice" src="/static/festival/christmas/fluent-ice.svg" alt="">
+
+        <!-- 漫天细雪粒子与零星飘落冰晶 -->
+        <div class="xm-snowfield">
+            <span class="xm-dot xm-dot-1"></span>
+            <span class="xm-dot xm-dot-2"></span>
+            <span class="xm-dot xm-dot-3"></span>
+            <span class="xm-dot xm-dot-4"></span>
+            <span class="xm-dot xm-dot-5"></span>
+            <span class="xm-dot xm-dot-6"></span>
+            <span class="xm-dot xm-dot-7"></span>
+            <span class="xm-dot xm-dot-8"></span>
+            <span class="xm-dot xm-dot-9"></span>
+            <span class="xm-dot xm-dot-10"></span>
+            <span class="xm-dot xm-dot-11"></span>
+            <span class="xm-dot xm-dot-12"></span>
+            <img class="xm-flake xm-flake-a" src="/static/festival/christmas/ph-snowflake-thin.svg" alt="">
+            <img class="xm-flake xm-flake-b" src="/static/festival/christmas/ph-snowflake-ice.svg" alt="">
+            <img class="xm-flake xm-flake-c" src="/static/festival/christmas/ph-snowflake-thin.svg" alt="">
         </div>
-        <div class="xm-ground xm-ground-right">
-            <img class="xm-deer" src="/static/festival/christmas/fluent-deer.svg" alt="">
-            <img class="xm-tree" src="/static/festival/christmas/fluent-christmas-tree.svg" alt="">
-            <img class="xm-santa" src="/static/festival/christmas/santa.svg" alt="">
-            <img class="xm-pine" src="/static/festival/christmas/fluent-pine.svg" alt="">
-            <img class="xm-cookie" src="/static/festival/christmas/fluent-cookie.svg" alt="">
-        </div>
-        <img class="xm-flake xm-flake-a" src="/static/festival/christmas/tw-snowflake.svg" alt="">
-        <img class="xm-flake xm-flake-b" src="/static/festival/christmas/fluent-snowflake.svg" alt="">
-        <img class="xm-flake xm-flake-c" src="/static/festival/christmas/tw-snowflake.svg" alt="">
-        <img class="xm-flake xm-flake-d" src="/static/festival/christmas/fluent-snowflake.svg" alt="">
-        <svg class="xm-hills" viewBox="0 0 1440 120" preserveAspectRatio="none">
-            <path fill="currentColor" d="M0 120 L0 78 C120 40 220 96 340 70 C460 44 520 88 660 64 C800 40 900 92 1040 58 C1160 30 1280 78 1440 48 L1440 120 Z"/>
+
+        <!-- 底部双层远山雪岭与冷杉树林剪影 -->
+        <svg class="xm-landscape xm-landscape-far" viewBox="0 0 1440 180" preserveAspectRatio="none">
+            <path fill="currentColor" d="M0 180 L0 122 C130 88 260 112 390 86 C520 60 660 110 810 78 C960 46 1110 98 1260 70 C1340 55 1395 66 1440 78 L1440 180 Z"/>
+        </svg>
+        <svg class="xm-landscape xm-landscape-near" viewBox="0 0 1440 160" preserveAspectRatio="none">
+            <path fill="currentColor" d="M0 160 L0 126 C160 116 320 132 480 122 C650 112 820 134 990 120 C1160 106 1310 124 1440 114 L1440 160 Z
+                M54 128 L66 96 L60 96 L72 68 L67 68 L77 44 L87 68 L82 68 L94 96 L88 96 L100 128 Z
+                M106 127 L115 104 L111 104 L119 84 L127 104 L123 104 L132 127 Z
+                M142 127 L156 90 L149 90 L162 58 L156 58 L168 30 L180 58 L174 58 L187 90 L180 90 L194 127 Z
+                M204 128 L213 108 L209 108 L217 90 L225 108 L221 108 L230 128 Z
+                M1220 122 L1231 94 L1226 94 L1236 72 L1246 94 L1241 94 L1252 122 Z
+                M1260 120 L1274 82 L1267 82 L1280 50 L1274 50 L1286 22 L1298 50 L1292 50 L1305 82 L1298 82 L1312 120 Z
+                M1322 120 L1333 94 L1328 94 L1338 70 L1348 94 L1343 94 L1354 120 Z
+                M1364 118 L1375 96 L1371 96 L1380 76 L1389 96 L1385 96 L1396 118 Z"/>
         </svg>
     </div>
     {% endif %}

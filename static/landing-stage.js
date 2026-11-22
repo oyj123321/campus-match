@@ -7,6 +7,7 @@
 
     var ctx = canvas.getContext('2d');
     var nodes = [];
+    var flakes = [];
     var mouse = { x: 0.5, y: 0.5 };
     var trail = [];
     var w = 0, h = 0, dpr = 1;
@@ -55,6 +56,18 @@
             nodes[b].vy *= 0.5;
         }
         trail = [];
+        flakes = [];
+        for (i = 0; i < 34; i++) {
+            flakes.push({
+                x: Math.random() * w,
+                y: Math.random() * h,
+                r: 0.7 + Math.random() * 1.4,
+                vy: 0.18 + Math.random() * 0.32,
+                drift: (Math.random() - 0.5) * 0.25,
+                phase: Math.random() * Math.PI * 2,
+                a: 0.2 + Math.random() * 0.45
+            });
+        }
     }
 
     stage.addEventListener('pointermove', function (e) {
@@ -134,15 +147,15 @@
         var fest = festMode();
         var hw = fest === 'hw';
         var xm = fest === 'xm';
-        ctx.fillStyle = xm ? '#07141e' : (hw ? '#07040d' : '#0b0a09');
+        ctx.fillStyle = xm ? '#06111e' : (hw ? '#07040d' : '#0b0a09');
         ctx.fillRect(0, 0, w, h);
 
         if (hw || xm) {
-            var moonGlow = ctx.createRadialGradient(w * 0.78, h * 0.24, 2, w * 0.78, h * 0.24, Math.min(w, h) * 0.36);
+            var moonGlow = ctx.createRadialGradient(w * 0.78, h * 0.22, 2, w * 0.78, h * 0.22, Math.min(w, h) * 0.48);
             if (xm) {
-                moonGlow.addColorStop(0, 'rgba(224, 242, 254, 0.28)');
-                moonGlow.addColorStop(0.45, 'rgba(56, 189, 248, 0.1)');
-                moonGlow.addColorStop(1, 'rgba(7, 20, 30, 0)');
+                moonGlow.addColorStop(0, 'rgba(186, 230, 253, 0.22)');
+                moonGlow.addColorStop(0.45, 'rgba(94, 234, 212, 0.08)');
+                moonGlow.addColorStop(1, 'rgba(6, 17, 30, 0)');
             } else {
                 moonGlow.addColorStop(0, 'rgba(255, 138, 36, 0.22)');
                 moonGlow.addColorStop(0.45, 'rgba(168, 85, 247, 0.08)');
@@ -150,6 +163,21 @@
             }
             ctx.fillStyle = moonGlow;
             ctx.fillRect(0, 0, w, h);
+        }
+
+        if (xm) {
+            for (var fi = 0; fi < flakes.length; fi++) {
+                var fl = flakes[fi];
+                fl.y += fl.vy;
+                fl.x += fl.drift + Math.sin(t * 0.6 + fl.phase) * 0.12;
+                if (fl.y > h + 4) { fl.y = -4; fl.x = Math.random() * w; }
+                if (fl.x < -4) fl.x = w + 4;
+                if (fl.x > w + 4) fl.x = -4;
+                ctx.fillStyle = 'rgba(226, 242, 254,' + fl.a + ')';
+                ctx.beginPath();
+                ctx.arc(fl.x, fl.y, fl.r, 0, Math.PI * 2);
+                ctx.fill();
+            }
         }
 
         var gx = mouse.x * w;

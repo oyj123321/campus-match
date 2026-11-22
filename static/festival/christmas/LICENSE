@@ -1,27 +1,26 @@
-Apache 2.0, MIT License & CC-BY 4.0 Attribution
+MIT License & SIL Open Font License 1.1 Attribution
 
-1. Microsoft Fluent UI Emoji (fluent-*.svg)
+1. Phosphor Icons (ph-*.svg)
+   Copyright (c) 2020-2026 Phosphor Icons
+   Source: https://github.com/phosphor-icons/core
+   License: MIT License
+   Files: ph-snowflake-ice.svg, ph-snowflake-thin.svg, ph-sparkle-gold.svg,
+   ph-star-gold.svg, ph-tree-frost.svg, ph-tree-gold.svg, ph-bell-gold.svg,
+   ph-gift-gold.svg.
+
+2. Microsoft Fluent UI Emoji (fluent-snowflake.svg)
    Copyright (c) Microsoft Corporation.
    Source: https://github.com/microsoft/fluentui-emoji
    License: MIT License
-   Files: snowflake, snowman, christmas tree, wrapped gift, bell, glowing star,
-   sparkles, deer, ice, cloud with snow, night with stars, pine decoration,
-   shooting star, cookie.
-
-2. Twemoji Graphics (santa.svg, tw-snowflake.svg, tw-tree.svg)
-   Copyright (c) Twitter, Inc and other contributors
-   Source: https://github.com/jdecked/twemoji
-   License: CC-BY 4.0 (https://creativecommons.org/licenses/by/4.0/)
-   Fluent has no Santa Claus color SVG, so the Santa figure is Twemoji.
 
 3. Tabler Icons (tabler-snowflake.svg, tabler-ornament.svg)
    Copyright (c) 2020-2026 Paweł Kuna
    Source: https://github.com/tabler/tabler-icons
    License: MIT License
 
-4. Mountains of Christmas
-   Copyright (c) 2011, Tart Workshop (Ashley DeLuzio, Crystal Kluge)
-   Source: https://github.com/google/fonts (apache/mountainsofchristmas)
-   License: Apache License 2.0
-   Font file: static/fonts/MountainsofChristmas-Regular.ttf
-   Full license text: static/fonts/MountainsofChristmas-LICENSE.txt
+4. Cinzel Font
+   Copyright (c) 2012, Natanael Gama (https://www.ndiscovered.com)
+   Source: https://github.com/google/fonts (ofl/cinzel)
+   License: SIL Open Font License 1.1
+   Font file: static/fonts/Cinzel-Variable.ttf
+   Full license text: static/fonts/Cinzel-OFL.txt

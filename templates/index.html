@@ -17,11 +17,11 @@
         {% endif %}
         {% if festival_christmas %}
         <div class="xm-hero-ribbon">
-            <img class="xm-ribbon-img" src="/static/festival/christmas/fluent-christmas-tree.svg" alt="">
-            <span class="xm-ribbon-tag">SNOW NIGHT</span>
+            <img class="xm-ribbon-img" src="/static/festival/christmas/ph-snowflake-ice.svg" alt="">
+            <span class="xm-ribbon-tag">WINTER EDITION</span>
             <span class="xm-ribbon-sep">·</span>
-            <span data-i18n="xm.ribbon">圣诞冰雪限定 · 12.18 – 01.01</span>
-            <img class="xm-ribbon-img" src="/static/festival/christmas/santa.svg" alt="">
+            <span data-i18n="xm.ribbon">圣诞冰雪季 · 11.25 – 01.01</span>
+            <img class="xm-ribbon-img xm-ribbon-spark" src="/static/festival/christmas/ph-sparkle-gold.svg" alt="">
         </div>
         {% endif %}
         <p class="ed-kicker" data-i18n="kicker">Campus Match · 澳门 & 大湾区</p>
@@ -48,8 +48,7 @@
     <img class="hw-board-bat" src="/static/festival/halloween/fluent-bat.svg" alt="" aria-hidden="true">
     {% endif %}
     {% if festival_christmas %}
-    <img class="xm-board-tree" src="/static/festival/christmas/fluent-christmas-tree.svg" alt="" aria-hidden="true">
-    <img class="xm-board-flake" src="/static/festival/christmas/fluent-snowflake.svg" alt="" aria-hidden="true">
+    <img class="xm-board-crest" src="/static/festival/christmas/ph-snowflake-ice.svg" alt="" aria-hidden="true">
     {% endif %}
     <div class="ed-stage" id="ed-stage" aria-hidden="true">
         <canvas id="ed-stage-canvas"></canvas>
@@ -220,8 +219,8 @@
     <img class="hw-cta-crystal" src="/static/festival/halloween/fluent-crystal-ball.svg" alt="" aria-hidden="true">
     {% endif %}
     {% if festival_christmas %}
-    <img class="xm-cta-gift" src="/static/festival/christmas/fluent-gift.svg" alt="" aria-hidden="true">
-    <img class="xm-cta-star" src="/static/festival/christmas/fluent-glowing-star.svg" alt="" aria-hidden="true">
+    <img class="xm-cta-crest" src="/static/festival/christmas/ph-tree-gold.svg" alt="" aria-hidden="true">
+    <img class="xm-cta-spark" src="/static/festival/christmas/ph-sparkle-gold.svg" alt="" aria-hidden="true">
     {% endif %}
     <div>
         <h2 data-i18n="cta.title">准备好了？</h2>
@@ -231,7 +230,7 @@
        onclick="document.getElementById('email').focus(); return true;" data-i18n="cta.btn">立即开始匹配</a>
 </section>
 
-<script src="/static/landing-stage.js?v=7"></script>
+<script src="/static/landing-stage.js?v=8"></script>
 <script>
 var currentEmail = '';
 (function prefInvite() {
