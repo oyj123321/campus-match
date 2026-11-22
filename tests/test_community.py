@@ -370,6 +370,30 @@ class CommunityTests(unittest.TestCase):
         self.assertNotIn("Topic 00",self.client.get("/community?school=School+B").get_data(as_text=True))
         self.assertEqual(self.client.get("/community?category=invalid").status_code,400)
 
+    def test_feed_filters_gender_fee_and_open_spots_together(self):
+        self.post(title="Women open", audience="female", fee="free", capacity=4)
+        self.post(title="Men only", audience="male", fee="aa", capacity=4)
+        full = self.post(title="Full free", audience="any", fee="free", capacity=2)
+        self.other.school = "School A"
+        self.user.gender = "female"
+        db.session.commit()
+        self.login(self.other)
+        self.assertEqual(self.submit(f"/community/posts/{full.id}/join").status_code, 302)
+        self.login(self.user)
+        women = self.client.get("/community?who=female").get_data(as_text=True)
+        self.assertIn("Women open", women)
+        self.assertNotIn("Men only", women)
+        mine = self.client.get("/community?who=mine").get_data(as_text=True)
+        self.assertIn("Women open", mine)
+        self.assertIn("Full free", mine)
+        self.assertNotIn("Men only", mine)
+        narrowed = self.client.get("/community?spots=open&fee=free&who=mine").get_data(as_text=True)
+        self.assertIn("Women open", narrowed)
+        self.assertNotIn("Full free", narrowed)
+        self.assertNotIn("Men only", narrowed)
+        self.assertEqual(self.client.get("/community?who=nope").status_code, 400)
+        self.assertEqual(self.client.get("/community?fee=nope").status_code, 400)
+
     def test_join_fills_then_waitlist_promotes_on_leave(self):
         post = self.post(capacity=2)
         self.other.school = "School A"

@@ -269,9 +269,13 @@ def feed():
     school = request.args.get("school", "")
     when = request.args.get("when", "")
     spots = request.args.get("spots", "")
+    who = request.args.get("who", "")
+    fee = request.args.get("fee", "")
     if category and category not in PLAN_CATEGORIES or view not in ("all", "mine", "saved", "joined"):
         abort(400, "无效筛选条件。")
     if when not in ("", "week") or spots not in ("", "open"):
+        abort(400, "无效筛选条件。")
+    if who not in ("", "any", "male", "female", "mine") or (fee and fee not in FEES):
         abort(400, "无效筛选条件。")
     query = Entry.query.filter(Entry.parent_id.is_(None), Entry.status != "deleted")
     if view == "mine":
@@ -292,6 +296,14 @@ def feed():
             query = query.filter(db.or_(Entry.flexible.is_(True), Entry.starts_at <= soon))
         if spots == "open":
             query = query.filter(Entry.capacity > 1 + going_count_query())
+        if who == "mine":
+            gender = g.community_user.gender if g.community_user else ""
+            allowed = ("any", gender) if gender in ("male", "female") else ("any",)
+            query = query.filter(Entry.audience.in_(allowed))
+        elif who:
+            query = query.filter(Entry.audience == who)
+        if fee:
+            query = query.filter(Entry.fee == fee)
     if category and view == "all":
         query = query.filter(Entry.category == category)
     guest = not g.community_user
@@ -316,7 +328,7 @@ def feed():
             Entry.category.in_(PLAN_CATEGORIES)).distinct().order_by(Entry.school)]
     return render_template("community_feed.html", posts=rows, more=more, page=page, locked=locked,
                            category=category, view=view, school=school, schools=schools,
-                           when=when, spots=spots, **card_data(rows))
+                           when=when, spots=spots, who=who, fee=fee, **card_data(rows))
 
 
 @bp.route("/community/new", methods=["GET", "POST"])
