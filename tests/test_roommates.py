@@ -118,3 +118,29 @@ class RoommateTests(unittest.TestCase):
         purge_roommates(self.user.id)
         db.session.commit()
         self.assertEqual(Profile.query.count(), 0)
+
+    def test_other_macau_schools_use_their_own_dorms(self):
+        self.user.school = "澳门科技大学"
+        db.session.commit()
+        self.assertEqual(self.save(self.user, college="满珍纪念书院").status_code, 302)
+        self.assertEqual(Profile.query.filter_by(user_id=self.user.id).one().college, "研究生宿舍")
+        self.user.education_level = "bachelor"
+        db.session.commit()
+        self.assertEqual(self.save(self.user, degree="bachelor").status_code, 302)
+        self.assertEqual(Profile.query.filter_by(user_id=self.user.id).one().college, "校园宿舍")
+
+        self.other.school = "澳门理工大学"
+        db.session.commit()
+        self.assertEqual(self.save(self.other, college="不存在的楼").status_code, 400)
+        self.assertEqual(self.save(self.other, college="明德楼").status_code, 302)
+        self.undergrad.school = "澳门理工大学"
+        db.session.commit()
+        self.save(self.undergrad, degree="bachelor", college="南岸")
+        self.login(self.other)
+        self.assertNotIn("丁", self.client.get("/roommates").get_data(as_text=True))
+
+        self.man.school = "澳门城市大学"
+        self.man.gender = "female"
+        db.session.commit()
+        self.assertEqual(self.save(self.man, college="南园").status_code, 400)
+        self.assertEqual(self.save(self.man, college="伟兴").status_code, 302)
