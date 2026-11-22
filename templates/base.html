@@ -14,7 +14,7 @@
     {% if festival_autumn %}<link rel="stylesheet" href="/static/festival-autumn.css?v=2">{% endif %}
     {% block extra_css %}{% endblock %}
     {% if festival_halloween %}<link rel="stylesheet" href="/static/festival-halloween.css?v=4">{% endif %}
-    <script src="/static/i18n.js?v=buddy-20261122f"></script>
+    <script src="/static/i18n.js?v=buddy-20261122g"></script>
     <script src="/static/love_personality_i18n.js?v=1968"></script>
     <script src="/static/vendor/html2canvas.min.js"></script>
     <script src="/static/vendor/qrcode-generator.min.js"></script>
@@ -252,6 +252,7 @@
             <a href="/" class="nav-brand">CampusMatch</a>
             <div class="nav-right">
                 <a href="/community" class="nav-link" data-i18n="nav.community">找搭子</a>
+                <a href="/roommates" class="nav-link" data-i18n="nav.roommate">找舍友</a>
                 {% if not session.user_id and request.endpoint == 'index' %}
                 <a href="#step1-card" class="nav-cta" data-i18n="nav.start">开始</a>
                 {% endif %}

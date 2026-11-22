@@ -535,6 +535,42 @@ class CommunityAudit(db.Model):
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
 
 
+class RoommateProfile(db.Model):
+    """One living card per user per academic year. Not used by romantic matching."""
+    __tablename__ = "roommate_profiles"
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), primary_key=True)
+    season = db.Column(db.String(16), primary_key=True)
+    college = db.Column(db.String(32), nullable=False)
+    degree = db.Column(db.String(16), nullable=False)
+    sleep = db.Column(db.String(16), nullable=False)
+    tidy = db.Column(db.String(16), nullable=False)
+    social = db.Column(db.String(16), nullable=False)
+    smoke = db.Column(db.String(16), nullable=False)
+    guests = db.Column(db.String(16), nullable=False)
+    note = db.Column(db.String(200), nullable=False, default="")
+    updated_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    user = db.relationship("User", lazy="joined")
+
+
+class RoommateWish(db.Model):
+    __tablename__ = "roommate_wishes"
+    season = db.Column(db.String(16), primary_key=True)
+    from_id = db.Column(db.Integer, db.ForeignKey("users.id"), primary_key=True)
+    to_id = db.Column(db.Integer, db.ForeignKey("users.id"), primary_key=True)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+
+
+class RoommatePair(db.Model):
+    """One confirmed roommate per user per academic year. low_id < high_id."""
+    __tablename__ = "roommate_pairs"
+    __table_args__ = (db.UniqueConstraint("season", "low_id", "high_id"),)
+    id = db.Column(db.Integer, primary_key=True)
+    season = db.Column(db.String(16), nullable=False, index=True)
+    low_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
+    high_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+
+
 class TrafficDay(db.Model):
     """Anonymous daily page and visitor totals for the private admin dashboard."""
     __tablename__ = "traffic_days"
