@@ -69,7 +69,7 @@ class CommunityTests(unittest.TestCase):
     def plan_form(self, **overrides):
         start = (datetime.utcnow() + timedelta(days=1)).strftime("%Y-%m-%dT%H:%M")
         fields = dict(category="study", title="A new topic", body="Today is sunny",
-                      place="图书馆", capacity="4", fee="free", starts_at=start)
+                      place="图书馆", capacity="4", fee="free", audience="any", starts_at=start)
         fields.update(overrides)
         return fields
 
@@ -398,3 +398,19 @@ class CommunityTests(unittest.TestCase):
         db.session.commit()
         self.assertEqual(self.submit(f"/community/posts/{post.id}/join").status_code, 302)
         self.assertEqual(Member.query.one().state, "going")
+
+    def test_gender_limit_rejects_the_other_gender_without_saving_a_wrong_pick(self):
+        self.user.gender = "female"
+        post = self.post(audience="female")
+        self.other.school = "School A"
+        self.other.gender = "male"
+        db.session.commit()
+        self.login(self.other)
+        self.assertEqual(self.submit(f"/community/posts/{post.id}/join").status_code, 403)
+        self.other.gender = None
+        db.session.commit()
+        self.assertEqual(self.submit(f"/community/posts/{post.id}/join", my_gender="male").status_code, 403)
+        self.assertIsNone(db.session.get(User, self.other.id).gender)
+        self.assertEqual(self.submit(f"/community/posts/{post.id}/join", my_gender="female").status_code, 302)
+        self.assertEqual(db.session.get(User, self.other.id).gender, "female")
+        self.assertEqual(Member.query.filter_by(user_id=self.other.id).one().state, "going")

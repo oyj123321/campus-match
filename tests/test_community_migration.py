@@ -30,6 +30,7 @@ class CommunityMigrationTests(unittest.TestCase):
                 cols={row[1] for row in con.execute("PRAGMA table_info(community_entries)")}
                 self.assertIn("starts_at", cols)
                 self.assertIn("cancelled", cols)
+                self.assertIn("audience", cols)
             backups=list(Path(folder).glob("*.community-backup-*"))
             self.assertEqual(len(backups),2)
             with closing(sqlite3.connect(backups[0])) as con:

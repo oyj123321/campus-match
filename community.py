@@ -28,6 +28,7 @@ LEGACY_CATEGORIES = {
 }
 CATEGORIES = {**PLAN_CATEGORIES, **LEGACY_CATEGORIES}
 FEES = {"aa": "AA", "host": "我请", "free": "免费"}
+AUDIENCES = {"any": "不限", "male": "只限男生", "female": "只限女生"}
 STATES = {"published": "已发布", "pending": "待审核", "hidden": "已隐藏", "deleted": "已删除"}
 ACTIONS = {"approve": "审核通过", "hide": "隐藏内容", "pin": "置顶", "unpin": "取消置顶",
            "ban": "禁言 7 天", "unban": "解除禁言", "resolve": "举报已处理"}
@@ -38,6 +39,7 @@ COLUMN_ADDS = (
     ("starts_at", "DATETIME"),
     ("flexible", "BOOLEAN DEFAULT 0"),
     ("cancelled", "BOOLEAN DEFAULT 0"),
+    ("audience", "VARCHAR(16) DEFAULT 'any'"),
 )
 
 
@@ -95,7 +97,7 @@ def private_headers(response):
 
 @bp.context_processor
 def shared():
-    return dict(categories=CATEGORIES, plan_categories=PLAN_CATEGORIES, fees=FEES,
+    return dict(categories=CATEGORIES, plan_categories=PLAN_CATEGORIES, fees=FEES, audiences=AUDIENCES,
                 states=STATES, actions=ACTIONS,
                 community_user=getattr(g, "community_user", None),
                 community_csrf=session.get("community_csrf", ""),
@@ -331,6 +333,16 @@ def create():
     fee = request.form.get("fee", "")
     if fee not in FEES:
         abort(400, "请选择费用方式。")
+    audience = request.form.get("audience", "")
+    if audience not in AUDIENCES:
+        abort(400, "请选择性别范围。")
+    picked = request.form.get("my_gender", "").strip()
+    if picked and picked not in ("male", "female"):
+        abort(400, "请选择你的性别。")
+    if picked and g.community_user.gender not in ("male", "female"):
+        g.community_user.gender = picked
+    if audience in ("male", "female") and g.community_user.gender not in ("male", "female"):
+        abort(400, "限性别的局，请先选择你的性别。")
     raw_cap = request.form.get("capacity", "").strip()
     if not raw_cap.isdigit() or not 2 <= int(raw_cap) <= 12:
         abort(400, "人数上限须在 2–12 人之间（含发起人）。")
@@ -339,7 +351,8 @@ def create():
     rate_limit("post", 60)
     post = Entry(author_id=g.community_user.id, school=g.community_user.school, category=category,
                  title=title, body=body or "就这样，细则在留言里补。", place=place, capacity=int(raw_cap),
-                 fee=fee, starts_at=starts_at, flexible=flexible, anonymous=False, status="published")
+                 fee=fee, audience=audience, starts_at=starts_at, flexible=flexible,
+                 anonymous=False, status="published")
     db.session.add(post)
     db.session.commit()
     flash("局已发布。同校同学可以直接占名额。")
@@ -387,6 +400,16 @@ def join(post_id):
         abort(400, "你是发起人，名额里已经算上你。")
     if not schools_can_meet(g.community_user, post.author):
         abort(403, "跨校组局需要双方都在资料里勾选了对方的学校。")
+    limit = post.audience if post.audience in ("male", "female") else ""
+    picked = request.form.get("my_gender", "").strip()
+    gender = g.community_user.gender if g.community_user.gender in ("male", "female") else ""
+    if not gender and picked in ("male", "female"):
+        gender = picked
+    if limit and gender != limit:
+        who = "男生" if limit == "male" else "女生"
+        abort(403, f"这场局只限{who}。" + ("" if g.community_user.gender in ("male", "female") else "请选择你的性别。"))
+    if picked in ("male", "female") and g.community_user.gender not in ("male", "female"):
+        g.community_user.gender = picked
     guard_muted()
     if Member.query.filter_by(plan_id=post.id, user_id=g.community_user.id).first():
         abort(400, "你已经在这场局里。")

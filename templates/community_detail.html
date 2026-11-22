@@ -9,12 +9,13 @@
 <article class="community-card">
     <div class="community-meta"><span class="community-tag">{{ categories.get(post.category, post.category) }}</span><span>{{ states[post.status] }}</span>{% if post.cancelled %}<span data-i18n="cm.cancelled">已取消</span>{% elif post.capacity and not plan_active(post) %}<span data-i18n="cm.ended">已结束</span>{% endif %}<time>{{ plan_when(post) }}</time></div>
     <h2 class="community-title">{{ post.title }}</h2>
-    <p class="community-muted">{{ '匿名同学' if post.anonymous else (post.author.name or '校园同学') }} · {{ post.school }}</p>
+    <p class="community-muted">{{ '匿名同学' if post.anonymous else (post.author.name or '校园同学') }}{% if not post.anonymous and post.author.gender in ('male','female') %} · <span data-i18n="g.{{ post.author.gender }}">{{ '男' if post.author.gender=='male' else '女' }}</span>{% endif %} · {{ post.school }}</p>
     {% if post.capacity %}
     <div class="community-facts">
         {% if post.place %}<span>{{ post.place }}</span>{% endif %}
         <span>{{ 1 + going.get(post.id,0) }}/{{ post.capacity }}</span>
         {% if post.fee in fees %}<span>{{ fees[post.fee] }}</span>{% endif %}
+        {% if post.audience in audiences %}<span data-i18n="cm.who.{{ post.audience }}">{{ audiences[post.audience] }}</span>{% endif %}
         {% if waiting.get(post.id) %}<span>{{ waiting.get(post.id) }} 人候补</span>{% endif %}
     </div>
     {% endif %}
@@ -24,7 +25,7 @@
     {% if members %}
     <ul class="community-members">
         {% for member in members %}
-        <li><strong>{{ member.user.name or '校园同学' }}</strong> · {{ member.user.school }} · {{ '候补' if member.state=='waitlist' else '已加入' }}
+        <li><strong>{{ member.user.name or '校园同学' }}</strong>{% if member.user.gender in ('male','female') %} · <span data-i18n="g.{{ member.user.gender }}">{{ '男' if member.user.gender=='male' else '女' }}</span>{% endif %} · {{ member.user.school }} · {{ '候补' if member.state=='waitlist' else '已加入' }}
             {% if community_user and post.author_id==community_user.id %}
             <form method="post" action="{{ url_for('community.remove_member', post_id=post.id, user_id=member.user_id) }}"><input type="hidden" name="csrf" value="{{ community_csrf }}"><button type="submit">移出</button></form>
             {% endif %}
@@ -40,7 +41,11 @@
             {% elif membership.get(post.id) %}
             <form method="post" action="{{ url_for('community.leave', post_id=post.id) }}"><input type="hidden" name="csrf" value="{{ community_csrf }}"><button type="submit">{{ '退出候补' if membership.get(post.id)=='waitlist' else '退出名额' }}</button></form>
             {% else %}
-            <form method="post" action="{{ url_for('community.join', post_id=post.id) }}"><input type="hidden" name="csrf" value="{{ community_csrf }}"><button type="submit" class="community-primary">{{ '加入候补' if (1 + going.get(post.id,0)) >= post.capacity else '加入' }}</button></form>
+            {% if post.audience in ('male','female') and community_user.gender in ('male','female') and community_user.gender != post.audience %}
+            <p class="community-notice" data-i18n="cm.who.blocked.{{ post.audience }}">{{ '这场局只限男生。' if post.audience=='male' else '这场局只限女生。' }}</p>
+            {% else %}
+            <form method="post" action="{{ url_for('community.join', post_id=post.id) }}"><input type="hidden" name="csrf" value="{{ community_csrf }}">{% if post.audience in ('male','female') and community_user.gender not in ('male','female') %}<label><span data-i18n="cm.form.myGender">我的性别</span><select name="my_gender" required><option value="male" data-i18n="g.male">男</option><option value="female" data-i18n="g.female">女</option></select></label>{% endif %}<button type="submit" class="community-primary">{{ '加入候补' if (1 + going.get(post.id,0)) >= post.capacity else '加入' }}</button></form>
+            {% endif %}
             {% endif %}
         {% endif %}
         {% if community_user and post.status=='published' %}<form method="post" data-community-action="reaction" action="{{ url_for('community.react',post_id=post.id) }}"><input type="hidden" name="csrf" value="{{ community_csrf }}"><input type="hidden" name="kind" value="save"><input type="hidden" name="enabled" value="{{ '0' if (post.id,'save') in reactions else '1' }}"><button type="submit">{{ '取消想去' if (post.id,'save') in reactions else '想去' }}</button></form>{% endif %}

@@ -10,6 +10,8 @@
     <label><span data-i18n="cm.form.place">地点</span><input name="place" required minlength="2" maxlength="40" placeholder="校内公共地点，或写「线上」" data-i18n-ph="cm.form.placePh"></label>
     <label><span data-i18n="cm.form.cap">人数上限（含你自己）</span><input name="capacity" type="number" required min="2" max="12" value="4"></label>
     <label><span data-i18n="cm.form.fee">费用</span><select name="fee" required>{% for key,label in fees.items() %}<option value="{{ key }}" data-i18n="cm.fee.{{ key }}">{{ label }}</option>{% endfor %}</select></label>
+    <label><span data-i18n="cm.form.who">性别</span><select name="audience" required>{% for key,label in audiences.items() %}<option value="{{ key }}" data-i18n="cm.who.{{ key }}">{{ label }}</option>{% endfor %}</select></label>
+    {% if community_user and community_user.gender not in ('male','female') %}<label><span data-i18n="cm.form.myGender">我的性别</span><select name="my_gender"><option value="" data-i18n="cm.who.later">限性别时再选</option><option value="male" data-i18n="g.male">男</option><option value="female" data-i18n="g.female">女</option></select></label>{% endif %}
     <label><span data-i18n="cm.form.body">补充</span><textarea name="body" maxlength="2000" rows="6" placeholder="节奏、要不要自带装备。可以留空。" data-i18n-ph="cm.form.bodyPh"></textarea></label>
     <p class="community-muted" data-i18n="cm.form.note">请勿留下微信或其他联系方式，也不要写他人的姓名和宿舍门牌。</p>
     <button class="community-primary" type="submit" data-i18n="cm.form.submit">发布这场局</button>

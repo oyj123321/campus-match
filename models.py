@@ -475,6 +475,7 @@ class CommunityEntry(db.Model):
     place = db.Column(db.String(80), nullable=False, default="")
     capacity = db.Column(db.Integer)
     fee = db.Column(db.String(16), nullable=False, default="")
+    audience = db.Column(db.String(16), nullable=False, default="any")  # any / male / female
     starts_at = db.Column(db.DateTime)
     flexible = db.Column(db.Boolean, nullable=False, default=False)
     cancelled = db.Column(db.Boolean, nullable=False, default=False)
