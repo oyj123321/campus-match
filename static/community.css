@@ -16,6 +16,11 @@
 .community-meta{display:flex;flex-wrap:wrap;align-items:center;gap:12px;font-size:12px;color:#6b665c}
 .community-meta time{margin-left:auto}
 .community-tag{padding:5px 9px;border-radius:6px;background:#efe8d9;color:#3f3c36;font-weight:600}
+.community-facts{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.community-facts span{font-size:13px;padding:4px 8px;border-radius:999px;background:#efe8d9;color:#3f3c36}
+.community-members{list-style:none;padding:0;margin:12px 0;display:grid;gap:8px}
+.community-members li{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:14px}
+.community-members form{margin:0}
 .community-excerpt{color:#5c5850;overflow-wrap:anywhere;white-space:pre-wrap}
 .community-body{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.9;margin:20px 0;font-size:15px}
 .community-title{font-size:28px!important;overflow-wrap:anywhere}
@@ -32,7 +37,7 @@
 .community-form input:not([type=checkbox]),.community-form textarea,.community-form select,.community-filters select{width:100%;box-sizing:border-box;border:1px solid rgba(28,27,25,.14);border-radius:9px;background:#fffdf8;color:#1c1b19;padding:11px;font:inherit;min-width:0}
 .community-form textarea{resize:vertical}
 .community-form input:focus,.community-form textarea:focus,.community-filters select:focus{outline:2px solid #141413;outline-offset:2px}
-.community-form .community-checkbox{display:flex;align-items:center;font-weight:400;line-height:1.7}
+.community-form .community-checkbox,.community-filters .community-checkbox{display:flex;align-items:center;gap:8px;font-weight:400;line-height:1.7;flex:0 0 auto;min-width:max-content}
 .community-form button,.community-tools button,.community-filters button,.community-card details button{border:1px solid rgba(28,27,25,.18);background:#f4eee3;color:#1c1b19;border-radius:8px;padding:9px 15px;font:inherit;cursor:pointer;width:auto}
 .community-form>.community-primary{justify-self:start}
 .community-tools{display:flex;flex-wrap:wrap;gap:12px;align-items:start;margin-top:18px}

@@ -30,7 +30,7 @@ document.addEventListener('submit', async (event) => {
             const kind = form.elements.kind.value;
             form.elements.enabled.value = data.enabled ? '0' : '1';
             button.textContent = (data.enabled ? '取消' : '') +
-                (kind === 'like' ? '赞 · ' + data.likes : '收藏');
+                (kind === 'like' ? '赞 · ' + data.likes : '想去');
             button.setAttribute('aria-pressed', String(data.enabled));
         } else {
             status.textContent = data.message;

@@ -10,11 +10,12 @@ import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from app import app
-from models import (db, CommunityEntry, CommunityReaction, CommunityReport,
+from community import ensure_community_columns
+from models import (db, CommunityEntry, CommunityMember, CommunityReaction, CommunityReport,
                     CommunityBan, CommunityLimit, CommunityAudit)
 
-TABLES = [model.__table__ for model in (CommunityEntry, CommunityReaction, CommunityReport,
-                                      CommunityBan, CommunityLimit, CommunityAudit)]
+TABLES = [model.__table__ for model in (CommunityEntry, CommunityMember, CommunityReaction,
+                                      CommunityReport, CommunityBan, CommunityLimit, CommunityAudit)]
 
 
 def migrate():
@@ -32,6 +33,7 @@ def migrate():
                 original.backup(saved)
         with db.engine.begin() as connection:
             db.metadata.create_all(bind=connection, tables=TABLES, checkfirst=True)
+        ensure_community_columns()
         print(f"Backup: {backup}")
         print("Community tables ready. Existing users and matching data unchanged.")
 
