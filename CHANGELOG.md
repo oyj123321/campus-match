@@ -2,6 +2,18 @@
 
 All notable changes to CampusMatch.
 
+## [1.9.71] — 2026-11-22
+
+### 问题（上次）
+- 万圣节夜场过了就回到米白编辑风，冬日与圣诞季没有欢快的节日界面。
+
+### 改动
+- **Added**：欢乐冰雪节限定界面，11.25 – 01.01（澳门时间）自动开启，`.env` 里 `FESTIVAL_CHRISTMAS=on/off` 可强制开关（`config.py`）。
+- **Added**：参考《英雄联盟》冰雪节（Snowdown）重做全站主题 `static/festival-christmas.css`：明亮通透的弗雷尔卓德冰川蓝天空、暖金与冰青极光、檐下玻璃彩灯串、红金糖果纹公告条、海克斯鎏金边框与卡片顶檐积雪、冰雪水晶白卡片配欢快红金按钮；底部铺设暖光雪顶木屋、皑皑雪坡与企鹅/北极熊/雪人/热可可/礼盒 3D 伙伴。首页连线画布同步改为魔法冰海与鎏金星轨（`static/landing-stage.js`）。人格分享卡保持原色。
+- **Improved**：同一套欢快皮肤再收一版：彩灯改成带灯座和高光的玻璃泡、标题第二行改成金属鎏金、主舞台加内金线框、下方卡片加四角金线、天空加定星、木屋窗加暖光。
+- **Added**：素材来自 Microsoft Fluent UI Emoji 3D（MIT）、Game-Icons.net（CC-BY 3.0，Lorc & Delapouite），展示字体 Cinzel Decorative Bold（SIL OFL 1.1）。许可见 `static/festival/christmas/LICENSE` 与 `static/fonts/CinzelDecorative-OFL.txt`。
+- **Deploy**：无数据库改动，拉代码重启即可。窗口外要预览可设 `FESTIVAL_CHRISTMAS=on`。
+
 ## [1.9.70] — 2026-10-22
 
 ### 问题（上次）
