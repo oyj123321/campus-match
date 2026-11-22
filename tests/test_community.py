@@ -453,3 +453,48 @@ class CommunityTests(unittest.TestCase):
         self.assertEqual(self.submit(f"/community/posts/{post.id}/join", my_gender="female").status_code, 302)
         self.assertEqual(db.session.get(User, self.other.id).gender, "female")
         self.assertEqual(Member.query.filter_by(user_id=self.other.id).one().state, "going")
+
+    def test_guest_filter_stays_inside_the_openable_preview(self):
+        for index in range(4):
+            self.post(title=f"Study {index}", category="study",
+                      starts_at=datetime.utcnow() + timedelta(hours=index + 1))
+        sport = self.post(title="Later sport", category="sport",
+                          starts_at=datetime.utcnow() + timedelta(hours=10))
+        with self.client.session_transaction() as session:
+            session.clear()
+        html = self.client.get("/community?category=sport").get_data(as_text=True)
+        self.assertNotIn("Later sport", html)
+        self.assertEqual(self.client.get(f"/community/posts/{sport.id}").status_code, 403)
+
+    def test_host_gender_must_match_a_limited_plan(self):
+        self.user.gender = "female"
+        db.session.commit()
+        self.assertEqual(self.submit("/community/new", **self.plan_form(audience="male")).status_code, 400)
+        self.assertEqual(Entry.query.filter(Entry.parent_id.is_(None), Entry.audience == "male").count(), 0)
+        self.user.gender = None
+        db.session.commit()
+        self.assertEqual(self.submit("/community/new", **self.plan_form(
+            audience="male", my_gender="female")).status_code, 400)
+        self.assertIsNone(db.session.get(User, self.user.id).gender)
+        self.assertEqual(self.submit("/community/new", **self.plan_form(
+            audience="male", my_gender="male", title="Men study")).status_code, 302)
+        self.assertEqual(db.session.get(User, self.user.id).gender, "male")
+
+    def test_leave_after_cancel_does_not_promote(self):
+        post = self.post(capacity=2)
+        self.other.school = "School A"
+        waiter = User(email="private-wait@example.test", school="School A", name="Waiter", email_verified=True)
+        db.session.add(waiter)
+        db.session.commit()
+        self.login(self.other)
+        self.assertEqual(self.submit(f"/community/posts/{post.id}/join").status_code, 302)
+        self.login(waiter)
+        self.assertEqual(self.submit(f"/community/posts/{post.id}/join").status_code, 302)
+        self.login(self.user)
+        self.assertEqual(self.submit(f"/community/posts/{post.id}/cancel").status_code, 302)
+        self.login(self.other)
+        html = self.client.get(f"/community/posts/{post.id}").get_data(as_text=True)
+        self.assertIn("退出名额", html)
+        self.assertEqual(self.submit(f"/community/posts/{post.id}/leave").status_code, 302)
+        self.assertEqual(Member.query.filter_by(user_id=waiter.id).one().state, "waitlist")
+        self.assertEqual(Member.query.filter_by(user_id=self.other.id).count(), 0)

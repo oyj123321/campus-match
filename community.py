@@ -313,7 +313,9 @@ def feed():
         school = ""
         page, more = 1, False
         total = query.count()
-        rows = order.limit(GUEST_PREVIEW).all()
+        preview_ids = guest_preview_ids()
+        query = query.filter(Entry.id.in_(preview_ids)) if preview_ids else query.filter(db.false())
+        rows = upcoming(query).limit(GUEST_PREVIEW).all()
         locked = max(0, total - len(rows))
         schools = []
     else:
@@ -353,10 +355,15 @@ def create():
     picked = request.form.get("my_gender", "").strip()
     if picked and picked not in ("male", "female"):
         abort(400, "请选择你的性别。")
-    if picked and g.community_user.gender not in ("male", "female"):
-        g.community_user.gender = picked
-    if audience in ("male", "female") and g.community_user.gender not in ("male", "female"):
-        abort(400, "限性别的局，请先选择你的性别。")
+    if audience in ("male", "female"):
+        gender = g.community_user.gender if g.community_user.gender in ("male", "female") else ""
+        if not gender and picked in ("male", "female"):
+            gender = picked
+        if gender != audience:
+            who = "男生" if audience == "male" else "女生"
+            abort(400, f"只限{who}的局，发起人自己也要是{who}。")
+        if g.community_user.gender not in ("male", "female"):
+            g.community_user.gender = picked
     raw_cap = request.form.get("capacity", "").strip()
     if not raw_cap.isdigit() or not 2 <= int(raw_cap) <= 12:
         abort(400, "人数上限须在 2–12 人之间（含发起人）。")
@@ -450,10 +457,10 @@ def leave(post_id):
     was_going = row.state == "going"
     db.session.delete(row)
     db.session.flush()
-    if was_going:
+    if was_going and plan_active(post):
         promote(post)
     db.session.commit()
-    flash("已退出。空出的名额会补给最早的候补。")
+    flash("已退出。空出的名额会补给最早的候补。" if plan_active(post) else "已退出。")
     return redirect(url_for("community.detail", post_id=post.id))
 
 
@@ -480,10 +487,10 @@ def remove_member(post_id, user_id):
     was_going = row.state == "going"
     db.session.delete(row)
     db.session.flush()
-    if was_going:
+    if was_going and plan_active(post):
         promote(post)
     db.session.commit()
-    flash("已移出。空出的名额会补给最早的候补。")
+    flash("已移出。空出的名额会补给最早的候补。" if plan_active(post) else "已移出。")
     return redirect(url_for("community.detail", post_id=post.id))
 
 

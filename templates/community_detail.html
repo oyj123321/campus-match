@@ -37,12 +37,12 @@
     {% endif %}
     <div class="community-tools">
         {% if not community_user %}<a href="/#step1-card" data-i18n="cm.loginWant">登录后想去</a><a href="/#step1-card" data-i18n="cm.loginComment">登录留言</a>{% endif %}
-        {% if community_user and post.status=='published' and post.capacity and plan_active(post) and not post.cancelled %}
-            {% if post.author_id==community_user.id %}
+        {% if community_user and post.status=='published' and post.capacity %}
+            {% if post.author_id==community_user.id and plan_active(post) and not post.cancelled %}
             <form method="post" action="{{ url_for('community.cancel', post_id=post.id) }}"><input type="hidden" name="csrf" value="{{ community_csrf }}"><button type="submit" data-i18n="cm.cancel">取消这场局</button></form>
             {% elif membership.get(post.id) %}
             <form method="post" action="{{ url_for('community.leave', post_id=post.id) }}"><input type="hidden" name="csrf" value="{{ community_csrf }}"><button type="submit">{{ '退出候补' if membership.get(post.id)=='waitlist' else '退出名额' }}</button></form>
-            {% else %}
+            {% elif plan_active(post) and not post.cancelled %}
             {% if post.audience in ('male','female') and community_user.gender in ('male','female') and community_user.gender != post.audience %}
             <p class="community-notice" data-i18n="cm.who.blocked.{{ post.audience }}">{{ '这场局只限男生。' if post.audience=='male' else '这场局只限女生。' }}</p>
             {% else %}
