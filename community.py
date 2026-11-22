@@ -7,6 +7,7 @@ from sqlalchemy import inspect, text
 from sqlalchemy.exc import IntegrityError
 
 from admin_dashboard import _admin_signed_in, _csrf_token, _valid_csrf
+from config import SCHOOL_DOMAINS
 from models import (db, User, CommunityEntry as Entry, CommunityMember as Member,
                     CommunityReaction as Reaction, CommunityReport as Report,
                     CommunityBan as Ban, CommunityLimit as Limit, CommunityAudit as Audit)
@@ -323,9 +324,10 @@ def feed():
         rows = order.offset((page - 1) * 20).limit(21).all()
         more, locked = len(rows) > 20, 0
         rows = rows[:20]
-        schools = [s for s, in db.session.query(Entry.school).filter(
+        present = {s for s, in db.session.query(Entry.school).filter(
             Entry.parent_id.is_(None), Entry.status == "published",
-            Entry.category.in_(PLAN_CATEGORIES)).distinct().order_by(Entry.school)]
+            Entry.category.in_(PLAN_CATEGORIES), Entry.school != "")}
+        schools = list(SCHOOL_DOMAINS) + sorted(s for s in present if s not in SCHOOL_DOMAINS)
     return render_template("community_feed.html", posts=rows, more=more, page=page, locked=locked,
                            category=category, view=view, school=school, schools=schools,
                            when=when, spots=spots, who=who, fee=fee, **card_data(rows))

@@ -369,6 +369,10 @@ class CommunityTests(unittest.TestCase):
         self.assertNotIn("Topic 00", page2)
         self.assertNotIn("Topic 00",self.client.get("/community?school=School+B").get_data(as_text=True))
         self.assertEqual(self.client.get("/community?category=invalid").status_code,400)
+        html = self.client.get("/community").get_data(as_text=True)
+        for name in ("澳门大学", "澳门科技大学", "澳门理工大学", "澳门旅游大学", "澳门城市大学"):
+            self.assertIn(f'data-school="{name}"', html)
+        self.assertLess(html.index('data-school="澳门大学"'), html.index('data-school="澳门城市大学"'))
 
     def test_feed_filters_gender_fee_and_open_spots_together(self):
         self.post(title="Women open", audience="female", fee="free", capacity=4)
