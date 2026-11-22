@@ -1,4 +1,8 @@
 document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('form.community-filters').forEach((form) => {
+        form.classList.add('is-live');
+        form.addEventListener('change', () => form.requestSubmit());
+    });
     const flex = document.querySelector('input[name="flexible"]');
     const start = document.querySelector('input[name="starts_at"]');
     const audience = document.querySelector('select[name="audience"]');

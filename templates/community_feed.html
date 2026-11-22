@@ -2,16 +2,17 @@
 {% from "community_icons.html" import icon, seat_row %}
 {% block community_content %}
 <div class="community-grid"><section>
+    {% if view=='all' %}
     <form class="community-filters" method="get">
-        <input type="hidden" name="view" value="{{ view }}">
+        <p class="community-filter-note" data-i18n="cm.filter.hint">下面已经是还没开始的局。这里只是再收窄，改完马上生效。</p>
         <label><span data-i18n="cm.filter.topic">活动</span><select name="category"><option value="" data-i18n="cm.filter.allTopics">全部活动</option>{% for key,label in plan_categories.items() %}<option value="{{ key }}" {% if category==key %}selected{% endif %} data-i18n="cm.cat.{{ key }}">{{ label }}</option>{% endfor %}</select></label>
-        {% if community_user and view=='all' %}<label><span data-i18n="cm.filter.school">学校</span><select name="school"><option value="" data-i18n="cm.filter.allSchools">全部学校</option>{% for s in schools %}<option value="{{ s }}" {% if school==s %}selected{% endif %} data-school="{{ s }}">{{ s }}</option>{% endfor %}</select></label>{% endif %}
-        {% if view=='all' %}
-        <label><span data-i18n="cm.filter.when">时间</span><select name="when"><option value="" data-i18n="cm.filter.anyTime">即将开始</option><option value="week" {% if when=='week' %}selected{% endif %} data-i18n="cm.filter.week">7 天内</option></select></label>
-        <label class="community-checkbox"><input type="checkbox" name="spots" value="open" {% if spots=='open' %}checked{% endif %}><span data-i18n="cm.filter.open">还有名额</span></label>
-        {% endif %}
-        <button type="submit" data-i18n="cm.filter.submit">筛选</button>
+        {% if community_user %}<label><span data-i18n="cm.filter.school">学校</span><select name="school"><option value="" data-i18n="cm.filter.allSchools">全部学校</option>{% for s in schools %}<option value="{{ s }}" {% if school==s %}selected{% endif %} data-school="{{ s }}">{{ s }}</option>{% endfor %}</select></label>{% endif %}
+        <label><span data-i18n="cm.filter.when">时间</span><select name="when"><option value="" data-i18n="cm.filter.anyTime">不限时间</option><option value="week" {% if when=='week' %}selected{% endif %} data-i18n="cm.filter.week">只看 7 天内</option></select></label>
+        <label class="community-checkbox"><input type="checkbox" name="spots" value="open" {% if spots=='open' %}checked{% endif %}><span data-i18n="cm.filter.open">只看还有空位</span></label>
+        <button type="submit" data-i18n="cm.filter.submit">应用</button>
+        {% if category or school or when or spots %}<a class="community-filter-clear" href="/community" data-i18n="cm.filter.clear">清除</a>{% endif %}
     </form>
+    {% endif %}
     {% for post in posts %}
     <article class="community-card">
         <div class="community-meta"><span class="community-tag" data-i18n="cm.cat.{{ post.category }}">{{ categories.get(post.category, post.category) }}</span>{% if post.pinned %}<span data-i18n="cm.pinned">置顶</span>{% endif %}{% if post.cancelled %}<span data-i18n="cm.cancelled">已取消</span>{% elif not plan_active(post) %}<span data-i18n="cm.ended">已结束</span>{% endif %}{% if post.status!='published' %}<span>{{ states[post.status] }}</span>{% endif %}<time>{{ icon('clock') }}{{ plan_when(post) }}</time></div>
