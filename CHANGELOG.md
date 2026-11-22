@@ -2,6 +2,17 @@
 
 All notable changes to CampusMatch.
 
+## [1.9.71] — 2026-11-22
+
+### 问题（上次）
+- 万圣节夜场过了就回到米白编辑风，圣诞和冰雪节没有任何节日界面。
+
+### 改动
+- **Added**：圣诞冰雪限定界面，12.18 – 01.01（澳门时间）自动开启，`.env` 里 `FESTIVAL_CHRISTMAS=on/off` 可强制开关（`config.py`）。
+- **Added**：全站冰夜主题 `static/festival-christmas.css`：冰月、飘雪、铃铛、雪人、圣诞树、鹿和礼物；导航、卡片、表单、按钮换成冰蓝与莓红。首页加限定横幅（四语言），首页画布改为冰蓝配金色连线（`static/landing-stage.js`）。人格分享卡保持原色。活动期间导航栏用雪花，结束后换回 logo。
+- **Added**：素材来自 Microsoft Fluent UI Emoji（MIT）、Twemoji（CC-BY 4.0，Fluent 没有圣诞老人，所以老人用 Twemoji）、Tabler Icons（MIT），字体 Mountains of Christmas（Apache 2.0）。许可见 `static/festival/christmas/LICENSE` 与 `static/fonts/MountainsofChristmas-LICENSE.txt`。
+- **Deploy**：无数据库改动，拉代码重启即可。窗口外要预览可设 `FESTIVAL_CHRISTMAS=on`。
+
 ## [1.9.70] — 2026-10-22
 
 ### 问题（上次）

@@ -14,7 +14,8 @@
     {% if festival_autumn %}<link rel="stylesheet" href="/static/festival-autumn.css?v=2">{% endif %}
     {% block extra_css %}{% endblock %}
     {% if festival_halloween %}<link rel="stylesheet" href="/static/festival-halloween.css?v=4">{% endif %}
-    <script src="/static/i18n.js?v=landing-20261022c"></script>
+    {% if festival_christmas %}<link rel="stylesheet" href="/static/festival-christmas.css?v=1">{% endif %}
+    <script src="/static/i18n.js?v=landing-20261122a"></script>
     <script src="/static/love_personality_i18n.js?v=1968"></script>
     <script src="/static/vendor/html2canvas.min.js"></script>
     <script src="/static/vendor/qrcode-generator.min.js"></script>
@@ -59,7 +60,7 @@
         }
     </script>
 </head>
-<body class="{% block body_class %}{% endblock %}{% if festival_autumn %} fest-autumn{% endif %}{% if festival_halloween %} fest-halloween{% endif %}">
+<body class="{% block body_class %}{% endblock %}{% if festival_autumn %} fest-autumn{% endif %}{% if festival_halloween %} fest-halloween{% endif %}{% if festival_christmas %} fest-christmas{% endif %}">
     {% if festival_autumn %}
     <div class="fest-layer" aria-hidden="true">
         <div class="fest-moon"><span class="fest-moon-star"></span></div>
@@ -136,6 +137,49 @@
 
         <svg class="hw-skyline" viewBox="0 0 1440 140" preserveAspectRatio="none">
             <path fill="currentColor" d="M0 140 L0 108 L48 104 L68 78 L88 104 L140 108 L158 68 L175 44 L192 68 L210 106 L280 112 L310 92 L326 60 L342 92 L390 110 L460 114 L495 82 L515 36 L535 82 L565 74 L580 54 L595 74 L640 112 L740 116 L780 96 L810 114 L900 112 L925 64 L946 28 L967 64 L995 108 L1080 114 L1120 88 L1140 62 L1160 88 L1230 112 L1290 76 L1312 46 L1334 76 L1390 108 L1440 112 L1440 140 Z"/>
+        </svg>
+    </div>
+    {% endif %}
+    {% if festival_christmas %}
+    <div class="fest-xm" aria-hidden="true">
+        <div class="xm-sky-glow"></div>
+        <img class="xm-corner xm-corner-tl" src="/static/festival/christmas/fluent-snowflake.svg" alt="">
+        <img class="xm-corner xm-corner-tr" src="/static/festival/christmas/tabler-snowflake.svg" alt="">
+        <div class="xm-hang">
+            <span class="xm-thread"></span>
+            <img class="xm-bell" src="/static/festival/christmas/fluent-bell.svg" alt="">
+            <img class="xm-ornament" src="/static/festival/christmas/tabler-ornament.svg" alt="">
+        </div>
+        <div class="xm-moon-stage">
+            <div class="xm-moon-halo"></div>
+            <div class="xm-moon-disc">
+                <img class="xm-moon-art" src="/static/festival/christmas/fluent-night.svg" alt="">
+            </div>
+            <img class="xm-moon-star xm-moon-star-a" src="/static/festival/christmas/fluent-glowing-star.svg" alt="">
+            <img class="xm-moon-star xm-moon-star-b" src="/static/festival/christmas/fluent-sparkles.svg" alt="">
+            <img class="xm-moon-star xm-moon-star-c" src="/static/festival/christmas/fluent-shooting-star.svg" alt="">
+        </div>
+        <img class="xm-float xm-float-cloud" src="/static/festival/christmas/fluent-snow-cloud.svg" alt="">
+        <img class="xm-float xm-float-spark" src="/static/festival/christmas/fluent-sparkles.svg" alt="">
+        <div class="xm-ground xm-ground-left">
+            <img class="xm-snowman" src="/static/festival/christmas/fluent-snowman.svg" alt="">
+            <img class="xm-tree" src="/static/festival/christmas/fluent-christmas-tree.svg" alt="">
+            <img class="xm-gift" src="/static/festival/christmas/fluent-gift.svg" alt="">
+            <img class="xm-ice" src="/static/festival/christmas/fluent-ice.svg" alt="">
+        </div>
+        <div class="xm-ground xm-ground-right">
+            <img class="xm-deer" src="/static/festival/christmas/fluent-deer.svg" alt="">
+            <img class="xm-tree" src="/static/festival/christmas/fluent-christmas-tree.svg" alt="">
+            <img class="xm-santa" src="/static/festival/christmas/santa.svg" alt="">
+            <img class="xm-pine" src="/static/festival/christmas/fluent-pine.svg" alt="">
+            <img class="xm-cookie" src="/static/festival/christmas/fluent-cookie.svg" alt="">
+        </div>
+        <img class="xm-flake xm-flake-a" src="/static/festival/christmas/tw-snowflake.svg" alt="">
+        <img class="xm-flake xm-flake-b" src="/static/festival/christmas/fluent-snowflake.svg" alt="">
+        <img class="xm-flake xm-flake-c" src="/static/festival/christmas/tw-snowflake.svg" alt="">
+        <img class="xm-flake xm-flake-d" src="/static/festival/christmas/fluent-snowflake.svg" alt="">
+        <svg class="xm-hills" viewBox="0 0 1440 120" preserveAspectRatio="none">
+            <path fill="currentColor" d="M0 120 L0 78 C120 40 220 96 340 70 C460 44 520 88 660 64 C800 40 900 92 1040 58 C1160 30 1280 78 1440 48 L1440 120 Z"/>
         </svg>
     </div>
     {% endif %}

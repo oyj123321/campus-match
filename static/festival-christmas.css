@@ -1,0 +1,699 @@
+/* ════════════════════════════════════════════════════════════════════════
+   CampusMatch — 圣诞冰雪节限定皮肤 (2026-12-18 ~ 2027-01-01)
+   开源全彩矢量：Microsoft Fluent Emoji (MIT) + Twemoji (CC-BY 4.0)
+   线稿：Tabler Icons (MIT)
+   展示字体：Mountains of Christmas (Apache 2.0)
+   ════════════════════════════════════════════════════════════════════════ */
+
+@font-face {
+    font-family: "CM Mountains";
+    src: url("/static/fonts/MountainsofChristmas-Regular.ttf") format("truetype");
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+
+body.fest-christmas {
+    --xm-bg-0: #07131c;
+    --xm-bg-1: #0c1e2e;
+    --xm-bg-2: #123044;
+    --xm-snow: #f4fbff;
+    --xm-ice: #d7f3ff;
+    --xm-muted: #b7c9d6;
+    --xm-dim: #8aa4b8;
+    --xm-cyan: #7dd3fc;
+    --xm-cyan-deep: #38bdf8;
+    --xm-gold: #f5d48a;
+    --xm-berry: #d6455d;
+    --xm-pine: #1f6b4a;
+
+    --bg-top: #07131c;
+    --bg-mid: #0c1e2e;
+    --bg-bot: #123044;
+    --card-bg: rgba(12, 30, 46, 0.86);
+    --card-border: rgba(125, 211, 252, 0.28);
+    --card-border-hover: rgba(245, 212, 138, 0.55);
+    --text: #f4fbff;
+    --text-secondary: #b7c9d6;
+    --accent: #7dd3fc;
+    --accent-deep: #e8f7ff;
+    --accent-2: #f5d48a;
+    --match: #d6455d;
+    --match-2: #7dd3fc;
+    --border: rgba(125, 211, 252, 0.24);
+    --primary: #d6455d;
+    --primary-hover: #e11d48;
+    --grad: linear-gradient(135deg, #d6455d 0%, #7dd3fc 100%);
+    --grad-match: linear-gradient(135deg, #d6455d 0%, #38bdf8 100%);
+
+    background-color: var(--xm-bg-0) !important;
+    background-image:
+        radial-gradient(circle at 84% 12%, rgba(186, 230, 253, 0.22), transparent 34%),
+        radial-gradient(circle at 12% 22%, rgba(56, 189, 248, 0.16), transparent 40%),
+        radial-gradient(circle at 50% 96%, rgba(245, 212, 138, 0.1), transparent 46%),
+        radial-gradient(rgba(244, 251, 255, 0.16) 1px, transparent 1.4px),
+        linear-gradient(180deg, #061018 0%, #0c1e2e 48%, #16344a 100%) !important;
+    background-size: auto, auto, auto, 28px 28px, auto !important;
+    background-attachment: fixed;
+    color: var(--xm-snow) !important;
+}
+
+body.fest-christmas .bg-decor,
+body.fest-christmas .grid-overlay,
+body.fest-christmas .gba-hero {
+    opacity: 0;
+}
+
+body.fest-christmas ::selection {
+    background: rgba(125, 211, 252, 0.35);
+    color: #07131c;
+}
+
+body.fest-christmas .nav,
+body.page-landing.fest-christmas .nav {
+    background: rgba(7, 19, 28, 0.88) !important;
+    backdrop-filter: blur(14px) !important;
+    -webkit-backdrop-filter: blur(14px) !important;
+    border-bottom: 1px solid rgba(125, 211, 252, 0.32) !important;
+    box-shadow: 0 10px 32px rgba(0, 0, 0, 0.42), 0 1px 0 rgba(245, 212, 138, 0.16);
+}
+
+body.fest-christmas .nav-brand,
+body.page-landing.fest-christmas .nav-brand {
+    color: var(--xm-snow) !important;
+    -webkit-text-fill-color: var(--xm-snow) !important;
+    text-shadow: 0 0 18px rgba(125, 211, 252, 0.4);
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+}
+
+body.fest-christmas .nav-brand::before,
+body.page-landing.fest-christmas .nav-brand::before {
+    content: "";
+    width: 26px !important;
+    height: 26px !important;
+    border-radius: 0 !important;
+    background: url("/static/festival/christmas/fluent-snowflake.svg") center / contain no-repeat !important;
+    filter: drop-shadow(0 0 8px rgba(186, 230, 253, 0.9));
+}
+
+body.fest-christmas .nav-brand::after {
+    content: "SNOW";
+    font-family: "CM Mountains", cursive, sans-serif;
+    font-size: 0.92em;
+    font-weight: 400;
+    letter-spacing: 0.06em;
+    padding: 1px 10px 3px;
+    border-radius: 999px;
+    background: rgba(125, 211, 252, 0.14);
+    border: 1px solid rgba(245, 212, 138, 0.55);
+    color: var(--xm-gold);
+    -webkit-text-fill-color: var(--xm-gold);
+}
+
+body.fest-christmas .nav-link,
+body.page-landing.fest-christmas .nav-link {
+    color: #d5e7f2 !important;
+}
+body.fest-christmas .nav-link:hover,
+body.page-landing.fest-christmas .nav-link:hover {
+    color: var(--xm-gold) !important;
+    text-shadow: 0 0 12px rgba(125, 211, 252, 0.55);
+}
+
+body.fest-christmas .nav-cta,
+body.page-landing.fest-christmas .nav-cta {
+    background: linear-gradient(135deg, #e11d48, #9f1239) !important;
+    color: #fff8f6 !important;
+    font-weight: 800;
+    box-shadow: 0 0 18px rgba(214, 69, 93, 0.4);
+}
+body.fest-christmas .nav-cta:hover,
+body.page-landing.fest-christmas .nav-cta:hover {
+    background: linear-gradient(135deg, #fb7185, #be123c) !important;
+    color: #fff !important;
+}
+
+body.fest-christmas .lang-select,
+body.page-landing.fest-christmas .lang-select {
+    background-color: rgba(12, 30, 46, 0.92) !important;
+    border: 1px solid rgba(125, 211, 252, 0.35) !important;
+    color: var(--xm-snow) !important;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23f5d48a' stroke-width='1.6' fill='none' stroke-linecap='round'/%3E%3C/svg%3E") !important;
+}
+
+body.fest-christmas .site-announcement,
+body.page-landing.fest-christmas .site-announcement {
+    background: linear-gradient(90deg, rgba(12, 42, 62, 0.96), rgba(88, 28, 42, 0.9), rgba(12, 42, 62, 0.96)) !important;
+    border-bottom: 1px solid rgba(125, 211, 252, 0.32) !important;
+    color: var(--xm-ice) !important;
+}
+body.fest-christmas .site-announcement-toggle,
+body.page-landing.fest-christmas .site-announcement-toggle {
+    color: var(--xm-gold) !important;
+}
+
+body.fest-christmas .incomplete-banner {
+    background: rgba(30, 58, 82, 0.55) !important;
+    border-bottom: 1px solid rgba(125, 211, 252, 0.35) !important;
+}
+body.fest-christmas .incomplete-banner-inner {
+    color: var(--xm-gold) !important;
+}
+
+.fest-xm {
+    position: fixed;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    overflow: hidden;
+    color: #e0f2fe;
+}
+
+body.fest-christmas .main,
+body.fest-christmas .footer {
+    position: relative;
+    z-index: 2;
+}
+
+.xm-sky-glow {
+    position: absolute;
+    inset: 0;
+    background:
+        radial-gradient(ellipse 48% 36% at 82% 16%, rgba(224, 242, 254, 0.28), transparent 70%),
+        radial-gradient(ellipse 40% 30% at 16% 24%, rgba(56, 189, 248, 0.16), transparent 72%);
+}
+
+.xm-corner {
+    position: absolute;
+    top: 52px;
+    width: 180px;
+    height: 180px;
+    opacity: 0.55;
+    filter: drop-shadow(0 0 16px rgba(186, 230, 253, 0.45));
+}
+.xm-corner-tl { left: -28px; }
+.xm-corner-tr { right: -28px; transform: scaleX(-1); }
+
+.xm-hang {
+    position: absolute;
+    top: 58px;
+    left: 11%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    animation: xmSwing 5.5s ease-in-out infinite;
+    transform-origin: top center;
+}
+.xm-thread {
+    width: 2px;
+    height: 72px;
+    background: linear-gradient(180deg, rgba(245, 212, 138, 0.2), rgba(245, 212, 138, 0.9));
+}
+.xm-bell {
+    width: 54px;
+    height: 54px;
+    margin-top: -4px;
+    filter: drop-shadow(0 8px 14px rgba(0, 0, 0, 0.45)) drop-shadow(0 0 12px rgba(245, 212, 138, 0.55));
+}
+.xm-ornament {
+    width: 28px;
+    height: 28px;
+    margin-top: 6px;
+    color: #f5d48a;
+}
+
+.xm-moon-stage {
+    position: absolute;
+    top: 78px;
+    right: 4%;
+    width: 210px;
+    height: 210px;
+}
+.xm-moon-halo {
+    position: absolute;
+    inset: -28px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(224, 242, 254, 0.55) 0%, rgba(125, 211, 252, 0.22) 46%, transparent 74%);
+    filter: blur(6px);
+    animation: xmMoonPulse 5s ease-in-out infinite alternate;
+}
+.xm-moon-disc {
+    position: absolute;
+    top: 22px;
+    left: 22px;
+    width: 156px;
+    height: 156px;
+    border-radius: 50%;
+    overflow: hidden;
+    background: radial-gradient(circle at 32% 30%, #ffffff 0%, #e0f2fe 42%, #7dd3fc 100%);
+    box-shadow:
+        0 0 42px 12px rgba(186, 230, 253, 0.55),
+        inset -16px -18px 28px rgba(14, 116, 144, 0.28);
+}
+.xm-moon-art {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    mix-blend-mode: soft-light;
+    opacity: 0.85;
+}
+.xm-moon-star {
+    position: absolute;
+    filter: drop-shadow(0 0 10px rgba(245, 212, 138, 0.75));
+}
+.xm-moon-star-a { width: 52px; height: 52px; top: 4px; left: 0; animation: xmTwinkle 3.6s ease-in-out infinite; }
+.xm-moon-star-b { width: 40px; height: 40px; top: 18px; right: 0; animation: xmTwinkle 4.4s ease-in-out infinite reverse; }
+.xm-moon-star-c { width: 46px; height: 46px; bottom: 18px; left: 8px; animation: xmTwinkle 5s ease-in-out infinite; }
+
+.xm-float {
+    position: absolute;
+    filter: drop-shadow(0 10px 18px rgba(0, 0, 0, 0.35));
+    animation: xmDrift 6.2s ease-in-out infinite;
+}
+.xm-float-cloud { top: 280px; left: 2%; width: 92px; height: 92px; }
+.xm-float-spark { top: 390px; right: 3%; width: 64px; height: 64px; animation-delay: -2.4s; }
+
+.xm-ground {
+    position: absolute;
+    bottom: 18px;
+    display: flex;
+    align-items: flex-end;
+    gap: 4px;
+    z-index: 2;
+}
+.xm-ground-left { left: 1.2%; }
+.xm-ground-right { right: 1.2%; flex-direction: row-reverse; }
+.xm-tree {
+    width: 108px;
+    height: 108px;
+    filter: drop-shadow(0 0 18px rgba(52, 211, 153, 0.35)) drop-shadow(0 10px 16px rgba(0, 0, 0, 0.45));
+    animation: xmBob 4s ease-in-out infinite alternate;
+}
+.xm-snowman, .xm-deer, .xm-santa {
+    width: 78px;
+    height: 78px;
+    filter: drop-shadow(0 8px 14px rgba(0, 0, 0, 0.4));
+}
+.xm-gift, .xm-ice, .xm-pine, .xm-cookie {
+    width: 48px;
+    height: 48px;
+    margin-bottom: 6px;
+    filter: drop-shadow(0 0 10px rgba(245, 212, 138, 0.35));
+}
+
+.xm-flake {
+    position: absolute;
+    top: -40px;
+    width: 22px;
+    height: 22px;
+    opacity: 0.85;
+    animation: xmFall 16s linear infinite;
+}
+.xm-flake-a { left: 18%; animation-delay: -2s; }
+.xm-flake-b { left: 42%; width: 16px; height: 16px; animation-duration: 19s; animation-delay: -8s; }
+.xm-flake-c { left: 67%; animation-duration: 14s; animation-delay: -5s; }
+.xm-flake-d { left: 84%; width: 18px; height: 18px; animation-duration: 21s; animation-delay: -11s; }
+
+.xm-hills {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    height: 92px;
+    color: rgba(232, 246, 255, 0.16);
+}
+
+.xm-hero-ribbon {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 7px 16px;
+    margin-bottom: 12px;
+    border-radius: 999px;
+    background: linear-gradient(135deg, rgba(125, 211, 252, 0.18), rgba(214, 69, 93, 0.22));
+    border: 1px solid rgba(245, 212, 138, 0.55);
+    box-shadow: 0 0 24px rgba(125, 211, 252, 0.22);
+    color: var(--xm-snow);
+    font-size: 0.84rem;
+    font-weight: 700;
+}
+.xm-ribbon-tag {
+    font-family: "CM Mountains", cursive, sans-serif;
+    font-size: 1.35rem;
+    letter-spacing: 0.04em;
+    color: var(--xm-gold);
+    text-shadow: 0 0 12px rgba(125, 211, 252, 0.55);
+}
+.xm-ribbon-sep { opacity: 0.65; color: var(--xm-gold); }
+.xm-ribbon-img {
+    width: 26px;
+    height: 26px;
+    flex-shrink: 0;
+    filter: drop-shadow(0 0 8px rgba(186, 230, 253, 0.7));
+}
+
+body.page-landing.fest-christmas .ed-board {
+    position: relative;
+    overflow: visible !important;
+    background: #07141e !important;
+    border: 1px solid rgba(125, 211, 252, 0.4) !important;
+    box-shadow:
+        0 22px 60px rgba(0, 0, 0, 0.55),
+        0 0 40px rgba(125, 211, 252, 0.14),
+        inset 0 0 0 1px rgba(245, 212, 138, 0.12) !important;
+}
+body.page-landing.fest-christmas .ed-stage {
+    border-radius: 19px 0 0 19px;
+    background: radial-gradient(circle at 78% 22%, #16344c 0%, #07141e 72%) !important;
+}
+body.page-landing.fest-christmas .ed-dock {
+    border-radius: 0 19px 19px 0;
+    background: linear-gradient(165deg, rgba(14, 36, 54, 0.96) 0%, rgba(8, 20, 32, 0.98) 100%) !important;
+    border-left: 1px solid rgba(125, 211, 252, 0.24) !important;
+}
+
+.xm-board-tree, .xm-board-flake {
+    position: absolute;
+    z-index: 6;
+    pointer-events: none;
+}
+.xm-board-tree {
+    top: -36px;
+    right: 18px;
+    width: 72px;
+    height: 72px;
+    filter: drop-shadow(0 8px 14px rgba(0, 0, 0, 0.45));
+}
+.xm-board-flake {
+    top: -22px;
+    left: 22px;
+    width: 54px;
+    height: 54px;
+    animation: xmTwinkle 4.2s ease-in-out infinite;
+}
+
+body.page-landing.fest-christmas .ed-cta {
+    position: relative;
+    overflow: visible !important;
+    background: linear-gradient(135deg, #10283a 0%, #1a3044 48%, #3a1a28 100%) !important;
+    border: 1px solid rgba(245, 212, 138, 0.4) !important;
+    box-shadow: 0 16px 44px rgba(0, 0, 0, 0.45) !important;
+}
+.xm-cta-gift, .xm-cta-star {
+    position: absolute;
+    pointer-events: none;
+}
+.xm-cta-gift { top: -22px; left: 22px; width: 52px; height: 52px; }
+.xm-cta-star { bottom: -16px; right: 168px; width: 44px; height: 44px; }
+
+body.page-landing.fest-christmas .ed-kicker,
+body.fest-christmas .kicker { color: var(--xm-gold) !important; }
+
+body.page-landing.fest-christmas .ed-hero h1,
+body.fest-christmas .hero h1,
+body.fest-christmas h1,
+body.fest-christmas h2,
+body.fest-christmas h3 {
+    color: var(--xm-snow) !important;
+}
+
+body.fest-christmas .personality-card,
+body.fest-christmas .lp-share-card {
+    color: var(--lp-ink, #1e293b) !important;
+    background: var(--lp-card) !important;
+}
+body.fest-christmas .personality-card :is(h1, h2, h3, p, a, .hint),
+body.fest-christmas .lp-share-card :is(h1, h2, h3, p, a, .hint) {
+    color: inherit !important;
+}
+
+body.page-landing.fest-christmas .ed-mark {
+    background: linear-gradient(120deg, #ffffff 0%, #7dd3fc 46%, #f5d48a 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent !important;
+    text-decoration-color: #7dd3fc !important;
+}
+
+body.page-landing.fest-christmas .ed-hero-aside {
+    border-left-color: rgba(125, 211, 252, 0.32) !important;
+}
+body.page-landing.fest-christmas .ed-lead { color: #d5e7f2 !important; }
+body.page-landing.fest-christmas .ed-stat { color: var(--xm-muted) !important; }
+body.page-landing.fest-christmas .ed-stat strong { color: var(--xm-gold) !important; }
+
+body.fest-christmas .live-dot {
+    background: #7dd3fc !important;
+    box-shadow: 0 0 10px rgba(125, 211, 252, 0.95), 0 0 0 3px rgba(125, 211, 252, 0.24) !important;
+}
+
+body.page-landing.fest-christmas .ed-scan {
+    background: linear-gradient(90deg, transparent, rgba(125, 211, 252, 0.16), rgba(245, 212, 138, 0.1), transparent) !important;
+}
+body.page-landing.fest-christmas .ed-dock .ed-panel h2 { color: var(--xm-gold) !important; }
+body.page-landing.fest-christmas .ed-dock #step2-card { border-top-color: rgba(125, 211, 252, 0.24) !important; }
+
+body.page-landing.fest-christmas .ed-section,
+body.page-landing.fest-christmas .ed-notes,
+body.page-landing.fest-christmas .ed-roadmap,
+body.fest-christmas .card:not(.lp-share-card):not(.personality-card) {
+    background: linear-gradient(165deg, rgba(16, 40, 58, 0.9) 0%, rgba(8, 22, 34, 0.94) 100%) !important;
+    border: 1px solid rgba(125, 211, 252, 0.26) !important;
+    box-shadow: 0 14px 36px rgba(0, 0, 0, 0.36), inset 0 1px 0 rgba(244, 251, 255, 0.08) !important;
+    color: var(--xm-snow) !important;
+}
+
+body.fest-christmas:not(.page-landing) .main > .card:first-of-type { position: relative; }
+body.fest-christmas:not(.page-landing) .main > .card:first-of-type::after {
+    content: "";
+    position: absolute;
+    top: -22px;
+    right: 18px;
+    width: 54px;
+    height: 54px;
+    background: url("/static/festival/christmas/fluent-christmas-tree.svg") center / contain no-repeat;
+    pointer-events: none;
+}
+
+body.page-landing.fest-christmas .ed-steps li + li,
+body.page-landing.fest-christmas .ed-features,
+body.page-landing.fest-christmas .ed-features article,
+body.page-landing.fest-christmas .ed-roadmap td,
+body.page-landing.fest-christmas .ed-trust {
+    border-color: rgba(125, 211, 252, 0.18) !important;
+}
+body.page-landing.fest-christmas .ed-num {
+    font-family: "CM Mountains", cursive, sans-serif;
+    font-size: 1.9rem;
+    color: var(--xm-cyan) !important;
+}
+body.page-landing.fest-christmas .ed-steps p,
+body.page-landing.fest-christmas .ed-features p,
+body.page-landing.fest-christmas .ed-notes ul,
+body.page-landing.fest-christmas .ed-roadmap td,
+body.page-landing.fest-christmas .ed-agree,
+body.fest-christmas .hint { color: var(--xm-muted) !important; }
+
+body.page-landing.fest-christmas .ed-schools li,
+body.fest-christmas .school-pill,
+body.fest-christmas .stat-chip {
+    background: rgba(14, 40, 58, 0.82) !important;
+    border: 1px solid rgba(125, 211, 252, 0.3) !important;
+    color: var(--xm-snow) !important;
+}
+body.page-landing.fest-christmas .ed-schools .cnt,
+body.fest-christmas .school-pill .cnt { color: var(--xm-gold) !important; }
+
+body.fest-christmas input[type="email"],
+body.fest-christmas input[type="text"],
+body.fest-christmas input[type="number"],
+body.fest-christmas select,
+body.fest-christmas textarea,
+body.page-landing.fest-christmas input[type="email"],
+body.page-landing.fest-christmas input[type="text"] {
+    background: rgba(7, 20, 32, 0.92) !important;
+    border: 1px solid rgba(125, 211, 252, 0.34) !important;
+    color: var(--xm-snow) !important;
+}
+body.fest-christmas input::placeholder,
+body.fest-christmas textarea::placeholder { color: #7f9aaf !important; }
+body.fest-christmas input:focus,
+body.fest-christmas select:focus,
+body.fest-christmas textarea:focus {
+    outline: 2px solid var(--xm-cyan) !important;
+    border-color: var(--xm-cyan) !important;
+    box-shadow: 0 0 0 3px rgba(125, 211, 252, 0.2) !important;
+}
+body.fest-christmas .form-group label,
+body.page-landing.fest-christmas .form-group label { color: #e7f4fb !important; }
+
+body.fest-christmas .btn-primary,
+body.fest-christmas .btn-match,
+body.page-landing.fest-christmas .btn-primary,
+body.page-landing.fest-christmas .ed-cta .btn-primary {
+    background: linear-gradient(135deg, #e11d48 0%, #be123c 58%, #9f1239 100%) !important;
+    color: #fffaf6 !important;
+    border: 1px solid rgba(245, 212, 138, 0.5) !important;
+    box-shadow: 0 6px 22px rgba(190, 18, 60, 0.35) !important;
+}
+body.fest-christmas .btn-primary:hover:not(:disabled),
+body.fest-christmas .btn-match:hover:not(:disabled),
+body.page-landing.fest-christmas .btn-primary:hover:not(:disabled) {
+    background: linear-gradient(135deg, #fb7185 0%, #e11d48 60%, #be123c 100%) !important;
+}
+body.fest-christmas .personality-card a.btn-primary,
+body.fest-christmas .personality-card a.btn-match,
+body.fest-christmas .lp-share-card a.btn-primary,
+body.fest-christmas .lp-share-card a.btn-match {
+    background: #1c1b19 !important;
+    color: #f3efe6 !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+
+body.fest-christmas .btn-secondary,
+body.page-landing.fest-christmas .btn-secondary {
+    background: rgba(14, 40, 58, 0.72) !important;
+    color: var(--xm-snow) !important;
+    border: 1px solid rgba(125, 211, 252, 0.38) !important;
+}
+body.fest-christmas .btn-secondary:hover:not(:disabled) {
+    background: rgba(125, 211, 252, 0.14) !important;
+    border-color: var(--xm-gold) !important;
+}
+
+body.fest-christmas .choice-chip,
+body.fest-christmas .multi-tag,
+body.fest-christmas .likert-btn {
+    background: rgba(8, 22, 34, 0.9) !important;
+    border: 1px solid rgba(125, 211, 252, 0.3) !important;
+    color: var(--xm-snow) !important;
+}
+body.fest-christmas .choice-chip.is-on,
+body.fest-christmas .choice-chip:has(input:checked),
+body.fest-christmas .multi-tag.on,
+body.fest-christmas .likert-btn.on {
+    background: linear-gradient(135deg, #0e7490, #1f6b4a) !important;
+    border-color: var(--xm-gold) !important;
+    color: #f4fbff !important;
+}
+
+body.fest-christmas .box-info,
+body.fest-christmas .box-ice,
+body.fest-christmas .box-warn,
+body.fest-christmas .box-dim,
+body.fest-christmas .ice-card,
+body.fest-christmas .progress-sticky {
+    background: rgba(14, 36, 52, 0.88) !important;
+    border-color: rgba(125, 211, 252, 0.26) !important;
+    color: var(--xm-snow) !important;
+}
+body.fest-christmas .ice-send-text {
+    background: rgba(7, 20, 32, 0.92) !important;
+    border-color: rgba(125, 211, 252, 0.35) !important;
+    color: var(--xm-gold) !important;
+}
+body.fest-christmas .wechat-line { color: var(--xm-gold) !important; }
+body.fest-christmas .progress-bar-fill {
+    background: linear-gradient(90deg, #7dd3fc, #f5d48a) !important;
+}
+
+body.fest-christmas .community-shell,
+body.fest-christmas .community-shell h1,
+body.fest-christmas .community-shell h2 { color: var(--xm-snow) !important; }
+body.fest-christmas .community-hero p,
+body.fest-christmas .community-excerpt,
+body.fest-christmas .community-guide p,
+body.fest-christmas .community-meta,
+body.fest-christmas .community-muted { color: var(--xm-muted) !important; }
+body.fest-christmas .community-card,
+body.fest-christmas .community-guide,
+body.fest-christmas .community-locked,
+body.fest-christmas .community-notice {
+    background: rgba(12, 32, 48, 0.88) !important;
+    border: 1px solid rgba(125, 211, 252, 0.26) !important;
+    color: var(--xm-snow) !important;
+}
+body.fest-christmas .community-tabs a {
+    background: rgba(14, 36, 52, 0.85) !important;
+    color: var(--xm-muted) !important;
+    border: 1px solid rgba(125, 211, 252, 0.2);
+}
+body.fest-christmas .community-tabs a[aria-current=page],
+body.fest-christmas .community-primary {
+    background: linear-gradient(135deg, #e11d48, #9f1239) !important;
+    color: #fffaf6 !important;
+    border-color: var(--xm-gold) !important;
+}
+body.fest-christmas .community-tag {
+    background: rgba(125, 211, 252, 0.14) !important;
+    color: var(--xm-gold) !important;
+}
+body.fest-christmas .community-form button,
+body.fest-christmas .community-tools button,
+body.fest-christmas .community-filters button,
+body.fest-christmas .community-card details button {
+    background: rgba(14, 40, 58, 0.85) !important;
+    border-color: rgba(125, 211, 252, 0.35) !important;
+    color: var(--xm-snow) !important;
+}
+
+body.page-landing.fest-christmas .ed-panel a,
+body.page-landing.fest-christmas .ed-notes a,
+body.page-landing.fest-christmas .footer a,
+body.fest-christmas .footer a,
+body.fest-christmas .card a:not(.btn) { color: var(--xm-gold) !important; }
+body.fest-christmas .footer {
+    border-top-color: rgba(125, 211, 252, 0.22) !important;
+    color: var(--xm-muted) !important;
+}
+
+@keyframes xmMoonPulse {
+    from { transform: scale(0.96); opacity: 0.8; }
+    to { transform: scale(1.06); opacity: 1; }
+}
+@keyframes xmSwing {
+    0%, 100% { transform: rotate(-4deg); }
+    50% { transform: rotate(5deg); }
+}
+@keyframes xmTwinkle {
+    0%, 100% { transform: translateY(0) scale(1); opacity: 0.85; }
+    50% { transform: translateY(-6px) scale(1.08); opacity: 1; }
+}
+@keyframes xmDrift {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-14px); }
+}
+@keyframes xmBob {
+    from { transform: translateY(0); }
+    to { transform: translateY(-6px); }
+}
+@keyframes xmFall {
+    0% { transform: translateY(0) rotate(0deg); opacity: 0; }
+    12% { opacity: 0.9; }
+    100% { transform: translateY(92vh) rotate(180deg); opacity: 0.15; }
+}
+
+@media (max-width: 900px) {
+    body.page-landing.fest-christmas .ed-stage { border-radius: 19px 19px 0 0; }
+    body.page-landing.fest-christmas .ed-dock { border-radius: 0 0 19px 19px; }
+    .xm-moon-stage { width: 132px; height: 132px; top: 64px; right: 6px; }
+    .xm-moon-disc { width: 96px; height: 96px; top: 16px; left: 16px; }
+    .xm-corner { width: 110px; height: 110px; }
+    .xm-hang, .xm-float-spark, .xm-ground-left, .xm-flake-b, .xm-cta-star { display: none; }
+    .xm-tree { width: 72px; height: 72px; }
+    .xm-snowman, .xm-deer, .xm-santa { width: 54px; height: 54px; }
+    .xm-board-tree { width: 52px; height: 52px; top: -22px; right: 10px; }
+    .xm-board-flake { width: 40px; height: 40px; top: -14px; left: 10px; }
+    body.fest-christmas .nav-brand::after { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .xm-moon-halo, .xm-hang, .xm-moon-star, .xm-float, .xm-tree, .xm-flake, .xm-board-flake {
+        animation: none !important;
+    }
+    .xm-flake { display: none !important; }
+}
