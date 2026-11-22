@@ -1,21 +1,59 @@
-"""Verified-campus community and private moderation. All writes require CSRF."""
+"""Verified-campus buddy plans. Writes require CSRF. No private messages."""
 import secrets
 from datetime import datetime, timedelta
 
 from flask import Blueprint, abort, flash, g, jsonify, redirect, render_template, request, session, url_for
+from sqlalchemy import inspect, text
 from sqlalchemy.exc import IntegrityError
 
 from admin_dashboard import _admin_signed_in, _csrf_token, _valid_csrf
-from models import (db, User, CommunityEntry as Entry, CommunityReaction as Reaction,
-                    CommunityReport as Report, CommunityBan as Ban,
-                    CommunityLimit as Limit, CommunityAudit as Audit)
+from config import SCHOOL_DOMAINS
+from models import (db, User, CommunityEntry as Entry, CommunityMember as Member,
+                    CommunityReaction as Reaction, CommunityReport as Report,
+                    CommunityBan as Ban, CommunityLimit as Limit, CommunityAudit as Audit)
 
 bp = Blueprint("community", __name__)
 GUEST_PREVIEW = 3
-CATEGORIES = {"confession": "表白与心动", "friends": "认识新朋友", "campus": "校园日常"}
+PLAN_CATEGORIES = {
+    "study": "学习",
+    "sport": "运动",
+    "meal": "吃饭",
+    "outing": "出行",
+    "show": "看演出 / 看展",
+    "game": "开黑",
+}
+LEGACY_CATEGORIES = {
+    "confession": "表白与心动",
+    "friends": "认识新朋友",
+    "campus": "校园日常",
+}
+CATEGORIES = {**PLAN_CATEGORIES, **LEGACY_CATEGORIES}
+FEES = {"aa": "AA", "host": "我请", "free": "免费"}
+AUDIENCES = {"any": "不限", "male": "只限男生", "female": "只限女生"}
 STATES = {"published": "已发布", "pending": "待审核", "hidden": "已隐藏", "deleted": "已删除"}
 ACTIONS = {"approve": "审核通过", "hide": "隐藏内容", "pin": "置顶", "unpin": "取消置顶",
            "ban": "禁言 7 天", "unban": "解除禁言", "resolve": "举报已处理"}
+COLUMN_ADDS = (
+    ("place", "VARCHAR(80) DEFAULT ''"),
+    ("capacity", "INTEGER"),
+    ("fee", "VARCHAR(16) DEFAULT ''"),
+    ("starts_at", "DATETIME"),
+    ("flexible", "BOOLEAN DEFAULT 0"),
+    ("cancelled", "BOOLEAN DEFAULT 0"),
+    ("audience", "VARCHAR(16) DEFAULT 'any'"),
+)
+
+
+def ensure_community_columns():
+    """Add plan columns when an older community_entries table is already present."""
+    try:
+        cols = {column["name"] for column in inspect(db.engine).get_columns("community_entries")}
+    except Exception:
+        return
+    for name, ddl in COLUMN_ADDS:
+        if name not in cols:
+            db.session.execute(text(f"ALTER TABLE community_entries ADD COLUMN {name} {ddl}"))
+    db.session.commit()
 
 
 @bp.before_request
@@ -60,9 +98,11 @@ def private_headers(response):
 
 @bp.context_processor
 def shared():
-    return dict(categories=CATEGORIES, states=STATES, actions=ACTIONS,
+    return dict(categories=CATEGORIES, plan_categories=PLAN_CATEGORIES, fees=FEES, audiences=AUDIENCES,
+                states=STATES, actions=ACTIONS,
                 community_user=getattr(g, "community_user", None),
-                community_csrf=session.get("community_csrf", ""))
+                community_csrf=session.get("community_csrf", ""),
+                plan_active=plan_active, plan_when=plan_when)
 
 
 @bp.app_template_filter("community_time")
@@ -111,28 +151,69 @@ def rate_limit(action, seconds):
         abort(429, f"操作太频繁，请间隔 {seconds} 秒后再试。")
 
 
+def plan_active(post, now=None):
+    if not post or post.cancelled or post.status != "published" or post.category not in PLAN_CATEGORIES:
+        return False
+    now = now or datetime.utcnow()
+    if post.flexible:
+        return post.created_at >= now - timedelta(days=7)
+    return bool(post.starts_at and post.starts_at >= now)
+
+
+def plan_when(post):
+    if post.flexible:
+        return "7 天内再议"
+    if post.starts_at:
+        return local_time(post.starts_at)
+    return local_time(post.created_at)
+
+
+def active_clause(now=None):
+    now = now or datetime.utcnow()
+    return db.or_(
+        db.and_(Entry.flexible.is_(False), Entry.starts_at.isnot(None), Entry.starts_at >= now),
+        db.and_(Entry.flexible.is_(True), Entry.created_at >= now - timedelta(days=7)),
+    )
+
+
+def upcoming(query):
+    return query.order_by(Entry.pinned.desc(), Entry.flexible.asc(),
+                          Entry.starts_at.asc().nulls_last(), Entry.id.asc())
+
+
+def going_count_query():
+    return db.session.query(db.func.count(Member.user_id)).filter(
+        Member.plan_id == Entry.id, Member.state == "going").correlate(Entry).scalar_subquery()
+
+
+def schools_can_meet(left, right):
+    if not left or not right:
+        return False
+    if left.school == right.school:
+        return True
+    return right.school in left.get_cross_schools() and left.school in right.get_cross_schools()
+
+
 def visible_post(post_id):
     post = db.session.get(Entry, post_id)
     if not post or post.parent_id or post.status == "deleted":
-        abort(404, "帖子不存在或已删除。")
+        abort(404, "这场局不存在或已删除。")
     if post.status != "published" and (not g.community_user or post.author_id != g.community_user.id):
-        abort(404, "帖子暂不可见。")
+        abort(404, "这场局暂不可见。")
     if post.status == "published" and not g.community_user and post.id not in guest_preview_ids():
-        abort(403, "这是广场预览之外的帖子。注册并验证学校邮箱后，即可浏览全部内容。")
+        abort(403, "这是预览之外的局。注册并验证学校邮箱后，即可浏览全部内容。")
     return post
 
 
-def published_posts(category="", school=""):
-    query = Entry.query.filter(Entry.parent_id.is_(None), Entry.status == "published")
-    if category:
-        query = query.filter(Entry.category == category)
-    if school:
-        query = query.filter(Entry.school == school)
-    return query.order_by(Entry.pinned.desc(), Entry.created_at.desc(), Entry.id.desc())
+def published_plans():
+    query = Entry.query.filter(
+        Entry.parent_id.is_(None), Entry.status == "published",
+        Entry.category.in_(PLAN_CATEGORIES), Entry.cancelled.is_(False), active_clause())
+    return upcoming(query)
 
 
 def guest_preview_ids():
-    return [row.id for row in published_posts().limit(GUEST_PREVIEW).all()]
+    return [row.id for row in published_plans().limit(GUEST_PREVIEW).all()]
 
 
 def page_number():
@@ -141,13 +222,45 @@ def page_number():
 
 def card_data(posts):
     ids = [p.id for p in posts]
+    if not ids:
+        return dict(likes={}, comment_counts={}, reactions={}, going={}, waiting={}, membership={})
     likes = dict(db.session.query(Reaction.entry_id, db.func.count()).filter(
         Reaction.entry_id.in_(ids), Reaction.kind == "like").group_by(Reaction.entry_id).all())
     comments = dict(db.session.query(Entry.parent_id, db.func.count()).filter(
         Entry.parent_id.in_(ids), Entry.status == "published").group_by(Entry.parent_id).all())
+    going = dict(db.session.query(Member.plan_id, db.func.count()).filter(
+        Member.plan_id.in_(ids), Member.state == "going").group_by(Member.plan_id).all())
+    waiting = dict(db.session.query(Member.plan_id, db.func.count()).filter(
+        Member.plan_id.in_(ids), Member.state == "waitlist").group_by(Member.plan_id).all())
     mine = {(r.entry_id, r.kind) for r in Reaction.query.filter(
         Reaction.entry_id.in_(ids), Reaction.user_id == g.community_user.id)} if g.community_user else set()
-    return dict(likes=likes, comment_counts=comments, reactions=mine)
+    membership = {}
+    if g.community_user:
+        membership = {row.plan_id: row.state for row in Member.query.filter(
+            Member.plan_id.in_(ids), Member.user_id == g.community_user.id)}
+    return dict(likes=likes, comment_counts=comments, reactions=mine,
+                going=going, waiting=waiting, membership=membership)
+
+
+def parse_start(raw):
+    try:
+        local = datetime.strptime((raw or "").strip(), "%Y-%m-%dT%H:%M")
+    except ValueError:
+        abort(400, "请填写开始时间。")
+    utc = local - timedelta(hours=8)
+    if utc <= datetime.utcnow():
+        abort(400, "开始时间需要晚于现在。")
+    return utc
+
+
+def promote(plan):
+    seated = 1 + Member.query.filter_by(plan_id=plan.id, state="going").count()
+    if not plan.capacity or seated >= plan.capacity:
+        return
+    nxt = Member.query.filter_by(plan_id=plan.id, state="waitlist").order_by(
+        Member.created_at, Member.user_id).first()
+    if nxt:
+        nxt.state = "going"
 
 
 @bp.get("/community")
@@ -155,38 +268,71 @@ def feed():
     category = request.args.get("category", "")
     view = request.args.get("view", "all")
     school = request.args.get("school", "")
-    if category and category not in CATEGORIES or view not in ("all", "mine", "saved"):
+    when = request.args.get("when", "")
+    spots = request.args.get("spots", "")
+    who = request.args.get("who", "")
+    fee = request.args.get("fee", "")
+    if category and category not in PLAN_CATEGORIES or view not in ("all", "mine", "saved", "joined"):
+        abort(400, "无效筛选条件。")
+    if when not in ("", "week") or spots not in ("", "open"):
+        abort(400, "无效筛选条件。")
+    if who not in ("", "any", "male", "female", "mine") or (fee and fee not in FEES):
         abort(400, "无效筛选条件。")
     query = Entry.query.filter(Entry.parent_id.is_(None), Entry.status != "deleted")
     if view == "mine":
         query = query.filter(Entry.author_id == g.community_user.id)
+    elif view == "joined":
+        query = query.filter(Entry.id.in_(db.select(Member.plan_id).where(
+            Member.user_id == g.community_user.id)))
+        query = query.filter(Entry.status == "published")
     else:
         query = query.filter(Entry.status == "published")
     if view == "saved":
         query = query.filter(Entry.id.in_(db.select(Reaction.entry_id).where(
             Reaction.user_id == g.community_user.id, Reaction.kind == "save")))
-    if category:
+    if view == "all":
+        query = query.filter(Entry.category.in_(PLAN_CATEGORIES), Entry.cancelled.is_(False), active_clause())
+        if when == "week":
+            soon = datetime.utcnow() + timedelta(days=7)
+            query = query.filter(db.or_(Entry.flexible.is_(True), Entry.starts_at <= soon))
+        if spots == "open":
+            query = query.filter(Entry.capacity > 1 + going_count_query())
+        if who == "mine":
+            gender = g.community_user.gender if g.community_user else ""
+            allowed = ("any", gender) if gender in ("male", "female") else ("any",)
+            query = query.filter(Entry.audience.in_(allowed))
+        elif who:
+            query = query.filter(Entry.audience == who)
+        if fee:
+            query = query.filter(Entry.fee == fee)
+    if category and view == "all":
         query = query.filter(Entry.category == category)
     guest = not g.community_user
+    order = upcoming(query) if view == "all" else query.order_by(Entry.created_at.desc(), Entry.id.desc())
     if guest:
         school = ""
-        page, more, locked = 1, False, 0
+        page, more = 1, False
         total = query.count()
-        rows = query.order_by(Entry.pinned.desc(), Entry.created_at.desc(), Entry.id.desc()).limit(GUEST_PREVIEW).all()
+        preview_ids = guest_preview_ids()
+        query = query.filter(Entry.id.in_(preview_ids)) if preview_ids else query.filter(db.false())
+        rows = upcoming(query).limit(GUEST_PREVIEW).all()
         locked = max(0, total - len(rows))
         schools = []
     else:
-        if school:
+        if school and view == "all":
             query = query.filter(Entry.school == school)
+            order = upcoming(query) if view == "all" else query.order_by(Entry.created_at.desc(), Entry.id.desc())
         page = page_number()
-        rows = query.order_by(Entry.pinned.desc(), Entry.created_at.desc(), Entry.id.desc()).offset((page-1)*20).limit(21).all()
+        rows = order.offset((page - 1) * 20).limit(21).all()
         more, locked = len(rows) > 20, 0
         rows = rows[:20]
-        schools = [s for s, in db.session.query(Entry.school).filter(
-            Entry.parent_id.is_(None), Entry.status == "published").distinct().order_by(Entry.school)]
+        present = {s for s, in db.session.query(Entry.school).filter(
+            Entry.parent_id.is_(None), Entry.status == "published",
+            Entry.category.in_(PLAN_CATEGORIES), Entry.school != "")}
+        schools = list(SCHOOL_DOMAINS) + sorted(s for s in present if s not in SCHOOL_DOMAINS)
     return render_template("community_feed.html", posts=rows, more=more, page=page, locked=locked,
                            category=category, view=view, school=school, schools=schools,
-                           **card_data(rows))
+                           when=when, spots=spots, who=who, fee=fee, **card_data(rows))
 
 
 @bp.route("/community/new", methods=["GET", "POST"])
@@ -195,16 +341,42 @@ def create():
         return render_template("community_new.html")
     guard_muted()
     category = request.form.get("category")
-    if category not in CATEGORIES:
-        abort(400, "请选择有效分类。")
-    title, body = text_field("title", 80, 2), text_field("body", 2000, 5)
+    if category not in PLAN_CATEGORIES:
+        abort(400, "请选择活动类型。")
+    title = text_field("title", 80, 2)
+    body = text_field("body", 2000, 0)
+    place = text_field("place", 40, 2)
+    fee = request.form.get("fee", "")
+    if fee not in FEES:
+        abort(400, "请选择费用方式。")
+    audience = request.form.get("audience", "")
+    if audience not in AUDIENCES:
+        abort(400, "请选择性别范围。")
+    picked = request.form.get("my_gender", "").strip()
+    if picked and picked not in ("male", "female"):
+        abort(400, "请选择你的性别。")
+    if audience in ("male", "female"):
+        gender = g.community_user.gender if g.community_user.gender in ("male", "female") else ""
+        if not gender and picked in ("male", "female"):
+            gender = picked
+        if gender != audience:
+            who = "男生" if audience == "male" else "女生"
+            abort(400, f"只限{who}的局，发起人自己也要是{who}。")
+        if g.community_user.gender not in ("male", "female"):
+            g.community_user.gender = picked
+    raw_cap = request.form.get("capacity", "").strip()
+    if not raw_cap.isdigit() or not 2 <= int(raw_cap) <= 12:
+        abort(400, "人数上限须在 2–12 人之间（含发起人）。")
+    flexible = request.form.get("flexible") == "1"
+    starts_at = None if flexible else parse_start(request.form.get("starts_at", ""))
     rate_limit("post", 60)
     post = Entry(author_id=g.community_user.id, school=g.community_user.school, category=category,
-                 title=title, body=body, anonymous=request.form.get("anonymous") == "1",
-                 status="pending" if category == "confession" else "published")
+                 title=title, body=body, place=place, capacity=int(raw_cap),
+                 fee=fee, audience=audience, starts_at=starts_at, flexible=flexible,
+                 anonymous=False, status="published")
     db.session.add(post)
     db.session.commit()
-    flash("已提交审核，通过后会出现在广场。" if post.status == "pending" else "发布成功。")
+    flash("局已发布。同校同学可以直接占名额。")
     return redirect(url_for("community.detail", post_id=post.id))
 
 
@@ -217,25 +389,108 @@ def detail(post_id):
     else:
         query = query.filter(Entry.status == "published")
     page = page_number()
-    comments = query.order_by(Entry.created_at, Entry.id).offset((page-1)*30).limit(31).all()
+    comments = query.order_by(Entry.created_at, Entry.id).offset((page - 1) * 30).limit(31).all()
+    members = Member.query.filter_by(plan_id=post.id).order_by(Member.state, Member.created_at, Member.user_id).all()
     return render_template("community_detail.html", post=post, comments=comments[:30], page=page,
-                           more=len(comments)>30, **card_data([post]))
+                           more=len(comments) > 30, members=members, **card_data([post]))
 
 
 @bp.post("/community/posts/<int:post_id>/comments")
 def comment(post_id):
     post = visible_post(post_id)
     if post.status != "published":
-        abort(403, "帖子尚未公开，暂不能评论。")
+        abort(403, "这场局尚未公开，暂不能留言。")
     guard_muted()
     body = text_field("body", 500)
     rate_limit("comment", 15)
     pending = post.category == "confession"
     db.session.add(Entry(parent_id=post.id, author_id=g.community_user.id, school=g.community_user.school,
-                         category=post.category, body=body, anonymous=request.form.get("anonymous") == "1",
+                         category=post.category, body=body, anonymous=False,
                          status="pending" if pending else "published"))
     db.session.commit()
-    flash("评论已提交审核，通过后会显示在帖子下。" if pending else "评论已发布。")
+    flash("留言已提交审核，通过后会显示。" if pending else "留言已发布。确认参加前请不要留下联系方式。")
+    return redirect(url_for("community.detail", post_id=post.id))
+
+
+@bp.post("/community/posts/<int:post_id>/join")
+def join(post_id):
+    post = visible_post(post_id)
+    if not plan_active(post):
+        abort(403, "这场局已结束或已取消，不能再加入。")
+    if post.author_id == g.community_user.id:
+        abort(400, "你是发起人，名额里已经算上你。")
+    if not schools_can_meet(g.community_user, post.author):
+        abort(403, "跨校组局需要双方都在资料里勾选了对方的学校。")
+    limit = post.audience if post.audience in ("male", "female") else ""
+    picked = request.form.get("my_gender", "").strip()
+    gender = g.community_user.gender if g.community_user.gender in ("male", "female") else ""
+    if not gender and picked in ("male", "female"):
+        gender = picked
+    if limit and gender != limit:
+        who = "男生" if limit == "male" else "女生"
+        abort(403, f"这场局只限{who}。" + ("" if g.community_user.gender in ("male", "female") else "请选择你的性别。"))
+    if picked in ("male", "female") and g.community_user.gender not in ("male", "female"):
+        g.community_user.gender = picked
+    guard_muted()
+    if Member.query.filter_by(plan_id=post.id, user_id=g.community_user.id).first():
+        abort(400, "你已经在这场局里。")
+    rate_limit("join", 10)
+    going = Member.query.filter_by(plan_id=post.id, state="going").count()
+    state = "going" if post.capacity and 1 + going < post.capacity else "waitlist"
+    try:
+        with db.session.begin_nested():
+            db.session.add(Member(plan_id=post.id, user_id=g.community_user.id, state=state))
+            db.session.flush()
+    except IntegrityError:
+        state = Member.query.filter_by(plan_id=post.id, user_id=g.community_user.id).one().state
+    db.session.commit()
+    flash("已占到名额。" if state == "going" else "名额已满，你在候补里。有人退出会按顺序补上。")
+    return redirect(url_for("community.detail", post_id=post.id))
+
+
+@bp.post("/community/posts/<int:post_id>/leave")
+def leave(post_id):
+    post = visible_post(post_id)
+    row = Member.query.filter_by(plan_id=post.id, user_id=g.community_user.id).first()
+    if not row:
+        abort(404, "你不在这场局里。")
+    was_going = row.state == "going"
+    db.session.delete(row)
+    db.session.flush()
+    if was_going and plan_active(post):
+        promote(post)
+    db.session.commit()
+    flash("已退出。空出的名额会补给最早的候补。" if plan_active(post) else "已退出。")
+    return redirect(url_for("community.detail", post_id=post.id))
+
+
+@bp.post("/community/posts/<int:post_id>/cancel")
+def cancel(post_id):
+    post = visible_post(post_id)
+    if post.author_id != g.community_user.id:
+        abort(403, "只有发起人可以取消这场局。")
+    post.cancelled = True
+    post.pinned = False
+    db.session.commit()
+    flash("这场局已取消。已加入的同学仍能打开页面看到取消说明。")
+    return redirect(url_for("community.detail", post_id=post.id))
+
+
+@bp.post("/community/posts/<int:post_id>/members/<int:user_id>/remove")
+def remove_member(post_id, user_id):
+    post = visible_post(post_id)
+    if post.author_id != g.community_user.id:
+        abort(403, "只有发起人可以移出同学。")
+    row = Member.query.filter_by(plan_id=post.id, user_id=user_id).first()
+    if not row:
+        abort(404, "这位同学不在局里。")
+    was_going = row.state == "going"
+    db.session.delete(row)
+    db.session.flush()
+    if was_going and plan_active(post):
+        promote(post)
+    db.session.commit()
+    flash("已移出。空出的名额会补给最早的候补。" if plan_active(post) else "已移出。")
     return redirect(url_for("community.detail", post_id=post.id))
 
 
@@ -243,7 +498,7 @@ def comment(post_id):
 def react(post_id):
     post = visible_post(post_id)
     if post.status != "published":
-        abort(403, "帖子尚未公开。")
+        abort(403, "这场局尚未公开。")
     kind, enabled = request.form.get("kind"), request.form.get("enabled")
     if kind not in ("like", "save") or enabled not in ("0", "1"):
         abort(400, "无效操作。")
@@ -260,7 +515,8 @@ def react(post_id):
         Reaction.query.filter_by(user_id=g.community_user.id, entry_id=post.id, kind=kind).delete()
     db.session.commit()
     if request.accept_mimetypes.best == "application/json":
-        return jsonify(enabled=Reaction.query.filter_by(user_id=g.community_user.id, entry_id=post.id, kind=kind).first() is not None,
+        return jsonify(enabled=Reaction.query.filter_by(
+            user_id=g.community_user.id, entry_id=post.id, kind=kind).first() is not None,
                        likes=Reaction.query.filter_by(entry_id=post.id, kind="like").count())
     return redirect(url_for("community.detail", post_id=post.id))
 
@@ -319,16 +575,16 @@ def admin():
     else:
         query = query.filter(Entry.status == state)
     page = page_number()
-    rows = query.order_by(Entry.created_at.desc(), Entry.id.desc()).offset((page-1)*20).limit(21).all()
+    rows = query.order_by(Entry.created_at.desc(), Entry.id.desc()).offset((page - 1) * 20).limit(21).all()
     ids = [r.id for r in rows[:20]]
     reports = Report.query.filter(Report.entry_id.in_(ids), Report.resolved.is_(False)).order_by(Report.created_at).all()
     counts = {key: Entry.query.filter_by(status=key).count() for key in ("pending", "published", "hidden")}
     counts["reports"] = db.session.query(Report.entry_id).filter_by(resolved=False).distinct().count()
     counts["banned"] = Ban.query.filter(Ban.until > datetime.utcnow()).count()
     return render_template("admin_community.html", entries=rows[:20], reports=reports, counts=counts,
-                           bans={b.user_id:b for b in Ban.query.filter(Ban.until > datetime.utcnow())},
+                           bans={b.user_id: b for b in Ban.query.filter(Ban.until > datetime.utcnow())},
                            audits=Audit.query.order_by(Audit.created_at.desc(), Audit.id.desc()).limit(30).all(),
-                           state=state, page=page, more=len(rows)>20, admin_csrf=_csrf_token())
+                           state=state, page=page, more=len(rows) > 20, admin_csrf=_csrf_token())
 
 
 @bp.post("/admin/community/entries/<int:entry_id>")
@@ -346,7 +602,7 @@ def moderate(entry_id):
         entry.status, entry.pinned = "hidden", False
     elif action in ("pin", "unpin"):
         if entry.parent_id or entry.status != "published":
-            abort(400, "仅可置顶公开帖子。")
+            abort(400, "仅可置顶公开的局。")
         entry.pinned = action == "pin"
     elif action == "ban":
         ban = db.session.get(Ban, entry.author_id)
@@ -380,9 +636,10 @@ def unban_user(user_id):
 
 
 def retire_entries(ids):
-    """Hide deleted content from the square but keep reports and audit rows."""
+    """Hide deleted content but keep reports and audit rows."""
     if not ids:
         return
+    Member.query.filter(Member.plan_id.in_(ids)).delete(synchronize_session=False)
     Reaction.query.filter(Reaction.entry_id.in_(ids)).delete(synchronize_session=False)
     Report.query.filter(Report.entry_id.in_(ids), Report.resolved.is_(False)).update(
         {"resolved": True}, synchronize_session=False)
@@ -395,6 +652,7 @@ def erase_entries(ids):
     if not ids:
         return
     Audit.query.filter(Audit.entry_id.in_(ids)).update({"entry_id": None}, synchronize_session=False)
+    Member.query.filter(Member.plan_id.in_(ids)).delete(synchronize_session=False)
     for model in (Reaction, Report):
         model.query.filter(model.entry_id.in_(ids)).delete(synchronize_session=False)
     Entry.query.filter(Entry.id.in_(ids), Entry.parent_id.isnot(None)).delete(synchronize_session=False)
@@ -403,7 +661,8 @@ def erase_entries(ids):
 
 def purge_community(user_id):
     own = [i for i, in db.session.query(Entry.id).filter_by(author_id=user_id)]
-    children = [i for i, in db.session.query(Entry.id).filter(Entry.parent_id.in_(own))]
+    children = [i for i, in db.session.query(Entry.id).filter(Entry.parent_id.in_(own))] if own else []
+    Member.query.filter_by(user_id=user_id).delete(synchronize_session=False)
     erase_entries(own + children)
     Audit.query.filter_by(user_id=user_id).update({"user_id": None}, synchronize_session=False)
     for model in (Reaction, Report, Ban, Limit):

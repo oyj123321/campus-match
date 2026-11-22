@@ -26,11 +26,35 @@ class CommunityMigrationTests(unittest.TestCase):
                 migrate_community.migrate()
             with closing(sqlite3.connect(path)) as con:
                 self.assertEqual(con.execute("SELECT * FROM users").fetchall(),[(7,"existing user")])
-                self.assertEqual(con.execute("SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name LIKE 'community_%'").fetchone()[0],6)
+                self.assertEqual(con.execute("SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name LIKE 'community_%'").fetchone()[0],7)
+                cols={row[1] for row in con.execute("PRAGMA table_info(community_entries)")}
+                self.assertIn("starts_at", cols)
+                self.assertIn("cancelled", cols)
+                self.assertIn("audience", cols)
             backups=list(Path(folder).glob("*.community-backup-*"))
             self.assertEqual(len(backups),2)
             with closing(sqlite3.connect(backups[0])) as con:
                 self.assertEqual(con.execute("SELECT * FROM users").fetchall(),[(7,"existing user")])
+            with app.app_context():
+                db.engine.dispose()
+
+    def test_old_entries_table_gains_plan_columns(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / "old.db"
+            with closing(sqlite3.connect(path)) as con:
+                con.execute("CREATE TABLE users(id INTEGER PRIMARY KEY, name TEXT)")
+                con.execute(
+                    "CREATE TABLE community_entries (id INTEGER PRIMARY KEY, title TEXT, category TEXT)")
+                con.execute("INSERT INTO community_entries VALUES (1, '旧帖', 'campus')")
+                con.commit()
+            app = Flask(__name__)
+            app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///" + path.as_posix()
+            db.init_app(app)
+            with patch.object(migrate_community, "app", app), patch("builtins.print"):
+                migrate_community.migrate()
+            with closing(sqlite3.connect(path)) as con:
+                row = con.execute("SELECT title, category, place, cancelled FROM community_entries").fetchone()
+                self.assertEqual(row, ("旧帖", "campus", "", 0))
             with app.app_context():
                 db.engine.dispose()
 

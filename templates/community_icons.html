@@ -1,0 +1,21 @@
+{% macro icon(name) -%}
+<svg class="community-icon" viewBox="0 0 24 24" aria-hidden="true">
+  {%- if name == 'pin' -%}
+  <path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" d="M12 21s6-5.2 6-10a6 6 0 1 0-12 0c0 4.8 6 10 6 10z"/><circle cx="12" cy="11" r="2.1" fill="currentColor"/>
+  {%- elif name == 'fee' -%}
+  <circle cx="12" cy="12" r="7.2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 8v8M9.6 10.1c.5-.7 1.2-1 2.1-1 1.3 0 2.1.6 2.1 1.6S13 12.2 12 12.5 9.8 13.3 9.8 14.4s.8 1.6 2.2 1.6c.8 0 1.5-.3 2-1" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+  {%- elif name == 'clock' -%}
+  <circle cx="12" cy="12" r="7.4" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 8v4.2l2.7 1.7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+  {%- elif name == 'chat' -%}
+  <path d="M5.5 7.2h13a1.8 1.8 0 0 1 1.8 1.8v5.6a1.8 1.8 0 0 1-1.8 1.8H11l-3.6 2.8v-2.8H5.5a1.8 1.8 0 0 1-1.8-1.8V9a1.8 1.8 0 0 1 1.8-1.8z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+  {%- elif name == 'person' -%}
+  <circle cx="12" cy="7.4" r="3" fill="currentColor"/><rect x="7.2" y="12.2" width="9.6" height="7.2" rx="4.6" fill="currentColor"/>
+  {%- endif -%}
+</svg>
+{%- endmacro %}
+{% macro seat_row(taken, capacity) -%}
+{% set filled = taken if taken < capacity else capacity %}
+<div class="community-seats" role="img" aria-label="{{ filled }}/{{ capacity }}">
+  {% for i in range(capacity) %}<span class="seat{% if i < filled %} is-in{% endif %}">{% if i < filled %}{{ icon('person') }}{% endif %}</span>{% endfor %}
+</div>
+{%- endmacro %}

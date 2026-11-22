@@ -1,6 +1,7 @@
 """Local end-to-end checks using synthetic data and a disposable in-memory server."""
 import os
 import threading
+from datetime import datetime, timedelta
 from pathlib import Path
 
 from flask import Flask, session
@@ -37,8 +38,10 @@ with app.app_context():
     db.session.flush()
     uid=user.id
     db.session.add_all([
-        Entry(author_id=uid,school=user.school,category="campus",title="图书馆窗边的晚霞",body="今天在图书馆看到了很好看的晚霞。你最近遇到过什么小确幸？"),
-        Entry(author_id=uid,school=user.school,category="friends",title="周末一起去海边散步吗？",body="想约几位同学周末一起散步，欢迎在评论里聊聊计划。"),
+        Entry(author_id=uid,school=user.school,category="study",title="图书馆窗边的晚霞",body="今晚在图书馆写高数，还差一个人。",
+             place="图书馆",capacity=4,fee="free",starts_at=datetime.utcnow()+timedelta(days=1)),
+        Entry(author_id=uid,school=user.school,category="meal",title="周末一起去海边散步吗？",body="想约几位同学周末一起散步。",
+             place="校园门口",capacity=4,fee="aa",starts_at=datetime.utcnow()+timedelta(days=2)),
     ])
     db.session.commit()
 
@@ -65,7 +68,7 @@ try:
             guest.goto(base+"/community")
             expect(guest.get_by_role("link",name="注册 / 登录参与",exact=True)).to_be_visible()
             guest.get_by_role("link",name="图书馆窗边的晚霞",exact=True).click()
-            expect(guest.get_by_role("link",name="登录收藏",exact=True)).to_be_visible()
+            expect(guest.get_by_role("link",name="登录后想去",exact=True)).to_be_visible()
             assert guest.locator('form[data-community-action]').count() == 0
             assert guest.locator("body").evaluate("el => el.scrollWidth <= innerWidth")
             guest.close()
@@ -75,38 +78,28 @@ try:
             errors=[]
             page.on("pageerror",lambda error:errors.append(str(error)))
             page.goto(base+"/community")
-            assert page.get_by_role("heading",name="校园广场",exact=True).is_visible()
+            assert page.get_by_role("heading",name="找搭子",exact=True).is_visible()
             assert page.locator("body").evaluate("el => el.scrollWidth <= innerWidth")
             page.screenshot(path=str(output/f"community-{width}.png"),full_page=True)
             page.get_by_role("link",name="图书馆窗边的晚霞",exact=True).click()
             page.evaluate("window.communityNavigationMarker = 42")
-            page.get_by_role("button",name="赞 · 0",exact=True).click()
-            expect(page.get_by_role("button",name="取消赞 · 1",exact=True)).to_be_visible()
-            page.get_by_role("button",name="取消赞 · 1",exact=True).click()
-            expect(page.get_by_role("button",name="赞 · 0",exact=True)).to_be_visible()
-            page.get_by_role("button",name="收藏",exact=True).click()
-            expect(page.get_by_role("button",name="取消收藏",exact=True)).to_be_visible()
+            page.get_by_role("button",name="想去",exact=True).click()
+            expect(page.get_by_role("button",name="取消想去",exact=True)).to_be_visible()
             assert page.evaluate("window.communityNavigationMarker") == 42
-            page.get_by_role("link",name="我的收藏",exact=True).click()
+            page.get_by_role("link",name="想去",exact=True).click()
             assert page.get_by_role("heading",name="图书馆窗边的晚霞").count()==1
             if width==1440:
-                page.get_by_role("link",name="＋ 发一条动态",exact=True).click()
-                page.locator('[name="category"]').select_option("confession")
-                page.locator('[name="title"]').fill("一封演示表白信")
-                page.locator('[name="body"]').fill("感谢那天借给我雨伞的同学，愿你每一天都开心。")
-                page.locator('[name="anonymous"]').check()
-                page.get_by_role("button",name="提交发布",exact=True).click()
-                expect(page.get_by_text("正在等待管理员审核，其他同学暂不可见。")).to_be_visible()
-                page.goto(base+"/admin/community")
-                page.locator('#password').fill("browser-test-admin")
-                page.get_by_role("button",name="登录",exact=True).click()
-                page.goto(base+"/admin/community")
-                page.locator('[name="reason"]').first.fill("演示审核通过")
-                page.get_by_role("button",name="审核通过",exact=True).first.click()
-                page.goto(base+"/community?view=mine")
-                page.get_by_role("link",name="一封演示表白信",exact=True).click()
+                page.get_by_role("link",name="＋ 发起一场局",exact=True).click()
+                page.locator('[name="category"]').select_option("study")
+                page.locator('[name="title"]').fill("周六图书馆高数")
+                page.locator('[name="place"]').fill("图书馆")
+                page.locator('[name="capacity"]').fill("3")
+                page.locator('[name="starts_at"]').fill("2026-12-01T19:00")
+                page.locator('[name="body"]').fill("一起写题，不闲聊。")
+                page.get_by_role("button",name="发布这场局",exact=True).click()
+                expect(page.get_by_role("heading",name="周六图书馆高数",exact=True)).to_be_visible()
                 page.locator('textarea[name="body"]').fill("谢谢，也祝你今天开心。")
-                page.get_by_role("button",name="发表评论",exact=True).click()
+                page.get_by_role("button",name="发表留言",exact=True).click()
                 expect(page.get_by_text("谢谢，也祝你今天开心。",exact=True)).to_be_visible()
                 page.screenshot(path=str(output/"community-detail.png"),full_page=True)
             page.goto(base+"/admin/login")

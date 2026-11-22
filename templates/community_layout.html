@@ -1,25 +1,26 @@
 {% extends "base.html" %}
 {% block content %}
-<link rel="stylesheet" href="/static/community.css?v=3">
-<script src="{{ url_for('static', filename='community.js') }}?v=1" defer></script>
+<link rel="stylesheet" href="/static/community.css?v=8">
+<script src="{{ url_for('static', filename='community.js') }}?v=4" defer></script>
 <div class="community-shell">
     <header class="community-hero">
         <div>
-            <span class="community-eyebrow" data-i18n="cm.eyebrow">校园里的每一种相遇</span>
-            <h1><a href="/community" data-i18n="nav.community">校园广场</a></h1>
-            <p data-i18n="cm.tagline">心动可以慢慢来，先从一句你好开始。</p>
+            <span class="community-eyebrow" data-i18n="cm.eyebrow">一起做一件具体的事</span>
+            <h1><a href="/community" data-i18n="nav.community">找搭子</a></h1>
+            <p data-i18n="cm.tagline">学习、运动、吃饭或看一场演出。</p>
         </div>
-        <a class="community-primary" href="{{ '/community/new' if community_user else '/#step1-card' }}">{% if community_user %}<span data-i18n="cm.post">＋ 发一条动态</span>{% else %}<span data-i18n="cm.loginJoin">注册 / 登录参与</span>{% endif %}</a>
+        <a class="community-primary" href="{{ '/community/new' if community_user else '/#step1-card' }}">{% if community_user %}<span data-i18n="cm.post">＋ 发起一场局</span>{% else %}<span data-i18n="cm.loginJoin">注册 / 登录参与</span>{% endif %}</a>
     </header>
-    <nav class="community-tabs" aria-label="广场导航">
-        <a href="/community" data-i18n="cm.tab.discover">发现</a>
+    <nav class="community-tabs" aria-label="找搭子">
+        <a href="/community" data-i18n="cm.tab.discover" {% if view|default('detail')=='all' %}aria-current="page"{% endif %}>即将开始</a>
         {% if community_user %}
-        <a href="/community?view=mine" data-i18n="cm.tab.mine">我的帖子</a>
-        <a href="/community?view=saved" data-i18n="cm.tab.saved">我的收藏</a>
+        <a href="/community?view=joined" data-i18n="cm.tab.joined" {% if view|default('')=='joined' %}aria-current="page"{% endif %}>我加入的</a>
+        <a href="/community?view=mine" data-i18n="cm.tab.mine" {% if view|default('')=='mine' %}aria-current="page"{% endif %}>我发起的</a>
+        <a href="/community?view=saved" data-i18n="cm.tab.saved" {% if view|default('')=='saved' %}aria-current="page"{% endif %}>想去</a>
         <a href="/matches" data-i18n="cm.tab.matches">回到匹配</a>
         {% endif %}
     </nav>
-    {% if not community_user %}<p class="community-notice"><span data-i18n="cm.guestNotice">未注册也可先看最新 3 条动态。注册并验证学校邮箱后，即可浏览全部帖子，以及发帖、评论、点赞和收藏。</span> <a href="/#step1-card" data-i18n="cm.loginArrow">注册 / 登录 →</a></p>{% endif %}
+    {% if not community_user %}<p class="community-notice"><span data-i18n="cm.guestNotice">未注册可先看最近 3 场即将开始的局。加入、留言和浏览全部内容，需要注册并验证学校邮箱。</span> <a href="/#step1-card" data-i18n="cm.loginArrow">注册 / 登录 →</a></p>{% endif %}
     {% for message in get_flashed_messages() %}<p class="community-notice" role="status">{{ message }}</p>{% endfor %}
     {% block community_content %}{% endblock %}
 </div>

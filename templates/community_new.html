@@ -1,13 +1,19 @@
 {% extends "community_layout.html" %}
 {% block community_content %}
-<section class="community-card community-compose"><h2>分享你的校园瞬间</h2><p>未注册访客只能预览最新 3 条。验证学校邮箱的同学可浏览全部公开帖。表白帖及表白下的评论都先审核，其余分类发布后公开。</p>
+<section class="community-card community-compose"><h2 data-i18n="cm.form.title">发起一场局</h2><p data-i18n="cm.form.lead">写清这一次要做什么。过期后不再出现在列表里。确认参加前不要交换联系方式。</p>
 <form method="post" class="community-form">
     <input type="hidden" name="csrf" value="{{ community_csrf }}">
-    <label>选择话题<select name="category" required>{% for key,label in categories.items() %}<option value="{{ key }}">{{ label }}</option>{% endfor %}</select></label>
-    <label>标题<input name="title" required minlength="2" maxlength="80" placeholder="给这段故事起个名字（2–80 字）"></label>
-    <label>正文<textarea name="body" required minlength="5" maxlength="2000" rows="8" placeholder="想说的话、想发起的活动，或今天的小确幸（5–2000 字）"></textarea></label>
-    <label class="community-checkbox"><input type="checkbox" name="anonymous" value="1">匿名发布（管理员仍可关联账号；学校仍会展示）</label>
-    <p class="community-muted">请勿发布他人的姓名、联系方式、照片或未经同意的个人经历。本期支持纯文字。</p>
-    <button class="community-primary" type="submit">提交发布</button>
+    <label><span data-i18n="cm.form.category">活动类型</span><select name="category" required>{% for key,label in plan_categories.items() %}<option value="{{ key }}" data-i18n="cm.cat.{{ key }}">{{ label }}</option>{% endfor %}</select></label>
+    <label><span data-i18n="cm.form.name">标题</span><input name="title" required minlength="2" maxlength="80" placeholder="例如：周六图书馆高数，找 1 人" data-i18n-ph="cm.form.namePh"></label>
+    <label><span data-i18n="cm.form.when">开始时间</span><input type="datetime-local" name="starts_at"></label>
+    <label class="community-checkbox"><input type="checkbox" name="flexible" value="1"><span data-i18n="cm.form.flex">时间再议，7 天内有效</span></label>
+    <label><span data-i18n="cm.form.place">地点</span><input name="place" required minlength="2" maxlength="40" placeholder="校内公共地点，或写「线上」" data-i18n-ph="cm.form.placePh"></label>
+    <label><span data-i18n="cm.form.cap">人数上限（含你自己）</span><input name="capacity" type="number" required min="2" max="12" value="4"></label>
+    <label><span data-i18n="cm.form.fee">费用</span><select name="fee" required>{% for key,label in fees.items() %}<option value="{{ key }}" data-i18n="cm.fee.{{ key }}">{{ label }}</option>{% endfor %}</select></label>
+    <label><span data-i18n="cm.form.who">性别</span><select name="audience" required>{% for key,label in audiences.items() %}<option value="{{ key }}" data-i18n="cm.who.{{ key }}">{{ label }}</option>{% endfor %}</select></label>
+    {% if community_user and community_user.gender not in ('male','female') %}<label id="my-gender-field" hidden><span data-i18n="cm.form.myGender">我的性别</span><select name="my_gender"><option value="" data-i18n="cm.who.pick">请选择</option><option value="male" data-i18n="g.male">男</option><option value="female" data-i18n="g.female">女</option></select></label>{% endif %}
+    <label><span data-i18n="cm.form.body">补充</span><textarea name="body" maxlength="2000" rows="6" placeholder="节奏、要不要自带装备。可以留空。" data-i18n-ph="cm.form.bodyPh"></textarea></label>
+    <p class="community-muted" data-i18n="cm.form.note">请勿留下微信或其他联系方式，也不要写他人的姓名和宿舍门牌。</p>
+    <button class="community-primary" type="submit" data-i18n="cm.form.submit">发布这场局</button>
 </form></section>
 {% endblock %}

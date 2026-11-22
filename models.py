@@ -472,8 +472,25 @@ class CommunityEntry(db.Model):
     anonymous = db.Column(db.Boolean, nullable=False, default=False)
     status = db.Column(db.String(16), nullable=False, default="published", index=True)
     pinned = db.Column(db.Boolean, nullable=False, default=False)
+    place = db.Column(db.String(80), nullable=False, default="")
+    capacity = db.Column(db.Integer)
+    fee = db.Column(db.String(16), nullable=False, default="")
+    audience = db.Column(db.String(16), nullable=False, default="any")  # any / male / female
+    starts_at = db.Column(db.DateTime)
+    flexible = db.Column(db.Boolean, nullable=False, default=False)
+    cancelled = db.Column(db.Boolean, nullable=False, default=False)
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, index=True)
     author = db.relationship("User", foreign_keys=[author_id], lazy="joined")
+
+
+class CommunityMember(db.Model):
+    """A seat or waitlist place on a buddy plan. The host is not a row; they count as one."""
+    __tablename__ = "community_members"
+    plan_id = db.Column(db.Integer, db.ForeignKey("community_entries.id"), primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), primary_key=True)
+    state = db.Column(db.String(16), nullable=False)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    user = db.relationship("User", lazy="joined")
 
 
 class CommunityReaction(db.Model):

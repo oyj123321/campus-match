@@ -8,9 +8,9 @@ from flask import Flask
 
 import admin_dashboard
 from community import bp, purge_community
-from models import (db, User, CommunityEntry as Entry, CommunityReaction as Reaction,
-                    CommunityReport as Report, CommunityBan as Ban,
-                    CommunityLimit as Limit, CommunityAudit as Audit)
+from models import (db, User, CommunityEntry as Entry, CommunityMember as Member,
+                    CommunityReaction as Reaction, CommunityReport as Report,
+                    CommunityBan as Ban, CommunityLimit as Limit, CommunityAudit as Audit)
 
 
 class CommunityTests(unittest.TestCase):
@@ -56,13 +56,22 @@ class CommunityTests(unittest.TestCase):
         return self.client.post(url, data={"csrf":"test-csrf", **data})
 
     def post(self, **overrides):
-        fields = dict(author_id=self.user.id, school=self.user.school, category="campus",
-                      title="Campus afternoon", body="A quiet afternoon on campus")
+        fields = dict(author_id=self.user.id, school=self.user.school, category="study",
+                      title="Campus afternoon", body="A quiet afternoon on campus",
+                      place="图书馆", capacity=4, fee="aa", flexible=False,
+                      starts_at=datetime.utcnow() + timedelta(days=2))
         fields.update(overrides)
         entry = Entry(**fields)
         db.session.add(entry)
         db.session.commit()
         return entry
+
+    def plan_form(self, **overrides):
+        start = (datetime.utcnow() + timedelta(days=1)).strftime("%Y-%m-%dT%H:%M")
+        fields = dict(category="study", title="A new topic", body="Today is sunny",
+                      place="图书馆", capacity="4", fee="free", audience="any", starts_at=start)
+        fields.update(overrides)
+        return fields
 
     def moderate(self, entry, action, **kwargs):
         self.admin_login()
@@ -78,7 +87,7 @@ class CommunityTests(unittest.TestCase):
         self.assertEqual(self.client.get("/community").status_code, 200)
         response = self.client.get(f"/community/posts/{public.id}")
         self.assertEqual(response.status_code, 200)
-        self.assertIn("登录收藏", response.get_data(as_text=True))
+        self.assertIn("登录后想去", response.get_data(as_text=True))
         self.assertNotIn('data-community-action="reaction"', response.get_data(as_text=True))
         for post in (hidden, pending):
             self.assertEqual(self.client.get(f"/community/posts/{post.id}").status_code, 404)
@@ -96,7 +105,8 @@ class CommunityTests(unittest.TestCase):
         outsider = User(email="never-posted@example.test", school="School C", name="Silent", email_verified=True)
         db.session.add(outsider)
         for index in range(5):
-            self.post(title=f"Preview {index}", body="enough body text for the guest excerpt preview card")
+            self.post(title=f"Preview {index}", body="enough body text for the guest excerpt preview card",
+                      starts_at=datetime.utcnow() + timedelta(hours=6 - index))
         with self.client.session_transaction() as session:
             session.clear()
         html = self.client.get("/community").get_data(as_text=True)
@@ -104,7 +114,7 @@ class CommunityTests(unittest.TestCase):
         self.assertIn("Preview 2", html)
         self.assertNotIn("Preview 1", html)
         self.assertNotIn("Preview 0", html)
-        self.assertIn("还有 2 条动态", html)
+        self.assertRegex(html, r"还有</span>\s*2\s*<span[^>]*>场即将开始")
         self.assertNotIn("下一页", html)
         self.assertNotIn("School C", html)
         newest = Entry.query.filter_by(title="Preview 4").one()
@@ -148,21 +158,36 @@ class CommunityTests(unittest.TestCase):
 
     def test_csrf_and_invalid_input_do_not_write(self):
         self.assertEqual(self.client.post("/community/new", data={}).status_code, 400)
-        for category, title, body in [("invalid", "Title", "Hello world"), ("campus", "a", "body content"),
-                                      ("campus", "Title", "x"*2001)]:
-            self.assertEqual(self.submit("/community/new",category=category,title=title,body=body).status_code,400)
+        for fields in (dict(category="invalid", title="Title", body="Hello world"),
+                       dict(category="study", title="a", body="body content"),
+                       dict(category="study", title="Title", body="x"*2001),
+                       dict(category="study", title="Title", body="Hello world", capacity="1")):
+            self.assertEqual(self.submit("/community/new", **self.plan_form(**fields)).status_code, 400)
         self.assertEqual(Entry.query.count(),0)
 
-    def test_confession_requires_review_and_owner_can_view(self):
-        self.assertEqual(self.submit("/community/new",category="confession",title="A confession",body="A kind classmate",anonymous="1").status_code,302)
+    def test_plan_publishes_immediately_and_shows_host_name(self):
+        self.assertEqual(self.submit("/community/new", **self.plan_form(
+            title="周六自习", anonymous="1")).status_code, 302)
         post = Entry.query.one()
-        self.assertEqual(post.status,"pending")
-        self.assertEqual(self.client.get(f"/community/posts/{post.id}").status_code,200)
+        self.assertEqual(post.status, "published")
+        self.assertFalse(post.anonymous)
+        self.assertEqual(post.place, "图书馆")
         self.login(self.other)
-        self.assertEqual(self.client.get(f"/community/posts/{post.id}").status_code,404)
-        self.assertNotIn("A confession",self.client.get("/community").get_data(as_text=True))
-        self.moderate(post,"approve")
-        self.assertEqual(self.client.get(f"/community/posts/{post.id}").status_code,200)
+        html = self.client.get(f"/community/posts/{post.id}").get_data(as_text=True)
+        self.assertIn("周六自习", html)
+        self.assertIn("Hidden Name", html)
+        self.assertNotIn("private-one", html)
+
+    def test_blank_note_is_not_replaced_with_a_sentence(self):
+        self.assertEqual(self.submit("/community/new", **self.plan_form(body="")).status_code, 302)
+        post = Entry.query.one()
+        self.assertEqual(post.body, "")
+        html = self.client.get(f"/community/posts/{post.id}").get_data(as_text=True)
+        self.assertNotIn("就这样", html)
+        self.assertIn("发起人", html)
+        self.assertNotIn(">已发布<", html)
+        self.assertGreaterEqual(html.count('class="seat is-in"'), 1)
+        self.assertEqual(html.count('class="seat"'), 3)
 
     def test_anonymous_does_not_expose_name_or_email_and_html_is_escaped(self):
         post = self.post(anonymous=True)
@@ -176,9 +201,8 @@ class CommunityTests(unittest.TestCase):
         self.assertNotIn("<script>alert",html)
 
     def test_persistent_post_and_comment_limits(self):
-        data=dict(category="campus",title="A new topic",body="Today is sunny")
-        self.assertEqual(self.submit("/community/new",**data).status_code,302)
-        self.assertEqual(self.submit("/community/new",**data).status_code,429)
+        self.assertEqual(self.submit("/community/new", **self.plan_form()).status_code, 302)
+        self.assertEqual(self.submit("/community/new", **self.plan_form()).status_code,429)
         post=Entry.query.one()
         self.assertEqual(self.submit(f"/community/posts/{post.id}/comments",body="hello").status_code,302)
         self.assertEqual(self.submit(f"/community/posts/{post.id}/comments",body="again").status_code,429)
@@ -238,7 +262,7 @@ class CommunityTests(unittest.TestCase):
         self.login(self.other)
         self.assertEqual(self.client.get(f"/community/posts/{post.id}").status_code,404)
         self.login(self.user)
-        self.assertEqual(self.submit("/community/new",category="campus",title="hello",body="hello world").status_code,403)
+        self.assertEqual(self.submit("/community/new", **self.plan_form()).status_code, 403)
         self.assertEqual(self.submit(f"/community/posts/{post.id}/comments",body="hello").status_code,403)
         self.assertEqual(self.submit(f"/community/posts/{post.id}/reaction",kind="like",enabled="1").status_code,403)
         self.moderate(post,"unban")
@@ -328,14 +352,149 @@ class CommunityTests(unittest.TestCase):
 
     def test_feed_filters_pagination_and_pinned_order(self):
         for number in range(23):
-            db.session.add(Entry(author_id=self.user.id,school="School A",category="campus",title=f"Topic {number:02}",body="hello"))
+            db.session.add(Entry(author_id=self.user.id, school="School A", category="study",
+                                 title=f"Topic {number:02}", body="hello there", place="图书馆",
+                                 capacity=4, fee="free",
+                                 starts_at=datetime.utcnow() + timedelta(hours=number + 1)))
         db.session.commit()
         first=Entry.query.order_by(Entry.id).first()
         first.pinned=True
         db.session.commit()
         html=self.client.get("/community").get_data(as_text=True)
-        self.assertLess(html.index("Topic 00"),html.index("Topic 22"))
+        self.assertLess(html.index("Topic 00"), html.index("Topic 01"))
+        self.assertNotIn("Topic 22", html)
         self.assertIn("下一页",html)
-        self.assertNotIn("Topic 00",self.client.get("/community?page=2").get_data(as_text=True))
-        self.assertNotIn("Topic",self.client.get("/community?school=School+B").get_data(as_text=True))
+        page2=self.client.get("/community?page=2").get_data(as_text=True)
+        self.assertIn("Topic 22", page2)
+        self.assertNotIn("Topic 00", page2)
+        self.assertNotIn("Topic 00",self.client.get("/community?school=School+B").get_data(as_text=True))
         self.assertEqual(self.client.get("/community?category=invalid").status_code,400)
+        html = self.client.get("/community").get_data(as_text=True)
+        for name in ("澳门大学", "澳门科技大学", "澳门理工大学", "澳门旅游大学", "澳门城市大学"):
+            self.assertIn(f'data-school="{name}"', html)
+        self.assertLess(html.index('data-school="澳门大学"'), html.index('data-school="澳门城市大学"'))
+
+    def test_feed_filters_gender_fee_and_open_spots_together(self):
+        self.post(title="Women open", audience="female", fee="free", capacity=4)
+        self.post(title="Men only", audience="male", fee="aa", capacity=4)
+        full = self.post(title="Full free", audience="any", fee="free", capacity=2)
+        self.other.school = "School A"
+        self.user.gender = "female"
+        db.session.commit()
+        self.login(self.other)
+        self.assertEqual(self.submit(f"/community/posts/{full.id}/join").status_code, 302)
+        self.login(self.user)
+        women = self.client.get("/community?who=female").get_data(as_text=True)
+        self.assertIn("Women open", women)
+        self.assertNotIn("Men only", women)
+        mine = self.client.get("/community?who=mine").get_data(as_text=True)
+        self.assertIn("Women open", mine)
+        self.assertIn("Full free", mine)
+        self.assertNotIn("Men only", mine)
+        narrowed = self.client.get("/community?spots=open&fee=free&who=mine").get_data(as_text=True)
+        self.assertIn("Women open", narrowed)
+        self.assertNotIn("Full free", narrowed)
+        self.assertNotIn("Men only", narrowed)
+        self.assertEqual(self.client.get("/community?who=nope").status_code, 400)
+        self.assertEqual(self.client.get("/community?fee=nope").status_code, 400)
+
+    def test_join_fills_then_waitlist_promotes_on_leave(self):
+        post = self.post(capacity=2)
+        self.other.school = "School A"
+        db.session.commit()
+        self.login(self.other)
+        self.assertEqual(self.submit(f"/community/posts/{post.id}/join").status_code, 302)
+        self.assertEqual(Member.query.filter_by(state="going").count(), 1)
+        third = User(email="private-three@example.test", school="School A", name="Third", email_verified=True)
+        db.session.add(third)
+        db.session.commit()
+        self.login(third)
+        self.assertEqual(self.submit(f"/community/posts/{post.id}/join").status_code, 302)
+        self.assertEqual(Member.query.filter_by(user_id=third.id).one().state, "waitlist")
+        self.login(self.other)
+        self.assertEqual(self.submit(f"/community/posts/{post.id}/leave").status_code, 302)
+        self.assertEqual(Member.query.filter_by(user_id=third.id).one().state, "going")
+
+    def test_expired_and_cancelled_leave_the_default_feed(self):
+        past = self.post(title="Already gone", starts_at=datetime.utcnow() - timedelta(hours=1))
+        live = self.post(title="Still open")
+        self.assertNotIn("Already gone", self.client.get("/community").get_data(as_text=True))
+        self.assertIn("Still open", self.client.get("/community").get_data(as_text=True))
+        self.assertEqual(self.client.get(f"/community/posts/{past.id}").status_code, 200)
+        self.assertEqual(self.submit(f"/community/posts/{live.id}/cancel").status_code, 302)
+        self.assertNotIn("Still open", self.client.get("/community").get_data(as_text=True))
+        self.assertIn("已取消", self.client.get(f"/community/posts/{live.id}").get_data(as_text=True))
+
+    def test_cross_school_requires_mutual_opt_in(self):
+        self.user.school = "澳门大学"
+        self.other.school = "澳门科技大学"
+        post = self.post(school="澳门大学")
+        self.login(self.other)
+        self.assertEqual(self.submit(f"/community/posts/{post.id}/join").status_code, 403)
+        self.assertEqual(Member.query.count(), 0)
+        self.user.set_cross_schools(["澳门科技大学"])
+        self.other.set_cross_schools(["澳门大学"])
+        db.session.commit()
+        self.assertEqual(self.submit(f"/community/posts/{post.id}/join").status_code, 302)
+        self.assertEqual(Member.query.one().state, "going")
+
+    def test_gender_limit_rejects_the_other_gender_without_saving_a_wrong_pick(self):
+        self.user.gender = "female"
+        post = self.post(audience="female")
+        self.other.school = "School A"
+        self.other.gender = "male"
+        db.session.commit()
+        self.login(self.other)
+        self.assertEqual(self.submit(f"/community/posts/{post.id}/join").status_code, 403)
+        self.other.gender = None
+        db.session.commit()
+        self.assertEqual(self.submit(f"/community/posts/{post.id}/join", my_gender="male").status_code, 403)
+        self.assertIsNone(db.session.get(User, self.other.id).gender)
+        self.assertEqual(self.submit(f"/community/posts/{post.id}/join", my_gender="female").status_code, 302)
+        self.assertEqual(db.session.get(User, self.other.id).gender, "female")
+        self.assertEqual(Member.query.filter_by(user_id=self.other.id).one().state, "going")
+
+    def test_guest_filter_stays_inside_the_openable_preview(self):
+        for index in range(4):
+            self.post(title=f"Study {index}", category="study",
+                      starts_at=datetime.utcnow() + timedelta(hours=index + 1))
+        sport = self.post(title="Later sport", category="sport",
+                          starts_at=datetime.utcnow() + timedelta(hours=10))
+        with self.client.session_transaction() as session:
+            session.clear()
+        html = self.client.get("/community?category=sport").get_data(as_text=True)
+        self.assertNotIn("Later sport", html)
+        self.assertEqual(self.client.get(f"/community/posts/{sport.id}").status_code, 403)
+
+    def test_host_gender_must_match_a_limited_plan(self):
+        self.user.gender = "female"
+        db.session.commit()
+        self.assertEqual(self.submit("/community/new", **self.plan_form(audience="male")).status_code, 400)
+        self.assertEqual(Entry.query.filter(Entry.parent_id.is_(None), Entry.audience == "male").count(), 0)
+        self.user.gender = None
+        db.session.commit()
+        self.assertEqual(self.submit("/community/new", **self.plan_form(
+            audience="male", my_gender="female")).status_code, 400)
+        self.assertIsNone(db.session.get(User, self.user.id).gender)
+        self.assertEqual(self.submit("/community/new", **self.plan_form(
+            audience="male", my_gender="male", title="Men study")).status_code, 302)
+        self.assertEqual(db.session.get(User, self.user.id).gender, "male")
+
+    def test_leave_after_cancel_does_not_promote(self):
+        post = self.post(capacity=2)
+        self.other.school = "School A"
+        waiter = User(email="private-wait@example.test", school="School A", name="Waiter", email_verified=True)
+        db.session.add(waiter)
+        db.session.commit()
+        self.login(self.other)
+        self.assertEqual(self.submit(f"/community/posts/{post.id}/join").status_code, 302)
+        self.login(waiter)
+        self.assertEqual(self.submit(f"/community/posts/{post.id}/join").status_code, 302)
+        self.login(self.user)
+        self.assertEqual(self.submit(f"/community/posts/{post.id}/cancel").status_code, 302)
+        self.login(self.other)
+        html = self.client.get(f"/community/posts/{post.id}").get_data(as_text=True)
+        self.assertIn("退出名额", html)
+        self.assertEqual(self.submit(f"/community/posts/{post.id}/leave").status_code, 302)
+        self.assertEqual(Member.query.filter_by(user_id=waiter.id).one().state, "waitlist")
+        self.assertEqual(Member.query.filter_by(user_id=self.other.id).count(), 0)
