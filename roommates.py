@@ -5,7 +5,10 @@ from datetime import datetime, timedelta, timezone
 from flask import Blueprint, abort, flash, g, redirect, render_template, request, session, url_for
 from sqlalchemy.exc import IntegrityError
 
-from models import db, User, RoommateProfile as Profile, RoommateWish as Wish, RoommatePair as Pair
+from models import (
+    db, User, RoommateProfile as Profile, RoommateWish as Wish,
+    RoommatePair as Pair, RoommateSeat as Seat,
+)
 
 bp = Blueprint("roommates", __name__)
 
@@ -101,10 +104,63 @@ def pair_for(user_id, season):
         Pair.season == season, db.or_(Pair.low_id == user_id, Pair.high_id == user_id)).first()
 
 
+def same_pool(me, mine, other, theirs):
+    return bool(
+        me and other and mine and theirs
+        and other.school == me.school and other.gender == me.gender
+        and other.gender in ("male", "female")
+        and housing(theirs) == housing(mine)
+    )
+
+
 def purge_roommates(user_id):
+    pair_ids = [row.id for row in Pair.query.filter(db.or_(Pair.low_id == user_id, Pair.high_id == user_id))]
+    if pair_ids:
+        Seat.query.filter(Seat.pair_id.in_(pair_ids)).delete(synchronize_session=False)
     Profile.query.filter_by(user_id=user_id).delete(synchronize_session=False)
     Wish.query.filter(db.or_(Wish.from_id == user_id, Wish.to_id == user_id)).delete(synchronize_session=False)
     Pair.query.filter(db.or_(Pair.low_id == user_id, Pair.high_id == user_id)).delete(synchronize_session=False)
+
+
+def drop_stale_wishes(user, profile):
+    """A wish only stays while both people still share a dorm and gender."""
+    season = profile.season
+    wishes = Wish.query.filter(
+        Wish.season == season, db.or_(Wish.from_id == user.id, Wish.to_id == user.id)).all()
+    for wish in wishes:
+        other_id = wish.to_id if wish.from_id == user.id else wish.from_id
+        other = db.session.get(User, other_id)
+        theirs = db.session.get(Profile, (other_id, season))
+        if not same_pool(user, profile, other, theirs):
+            db.session.delete(wish)
+
+
+def confirm_mutual(season, user_id):
+    """If both people already chose each other, confirm the one pair for this year."""
+    if pair_for(user_id, season):
+        return False
+    mine = db.session.get(Profile, (user_id, season))
+    if not mine:
+        return False
+    for wish in Wish.query.filter_by(season=season, from_id=user_id):
+        other_id = wish.to_id
+        if pair_for(other_id, season) or not db.session.get(Wish, (season, other_id, user_id)):
+            continue
+        theirs = db.session.get(Profile, (other_id, season))
+        if not same_pool(mine.user, mine, theirs.user if theirs else None, theirs):
+            continue
+        low, high = sorted((user_id, other_id))
+        pair = Pair(season=season, low_id=low, high_id=high)
+        db.session.add(pair)
+        try:
+            db.session.flush()
+            db.session.add(Seat(season=season, user_id=low, pair_id=pair.id))
+            db.session.add(Seat(season=season, user_id=high, pair_id=pair.id))
+            db.session.commit()
+        except IntegrityError:
+            db.session.rollback()
+        return pair_for(user_id, season) is not None
+    return False
 
 
 @bp.before_request
@@ -141,6 +197,8 @@ def board():
     user = g.roommate_user
     season = current_season()
     mine = db.session.get(Profile, (user.id, season))
+    if mine and confirm_mutual(season, user.id):
+        flash("双方都想住一起，本学年的舍友已确认。学校邮箱只在这里互见。")
     pair = pair_for(user.id, season)
     partner = None
     if pair:
@@ -223,10 +281,18 @@ def save():
         college = request.form.get("college", "").strip()
         if not 2 <= len(college) <= 32:
             abort(400, "请填写宿舍名称。")
+    account_degree = user.education_level if user.education_level in DEGREES else ""
+    if account_degree and degree != account_degree:
+        abort(400, "学历和账号里的不一致。要改学历，先到个人资料里改。")
+    if not account_degree:
+        user.education_level = degree
     note = request.form.get("note", "").strip()
     if len(note) > 200:
         abort(400, "补充请控制在 200 字以内。")
     profile = db.session.get(Profile, (user.id, season)) or Profile(user_id=user.id, season=season)
+    paired = pair_for(user.id, season)
+    if paired and profile.degree and (profile.degree != degree or profile.college != college):
+        abort(400, "本学年已确认舍友。要换住处，先解除。")
     profile.college = college
     profile.degree = degree
     for field in CHOICES:
@@ -234,8 +300,13 @@ def save():
     profile.note = note
     profile.updated_at = datetime.utcnow()
     db.session.add(profile)
+    if not paired:
+        drop_stale_wishes(user, profile)
     db.session.commit()
-    flash(f"作息已保存。同性别、同在{college}的同学能看到这张卡片。")
+    if paired:
+        flash("作息已更新。本学年的舍友确认还在。")
+    else:
+        flash(f"作息已保存。同性别、同在{college}的同学能看到这张卡片。")
     return redirect(url_for("roommates.board"))
 
 
@@ -249,24 +320,31 @@ def wish(user_id):
         abort(404, "找不到这位同学的舍友卡片。")
     if theirs.user.school != user.school or theirs.user.gender != user.gender or housing(theirs) != housing(mine):
         abort(403, "只能在同一处宿舍、同性别里选舍友。")
+    if confirm_mutual(season, user.id):
+        flash("双方都想住一起，本学年的舍友已确认。学校邮箱只在这里互见。")
+        return redirect(url_for("roommates.board"))
     if pair_for(user.id, season) or pair_for(user_id, season):
         abort(400, "本学年已经确认过舍友。解除后才能再选。")
     existing = db.session.get(Wish, (season, user.id, user_id))
-    if existing:
+    back = db.session.get(Wish, (season, user_id, user.id))
+    if existing and not back:
         db.session.delete(existing)
         db.session.commit()
         flash("已收回。")
         return redirect(url_for("roommates.board"))
-    db.session.add(Wish(season=season, from_id=user.id, to_id=user_id))
-    back = db.session.get(Wish, (season, user_id, user.id))
-    if back:
-        low, high = sorted((user.id, user_id))
-        db.session.add(Pair(season=season, low_id=low, high_id=high))
-        flash("双方都想住一起，本学年的舍友已确认。学校邮箱只在这里互见。")
-    else:
-        flash("已记下。对方也选择你之后，才会确认。")
+    if not existing:
+        db.session.add(Wish(season=season, from_id=user.id, to_id=user_id))
     try:
-        db.session.commit()
+        if back:
+            db.session.flush()
+            if confirm_mutual(season, user.id):
+                flash("双方都想住一起，本学年的舍友已确认。学校邮箱只在这里互见。")
+            else:
+                db.session.commit()
+                flash("对方本学年已经确认过舍友。解除后才能再选。")
+        else:
+            db.session.commit()
+            flash("已记下。对方也选择你之后，才会确认。")
     except IntegrityError:
         db.session.rollback()
         flash("刚刚已经处理过了，请刷新后再看。")
@@ -281,6 +359,7 @@ def cancel():
     if not pair:
         abort(404, "本学年还没有确认舍友。")
     other = pair.high_id if pair.low_id == user.id else pair.low_id
+    Seat.query.filter(Seat.season == season, Seat.user_id.in_((user.id, other))).delete(synchronize_session=False)
     Wish.query.filter(
         Wish.season == season,
         db.or_(

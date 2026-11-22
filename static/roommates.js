@@ -1,7 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
     const field = document.getElementById('housing-field');
     const catalogNode = document.getElementById('housing-catalog');
-    const degree = document.querySelector('select[name="degree"]');
+    const degree = document.querySelector('[name="degree"]');
     const gender = document.querySelector('select[name="my_gender"]');
     const wrap = document.getElementById('housing-select-wrap');
     const select = document.getElementById('housing-select');

@@ -571,6 +571,14 @@ class RoommatePair(db.Model):
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
 
 
+class RoommateSeat(db.Model):
+    """One seat per user per academic year, so two confirms cannot both succeed."""
+    __tablename__ = "roommate_seats"
+    season = db.Column(db.String(16), primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), primary_key=True)
+    pair_id = db.Column(db.Integer, db.ForeignKey("roommate_pairs.id"), nullable=False)
+
+
 class TrafficDay(db.Model):
     """Anonymous daily page and visitor totals for the private admin dashboard."""
     __tablename__ = "traffic_days"
