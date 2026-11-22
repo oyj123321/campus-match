@@ -17,7 +17,13 @@
 .community-meta time{margin-left:auto}
 .community-tag{padding:5px 9px;border-radius:6px;background:#efe8d9;color:#3f3c36;font-weight:600}
 .community-facts{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
-.community-facts>span{font-size:13px;padding:4px 8px;border-radius:999px;background:#efe8d9;color:#3f3c36}
+.community-facts>span{display:inline-flex;align-items:center;gap:4px;font-size:13px;padding:4px 8px;border-radius:999px;background:#efe8d9;color:#3f3c36}
+.community-icon{width:14px;height:14px;flex:none;display:block}
+.community-seats{display:flex;flex-wrap:wrap;gap:6px;margin:2px 0 10px}
+.seat{width:28px;height:28px;border-radius:8px;display:grid;place-items:center;border:1.5px dashed rgba(28,27,25,.28);color:transparent;background:transparent}
+.seat.is-in{border-style:solid;border-color:#1c1b19;background:#1c1b19;color:#f3efe6}
+.seat .community-icon{width:16px;height:16px}
+.community-meta time,.community-meta a{display:inline-flex;align-items:center;gap:4px}
 .community-members{list-style:none;padding:0;margin:12px 0;display:grid;gap:8px}
 .community-members li{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:14px}
 .community-members form{margin:0}

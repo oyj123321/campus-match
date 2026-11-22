@@ -186,6 +186,8 @@ class CommunityTests(unittest.TestCase):
         self.assertNotIn("就这样", html)
         self.assertIn("发起人", html)
         self.assertNotIn(">已发布<", html)
+        self.assertGreaterEqual(html.count('class="seat is-in"'), 1)
+        self.assertEqual(html.count('class="seat"'), 3)
 
     def test_anonymous_does_not_expose_name_or_email_and_html_is_escaped(self):
         post = self.post(anonymous=True)
