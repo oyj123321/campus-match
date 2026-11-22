@@ -1,6 +1,6 @@
 {% extends "community_layout.html" %}
 {% block community_content %}
-<section class="community-card community-compose"><h2 data-i18n="cm.form.title">发起一场局</h2><p data-i18n="cm.form.lead">写清这一次要做什么。过期后不再出现在列表里。确认参加前不要交换联系方式。</p>
+<section class="community-card community-compose"><h2 data-i18n="cm.form.title">发起一场局</h2><p data-i18n="cm.form.lead">写清这一次要做什么。过期后不再出现在列表里。占到名额后才能看留言，小队里互相看得到学校邮箱。</p>
 <form method="post" class="community-form">
     <input type="hidden" name="csrf" value="{{ community_csrf }}">
     <label><span data-i18n="cm.form.category">活动类型</span><select name="category" required>{% for key,label in plan_categories.items() %}<option value="{{ key }}" data-i18n="cm.cat.{{ key }}">{{ label }}</option>{% endfor %}</select></label>

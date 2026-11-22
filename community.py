@@ -194,6 +194,15 @@ def schools_can_meet(left, right):
     return right.school in left.get_cross_schools() and left.school in right.get_cross_schools()
 
 
+def in_squad(user, post):
+    """Host and people holding a spot. Waitlist has not entered the group yet."""
+    if not user or not post:
+        return False
+    if user.id == post.author_id:
+        return True
+    return Member.query.filter_by(plan_id=post.id, user_id=user.id, state="going").first() is not None
+
+
 def visible_post(post_id):
     post = db.session.get(Entry, post_id)
     if not post or post.parent_id or post.status == "deleted":
@@ -383,16 +392,22 @@ def create():
 @bp.get("/community/posts/<int:post_id>")
 def detail(post_id):
     post = visible_post(post_id)
-    query = Entry.query.filter_by(parent_id=post.id).filter(Entry.status != "deleted")
-    if g.community_user:
-        query = query.filter(db.or_(Entry.status == "published", Entry.author_id == g.community_user.id))
+    squad = post.category not in PLAN_CATEGORIES or in_squad(g.community_user, post)
+    if not squad:
+        comments, page, more = [], 1, False
     else:
-        query = query.filter(Entry.status == "published")
-    page = page_number()
-    comments = query.order_by(Entry.created_at, Entry.id).offset((page - 1) * 30).limit(31).all()
+        query = Entry.query.filter_by(parent_id=post.id).filter(Entry.status != "deleted")
+        if g.community_user:
+            query = query.filter(db.or_(Entry.status == "published", Entry.author_id == g.community_user.id))
+        else:
+            query = query.filter(Entry.status == "published")
+        page = page_number()
+        comments = query.order_by(Entry.created_at, Entry.id).offset((page - 1) * 30).limit(31).all()
+        more = len(comments) > 30
+        comments = comments[:30]
     members = Member.query.filter_by(plan_id=post.id).order_by(Member.state, Member.created_at, Member.user_id).all()
-    return render_template("community_detail.html", post=post, comments=comments[:30], page=page,
-                           more=len(comments) > 30, members=members, **card_data([post]))
+    return render_template("community_detail.html", post=post, comments=comments, page=page,
+                           more=more, members=members, squad=squad, **card_data([post]))
 
 
 @bp.post("/community/posts/<int:post_id>/comments")
@@ -400,6 +415,8 @@ def comment(post_id):
     post = visible_post(post_id)
     if post.status != "published":
         abort(403, "这场局尚未公开，暂不能留言。")
+    if post.category in PLAN_CATEGORIES and not in_squad(g.community_user, post):
+        abort(403, "占到名额后才能留言。")
     guard_muted()
     body = text_field("body", 500)
     rate_limit("comment", 15)
@@ -408,7 +425,7 @@ def comment(post_id):
                          category=post.category, body=body, anonymous=False,
                          status="pending" if pending else "published"))
     db.session.commit()
-    flash("留言已提交审核，通过后会显示。" if pending else "留言已发布。确认参加前请不要留下联系方式。")
+    flash("留言已提交审核，通过后会显示。" if pending else "留言已发布。只有占到名额的人看得到。")
     return redirect(url_for("community.detail", post_id=post.id))
 
 
