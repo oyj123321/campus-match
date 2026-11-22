@@ -147,8 +147,8 @@ DEVICE_COOKIE_NAME = "cm_device"
 CROSS_DEGREE_LEGACY_BEFORE = datetime(2026, 9, 4, 0, 0, 0)
 # 全站公告：.env 设 SITE_ANNOUNCEMENT= 可强制清空；未设置则用默认运营文案
 _DEFAULT_SITE_ANNOUNCEMENT = (
-    "【更新】校园广场改为找搭子。可以约学习、运动、吃饭或看演出，按学校、时间、性别、费用和空位筛选还没开始的局。"
-    "同校直接占名额，满了候补。确认参加前只在留言里说话，不交换联系方式。"
+    "【更新】找搭子可以约学习、运动、吃饭或看演出，按学校、时间、性别、费用和空位筛选还没开始的局。"
+    "找舍友按书院或宿舍看同性别同学的作息，双方都点「想住一起」后确认一位，只互见学校邮箱。"
 )
 if "SITE_ANNOUNCEMENT" in os.environ:
     SITE_ANNOUNCEMENT = os.environ.get("SITE_ANNOUNCEMENT", "").strip()
