@@ -200,14 +200,6 @@ def going_count_query():
         Member.plan_id == Entry.id, Member.state == "going").correlate(Entry).scalar_subquery()
 
 
-def schools_can_meet(left, right):
-    if not left or not right:
-        return False
-    if left.school == right.school:
-        return True
-    return right.school in left.get_cross_schools() and left.school in right.get_cross_schools()
-
-
 def in_squad(user, post):
     """Host and people holding a spot. Waitlist has not entered the group yet."""
     if not user or not post:
@@ -411,7 +403,7 @@ def create():
                  anonymous=False, status="published")
     db.session.add(post)
     db.session.commit()
-    flash("局已发布。同校同学可以直接占名额。")
+    flash("局已发布。同校和其他学校的同学点加入就能占名额。")
     return redirect(url_for("community.detail", post_id=post.id))
 
 
@@ -462,8 +454,6 @@ def join(post_id):
         abort(403, "这场局已截止或已取消，不能再加入。")
     if post.author_id == g.community_user.id:
         abort(400, "你是发起人，名额里已经算上你。")
-    if not schools_can_meet(g.community_user, post.author):
-        abort(403, "跨校组局需要双方都在资料里勾选了对方的学校。")
     limit = post.audience if post.audience in ("male", "female") else ""
     picked = request.form.get("my_gender", "").strip()
     gender = g.community_user.gender if g.community_user.gender in ("male", "female") else ""

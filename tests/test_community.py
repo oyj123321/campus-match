@@ -450,16 +450,13 @@ class CommunityTests(unittest.TestCase):
         self.assertIn("长期开黑", html)
         self.assertIn("一直找人", html)
 
-    def test_cross_school_requires_mutual_opt_in(self):
+    def test_other_school_joins_without_the_dating_cross_list(self):
         self.user.school = "澳门大学"
         self.other.school = "澳门科技大学"
+        self.user.set_cross_schools([])
+        self.other.set_cross_schools([])
         post = self.post(school="澳门大学")
         self.login(self.other)
-        self.assertEqual(self.submit(f"/community/posts/{post.id}/join").status_code, 403)
-        self.assertEqual(Member.query.count(), 0)
-        self.user.set_cross_schools(["澳门科技大学"])
-        self.other.set_cross_schools(["澳门大学"])
-        db.session.commit()
         self.assertEqual(self.submit(f"/community/posts/{post.id}/join").status_code, 302)
         self.assertEqual(Member.query.one().state, "going")
 
