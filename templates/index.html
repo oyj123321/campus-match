@@ -15,6 +15,15 @@
             <img class="hw-ribbon-img" src="/static/festival/halloween/fluent-ghost.svg" alt="">
         </div>
         {% endif %}
+        {% if festival_christmas %}
+        <div class="xm-hero-ribbon">
+            <img class="xm-ribbon-img" src="/static/festival/christmas/3d-bell.png" alt="">
+            <span class="xm-ribbon-tag">SNOWDOWN</span>
+            <span class="xm-ribbon-sep">✦</span>
+            <span data-i18n="xm.ribbon">欢乐冰雪节 · 11.25 – 01.01</span>
+            <img class="xm-ribbon-img xm-ribbon-crown" src="/static/festival/christmas/3d-crown.png" alt="">
+        </div>
+        {% endif %}
         <p class="ed-kicker" data-i18n="kicker">Campus Match · 澳门 & 大湾区</p>
         <h1>
             <span data-i18n="hero.t1">在你的校园里，</span><br>
@@ -37,6 +46,13 @@
     {% if festival_halloween %}
     <img class="hw-board-pumpkin" src="/static/festival/halloween/fluent-pumpkin.svg" alt="" aria-hidden="true">
     <img class="hw-board-bat" src="/static/festival/halloween/fluent-bat.svg" alt="" aria-hidden="true">
+    {% endif %}
+    {% if festival_christmas %}
+    <img class="xm-board-flake" src="/static/festival/christmas/3d-snowflake.png" alt="" aria-hidden="true">
+    <div class="xm-board-mascot" aria-hidden="true">
+        <img class="xm-board-penguin" src="/static/festival/christmas/3d-penguin.png" alt="">
+        <img class="xm-board-gift" src="/static/festival/christmas/3d-gift.png" alt="">
+    </div>
     {% endif %}
     <div class="ed-stage" id="ed-stage" aria-hidden="true">
         <canvas id="ed-stage-canvas"></canvas>
@@ -206,6 +222,10 @@
     <img class="hw-cta-pumpkin" src="/static/festival/halloween/fluent-pumpkin.svg" alt="" aria-hidden="true">
     <img class="hw-cta-crystal" src="/static/festival/halloween/fluent-crystal-ball.svg" alt="" aria-hidden="true">
     {% endif %}
+    {% if festival_christmas %}
+    <img class="xm-cta-cocoa" src="/static/festival/christmas/3d-cocoa.png" alt="" aria-hidden="true">
+    <img class="xm-cta-heart" src="/static/festival/christmas/3d-heart-ribbon.png" alt="" aria-hidden="true">
+    {% endif %}
     <div>
         <h2 data-i18n="cta.title">准备好了？</h2>
         <p data-i18n="cta.sub">注册之后，恋爱匹配、找搭子和找舍友用的是同一个账号。</p>
@@ -214,7 +234,7 @@
        onclick="document.getElementById('email').focus(); return true;" data-i18n="cta.btn">用学校邮箱开始</a>
 </section>
 
-<script src="/static/landing-stage.js?v=6"></script>
+<script src="/static/landing-stage.js?v=9"></script>
 <script>
 var currentEmail = '';
 (function prefInvite() {

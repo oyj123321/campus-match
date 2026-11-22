@@ -188,5 +188,20 @@ def festival_halloween_active():
     return FESTIVAL_HALLOWEEN_START <= today <= FESTIVAL_HALLOWEEN_END
 
 
+# 圣诞冰雪季（11 月底到元旦）：澳门时区。FESTIVAL_CHRISTMAS=on/off 可强制开关。
+FESTIVAL_CHRISTMAS_START = date(2026, 11, 25)
+FESTIVAL_CHRISTMAS_END = date(2027, 1, 1)
+
+
+def festival_christmas_active():
+    flag = (os.environ.get("FESTIVAL_CHRISTMAS") or "").strip().lower()
+    if flag in ("1", "true", "on", "yes"):
+        return True
+    if flag in ("0", "false", "off", "no"):
+        return False
+    today = datetime.now(timezone(timedelta(hours=8))).date()
+    return FESTIVAL_CHRISTMAS_START <= today <= FESTIVAL_CHRISTMAS_END
+
+
 # weekday 显示名（供前端）
 WEEKDAY_LABELS = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"]
