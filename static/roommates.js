@@ -6,6 +6,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const wrap = document.getElementById('housing-select-wrap');
     const select = document.getElementById('housing-select');
     const fixed = document.getElementById('housing-fixed');
+    const fixedName = document.getElementById('housing-fixed-name');
     const free = document.getElementById('housing-free');
     const freeInput = free ? free.querySelector('input') : null;
     if (!field || !catalogNode || !degree || !select) return;
@@ -24,7 +25,7 @@ document.addEventListener('DOMContentLoaded', () => {
         select.disabled = !choosing;
         select.required = choosing;
         fixed.hidden = !locked;
-        fixed.textContent = locked ? list[0] : '';
+        if (fixedName) fixedName.textContent = locked ? list[0] : '';
         free.hidden = list.length !== 0;
         if (freeInput) freeInput.disabled = list.length !== 0;
     };

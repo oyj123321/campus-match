@@ -1,8 +1,8 @@
 {% extends "base.html" %}
 {% block content %}
 <link rel="stylesheet" href="/static/community.css?v=8">
-<link rel="stylesheet" href="/static/roommates.css?v=1">
-<script src="/static/roommates.js?v=2" defer></script>
+<link rel="stylesheet" href="/static/roommates.css?v=2">
+<script src="/static/roommates.js?v=3" defer></script>
 <div class="community-shell">
     <header class="community-hero">
         <div>
@@ -39,7 +39,10 @@
                             {% for name in options %}<option value="{{ name }}" {% if mine and mine.college==name %}selected{% endif %}>{{ name }}</option>{% endfor %}
                         </select>
                     </label>
-                    <p id="housing-fixed" class="community-muted" {% if options|length != 1 %}hidden{% endif %}>{{ options[0] if options|length == 1 else '' }}</p>
+                    <div id="housing-fixed" {% if options|length != 1 %}hidden{% endif %}>
+                        <span data-i18n="rm.place">住处</span>
+                        <p class="community-muted" id="housing-fixed-name">{{ options[0] if options|length == 1 else '' }}</p>
+                    </div>
                     <label id="housing-free" {% if options %}hidden{% endif %}>
                         <span data-i18n="rm.dorm">宿舍名称</span>
                         <input name="college" minlength="2" maxlength="32" value="{{ mine.college if mine and not options else '' }}" placeholder="你们学校的宿舍名称" {% if options %}disabled{% endif %}>

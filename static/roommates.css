@@ -1,3 +1,6 @@
+.community-form [hidden]{display:none !important}
+#housing-fixed{display:grid;gap:7px;font-size:14px;font-weight:600}
+#housing-fixed p{margin:0;font-weight:400}
 .roommate-habits{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0;padding:0;list-style:none}
 .roommate-habits li{border:1px solid rgba(28,27,25,.14);border-radius:999px;padding:4px 10px;font-size:13px;background:#fffdf8}
 .community-filters.is-live button[type=submit]{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}
