@@ -36,7 +36,7 @@
     </ul>
     {% endif %}
     <div class="community-tools">
-        {% if not community_user %}<a href="/#step1-card" data-i18n="cm.loginWant">登录后想去</a><a href="/#step1-card" data-i18n="cm.loginComment">登录留言</a>{% endif %}
+        {% if not community_user %}<a href="/#step1-card" data-i18n="cm.loginWant">登录后收藏</a><a href="/#step1-card" data-i18n="cm.loginComment">登录留言</a>{% endif %}
         {% if community_user and post.status=='published' and post.capacity %}
             {% if post.author_id==community_user.id and plan_active(post) and not post.cancelled %}
             <form method="post" action="{{ url_for('community.cancel', post_id=post.id) }}"><input type="hidden" name="csrf" value="{{ community_csrf }}"><button type="submit" data-i18n="cm.cancel">取消这场局</button></form>
@@ -50,7 +50,7 @@
             {% endif %}
             {% endif %}
         {% endif %}
-        {% if community_user and post.status=='published' %}<form method="post" data-community-action="reaction" action="{{ url_for('community.react',post_id=post.id) }}"><input type="hidden" name="csrf" value="{{ community_csrf }}"><input type="hidden" name="kind" value="save"><input type="hidden" name="enabled" value="{{ '0' if (post.id,'save') in reactions else '1' }}"><button type="submit">{{ '取消想去' if (post.id,'save') in reactions else '想去' }}</button></form>{% endif %}
+        {% if community_user and post.status=='published' %}<form method="post" data-community-action="reaction" action="{{ url_for('community.react',post_id=post.id) }}"><input type="hidden" name="csrf" value="{{ community_csrf }}"><input type="hidden" name="kind" value="save"><input type="hidden" name="enabled" value="{{ '0' if (post.id,'save') in reactions else '1' }}"><button type="submit" data-i18n="{{ 'cm.unsave' if (post.id,'save') in reactions else 'cm.save' }}">{{ '取消收藏' if (post.id,'save') in reactions else '收藏' }}</button></form>{% endif %}
         {% if community_user and post.author_id==community_user.id %}{{ delete_form(post) }}{% elif community_user and post.status=='published' %}{{ report_form(post) }}{% endif %}
     </div>
 </article>

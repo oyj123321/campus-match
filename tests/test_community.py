@@ -87,7 +87,7 @@ class CommunityTests(unittest.TestCase):
         self.assertEqual(self.client.get("/community").status_code, 200)
         response = self.client.get(f"/community/posts/{public.id}")
         self.assertEqual(response.status_code, 200)
-        self.assertIn("登录后想去", response.get_data(as_text=True))
+        self.assertIn("登录后收藏", response.get_data(as_text=True))
         self.assertNotIn('data-community-action="reaction"', response.get_data(as_text=True))
         for post in (hidden, pending):
             self.assertEqual(self.client.get(f"/community/posts/{post.id}").status_code, 404)

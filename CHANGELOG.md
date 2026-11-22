@@ -13,6 +13,7 @@ All notable changes to CampusMatch.
 - **Changed**：找搭子的留言只有占到名额的人能看、能写。发起人和已加入的人互相看得到学校邮箱。候补和路人看不到留言，也看不到邮箱。局卡片上的公开地点不变。
 - **Fixed**：四语言文案里多了一个逗号，整份 `i18n.js` 加载失败，问卷 39 题不渲染，页面只剩进度 0/39。
 - **Changed**：默认全站公告同时写上找搭子和找舍友（`config.py`、`static/i18n.js` 简中、繁中、英文、葡文）。`.env` 里若已设置 `SITE_ANNOUNCEMENT`，仍以环境变量为准，不会换成这段默认文案。
+- **Changed**：找搭子里原来的「想去」改叫「收藏」。标签、按钮、空列表和隐私说明一起改（简中、繁中、英文、葡文）。收藏仍然不占名额。
 - **Deploy**：服务器拉代码并重启后，`create_all` 会建 `roommate_profiles`、`roommate_wishes`、`roommate_pairs`、`roommate_seats`。这次推送本身不会自动部署。
 
 ## [1.9.71] — 2026-11-22

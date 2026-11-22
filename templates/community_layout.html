@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block content %}
 <link rel="stylesheet" href="/static/community.css?v=8">
-<script src="{{ url_for('static', filename='community.js') }}?v=4" defer></script>
+<script src="{{ url_for('static', filename='community.js') }}?v=5" defer></script>
 <div class="community-shell">
     <header class="community-hero">
         <div>
@@ -16,7 +16,7 @@
         {% if community_user %}
         <a href="/community?view=joined" data-i18n="cm.tab.joined" {% if view|default('')=='joined' %}aria-current="page"{% endif %}>我加入的</a>
         <a href="/community?view=mine" data-i18n="cm.tab.mine" {% if view|default('')=='mine' %}aria-current="page"{% endif %}>我发起的</a>
-        <a href="/community?view=saved" data-i18n="cm.tab.saved" {% if view|default('')=='saved' %}aria-current="page"{% endif %}>想去</a>
+        <a href="/community?view=saved" data-i18n="cm.tab.saved" {% if view|default('')=='saved' %}aria-current="page"{% endif %}>收藏</a>
         <a href="/matches" data-i18n="cm.tab.matches">回到匹配</a>
         {% endif %}
     </nav>

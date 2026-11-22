@@ -58,8 +58,13 @@ document.addEventListener('submit', async (event) => {
         if (form.dataset.communityAction === 'reaction') {
             const kind = form.elements.kind.value;
             form.elements.enabled.value = data.enabled ? '0' : '1';
-            button.textContent = (data.enabled ? '取消' : '') +
-                (kind === 'like' ? '赞 · ' + data.likes : '想去');
+            if (kind === 'save') {
+                const key = data.enabled ? 'cm.unsave' : 'cm.save';
+                button.setAttribute('data-i18n', key);
+                button.textContent = window.t ? window.t(key) : (data.enabled ? '取消收藏' : '收藏');
+            } else {
+                button.textContent = (data.enabled ? '取消' : '') + '赞 · ' + data.likes;
+            }
             button.setAttribute('aria-pressed', String(data.enabled));
         } else {
             status.textContent = data.message;
