@@ -1,6 +1,6 @@
 """Verified-campus buddy plans. Writes require CSRF. No private messages."""
 import secrets
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from flask import Blueprint, abort, flash, g, jsonify, redirect, render_template, request, session, url_for
 from sqlalchemy import inspect, text
@@ -96,13 +96,20 @@ def private_headers(response):
     return response
 
 
+def macau_now():
+    return datetime.now(timezone(timedelta(hours=8))).replace(tzinfo=None)
+
+
 @bp.context_processor
 def shared():
+    now = macau_now().replace(second=0, microsecond=0)
     return dict(categories=CATEGORIES, plan_categories=PLAN_CATEGORIES, fees=FEES, audiences=AUDIENCES,
                 states=STATES, actions=ACTIONS,
                 community_user=getattr(g, "community_user", None),
                 community_csrf=session.get("community_csrf", ""),
-                plan_active=plan_active, plan_when=plan_when)
+                plan_active=plan_active, plan_when=plan_when,
+                macau_clock=now.strftime("%m-%d %H:%M"),
+                macau_min=now.strftime("%Y-%m-%dT%H:%M"))
 
 
 @bp.app_template_filter("community_time")
@@ -252,14 +259,23 @@ def card_data(posts):
 
 
 def parse_start(raw):
-    try:
-        local = datetime.strptime((raw or "").strip(), "%Y-%m-%dT%H:%M")
-    except ValueError:
+    text = (raw or "").strip()
+    local = None
+    for fmt in ("%Y-%m-%dT%H:%M", "%Y-%m-%dT%H:%M:%S"):
+        try:
+            local = datetime.strptime(text, fmt)
+            break
+        except ValueError:
+            continue
+    if local is None:
         abort(400, "请填写开始时间。")
-    utc = local - timedelta(hours=8)
-    if utc <= datetime.utcnow():
-        abort(400, "开始时间需要晚于现在。")
-    return utc
+    local = local.replace(second=0, microsecond=0)
+    now = macau_now().replace(second=0, microsecond=0)
+    if local < now:
+        abort(400, "开始时间要晚于现在。你填的是 "
+              f"{local.strftime('%m-%d %H:%M')}，现在是 {now.strftime('%m-%d %H:%M')}（澳门时间）。"
+              "已经过了的话，把时间改晚，或勾选「时间再议」。")
+    return local - timedelta(hours=8)
 
 
 def promote(plan):

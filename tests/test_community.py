@@ -1,6 +1,6 @@
 import time
 import unittest
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from unittest.mock import patch
 
@@ -164,6 +164,21 @@ class CommunityTests(unittest.TestCase):
                        dict(category="study", title="Title", body="Hello world", capacity="1")):
             self.assertEqual(self.submit("/community/new", **self.plan_form(**fields)).status_code, 400)
         self.assertEqual(Entry.query.count(),0)
+
+    def test_start_time_is_compared_in_macau(self):
+        macau = datetime.now(timezone(timedelta(hours=8))).replace(second=0, microsecond=0, tzinfo=None)
+        past_at = macau - timedelta(hours=2)
+        rejected = self.submit("/community/new", **self.plan_form(starts_at=past_at.strftime("%Y-%m-%dT%H:%M")))
+        self.assertEqual(rejected.status_code, 400)
+        text = rejected.get_data(as_text=True)
+        self.assertIn("澳门时间", text)
+        self.assertIn(past_at.strftime("%m-%d %H:%M"), text)
+        self.assertIn(macau.strftime("%m-%d %H:%M"), text)
+        this_minute = macau.strftime("%Y-%m-%dT%H:%M:%S")
+        self.assertEqual(self.submit("/community/new", **self.plan_form(
+            title="这一分钟", starts_at=this_minute)).status_code, 302)
+        stored = Entry.query.filter_by(title="这一分钟").one().starts_at
+        self.assertEqual(stored.replace(tzinfo=None), macau - timedelta(hours=8))
 
     def test_plan_publishes_immediately_and_shows_host_name(self):
         self.assertEqual(self.submit("/community/new", **self.plan_form(
