@@ -30,7 +30,8 @@ from matcher import batch_match_school, orientation_compatible, _dealbreaker_con
 from questionnaire import get_compatibility_insight
 from email_service import send_match_result_email
 from match_pool import (
-    is_blocked_pair, was_matched_pair, school_compatible, degree_compatible, vectors_aligned,
+    is_blocked_pair, was_matched_pair, school_compatible, degree_compatible,
+    bachelor_compatible, vectors_aligned,
     previous_pair_keys, deactivate_filled_degree_violations,
 )
 
@@ -197,6 +198,8 @@ def persist_user_matches(user, scored_pairs, mode, mail_cfg, weekly_new_limit=No
             continue
         if not school_compatible(user, other) or not degree_compatible(user, other):
             continue
+        if not bachelor_compatible(user, other):
+            continue
         if _dealbreaker_conflict(user, other):
             skipped_dealbreaker += 1
             continue
@@ -353,7 +356,7 @@ def run_batch_school(school, mail_cfg, require_opt_in=False, exclude_ids=None):
             continue
         if not age_compatible(a, b):
             continue
-        if not degree_compatible(a, b):
+        if not degree_compatible(a, b) or not bachelor_compatible(a, b):
             continue
         if is_blocked_pair(a.id, b.id):
             continue
@@ -454,7 +457,7 @@ def run_batch_cross(mail_cfg, require_opt_in=False, exclude_ids=None):
             continue
         if not age_compatible(a, b):
             continue
-        if not degree_compatible(a, b):
+        if not degree_compatible(a, b) or not bachelor_compatible(a, b):
             continue
         if is_blocked_pair(a.id, b.id):
             continue

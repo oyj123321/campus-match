@@ -1,4 +1,5 @@
 """Verified-campus buddy plans. Writes require CSRF. No private messages."""
+import re
 import secrets
 from datetime import datetime, timedelta, timezone
 
@@ -108,7 +109,7 @@ def shared():
                 states=STATES, actions=ACTIONS,
                 community_user=getattr(g, "community_user", None),
                 community_csrf=session.get("community_csrf", ""),
-                plan_active=plan_active, plan_when=plan_when,
+                plan_active=plan_active, plan_when=plan_when, public_name=public_name,
                 macau_clock=now.strftime("%m-%d %H:%M"),
                 macau_min=now.strftime("%Y-%m-%dT%H:%M"))
 
@@ -157,6 +158,29 @@ def rate_limit(action, seconds):
         Limit.last_at <= now - timedelta(seconds=seconds)).update({"last_at": now})
     if not changed:
         abort(429, f"操作太频繁，请间隔 {seconds} 秒后再试。")
+
+
+def public_name(user, anonymous=False):
+    """Nicknames only. Student numbers and mailbox local-parts stay off the plan."""
+    if anonymous:
+        return "匿名同学"
+    name = (getattr(user, "name", None) or "").strip()
+    local = ((getattr(user, "email", None) or "").split("@", 1)[0]).strip().lower()
+    if _is_student_number(name, local):
+        return "同学"
+    return name or "校园同学"
+
+
+def _is_student_number(name, local):
+    if not name:
+        return False
+    folded = re.sub(r"[\s._\-]", "", name).lower()
+    local_folded = re.sub(r"[\s._\-]", "", local)
+    if local_folded and folded == local_folded:
+        return True
+    letters = re.sub(r"[\d\s._\-]", "", name)
+    digits = re.sub(r"\D", "", name)
+    return len(digits) >= 5 and len(letters) <= 2
 
 
 def plan_active(post, now=None):

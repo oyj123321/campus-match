@@ -118,7 +118,8 @@ BATCH_SCHEDULER_ENABLED = os.environ.get("BATCH_SCHEDULER_ENABLED", "false").low
 ADMIN_SECRET = os.environ.get("ADMIN_SECRET", "")
 # 揭晓仪式：需本周 opt-in 才进批量池；冷启动仍可开即时匹配
 REVEAL_REQUIRE_OPT_IN = os.environ.get("REVEAL_REQUIRE_OPT_IN", "true").lower() == "true"
-INSTANT_MATCH_ENABLED = os.environ.get("INSTANT_MATCH_ENABLED", "true").lower() == "true"
+# 提前揭晓已关闭。每周预约后统一揭晓。环境变量不能再打开。
+INSTANT_MATCH_ENABLED = False
 # 跨校总闸：true 时，允许按「双方互相勾选对方学校」做跨校配对
 CROSS_SCHOOL_MATCHING_ENABLED = os.environ.get("CROSS_SCHOOL_MATCHING_ENABLED", "true").lower() == "true"
 # 配对成功后第 N 天发破冰随访（催打招呼；避开整周揭晓日）

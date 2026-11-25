@@ -539,11 +539,25 @@ class CommunityTests(unittest.TestCase):
         self.assertEqual(self.submit(f"/community/posts/{post.id}/join").status_code, 302)
         html = self.client.get(f"/community/posts/{post.id}").get_data(as_text=True)
         self.assertIn("图书馆三楼靠窗", html)
-        self.assertIn(self.user.email, html)
-        self.assertIn(self.other.email, html)
+        self.assertNotIn(self.user.email, html)
+        self.assertNotIn(self.other.email, html)
+        self.assertIn("Hidden Name", html)
         self.login(waiter)
         self.assertEqual(self.submit(f"/community/posts/{post.id}/join").status_code, 302)
         html = self.client.get(f"/community/posts/{post.id}").get_data(as_text=True)
         self.assertNotIn("图书馆三楼靠窗", html)
         self.assertNotIn(self.user.email, html)
         self.assertEqual(Member.query.filter_by(user_id=waiter.id).one().state, "waitlist")
+
+    def test_student_numbers_are_not_shown_on_a_plan(self):
+        self.user.name = "202312345"
+        self.other.school = "School A"
+        db.session.commit()
+        post = self.post()
+        self.login(self.other)
+        self.assertEqual(self.submit(f"/community/posts/{post.id}/join").status_code, 302)
+        html = self.client.get(f"/community/posts/{post.id}").get_data(as_text=True)
+        self.assertNotIn("202312345", html)
+        self.assertNotIn(self.user.email, html)
+        self.assertNotIn(self.other.email, html)
+        self.assertIn(">同学<", html)

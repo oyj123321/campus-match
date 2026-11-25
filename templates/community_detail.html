@@ -10,7 +10,7 @@
 <article class="community-card">
     <div class="community-meta"><span class="community-tag">{{ categories.get(post.category, post.category) }}</span>{% if post.status!='published' %}<span>{{ states[post.status] }}</span>{% endif %}{% if post.cancelled %}<span data-i18n="cm.cancelled">已取消</span>{% elif post.capacity and not plan_active(post) %}<span data-i18n="cm.ended">已截止</span>{% endif %}<time>{{ icon('clock') }}{{ plan_when(post) }}</time></div>
     <h2 class="community-title">{{ post.title }}</h2>
-    <p class="community-muted">{{ '匿名同学' if post.anonymous else (post.author.name or '校园同学') }}{% if not post.anonymous and post.author.gender in ('male','female') %} · <span data-i18n="g.{{ post.author.gender }}">{{ '男' if post.author.gender=='male' else '女' }}</span>{% endif %} · {{ post.school }}</p>
+    <p class="community-muted">{{ public_name(post.author, post.anonymous) }}{% if not post.anonymous and post.author.gender in ('male','female') %} · <span data-i18n="g.{{ post.author.gender }}">{{ '男' if post.author.gender=='male' else '女' }}</span>{% endif %} · {{ post.school }}</p>
     {% if post.capacity %}
     {{ seat_row(1 + going.get(post.id, 0), post.capacity) }}
     <div class="community-facts">
@@ -25,9 +25,9 @@
     {% if post.status!='published' %}<p class="community-notice">{{ '正在等待管理员审核，其他同学暂不可见。' if post.status=='pending' else '此内容已被管理员隐藏，其他同学暂不可见。' }}</p>{% endif %}
     {% if post.capacity or members %}
     <ul class="community-members">
-        {% if post.capacity %}<li><span class="seat is-in" aria-hidden="true">{{ icon('person') }}</span><strong>{{ '匿名同学' if post.anonymous else (post.author.name or '校园同学') }}</strong>{% if not post.anonymous and post.author.gender in ('male','female') %} · <span data-i18n="g.{{ post.author.gender }}">{{ '男' if post.author.gender=='male' else '女' }}</span>{% endif %} · {{ post.school }}{% if squad and post.category in plan_categories and not post.anonymous %} · {{ post.author.email }}{% endif %} · <span data-i18n="cm.host">发起人</span></li>{% endif %}
+        {% if post.capacity %}<li><span class="seat is-in" aria-hidden="true">{{ icon('person') }}</span><strong>{{ public_name(post.author, post.anonymous) }}</strong>{% if not post.anonymous and post.author.gender in ('male','female') %} · <span data-i18n="g.{{ post.author.gender }}">{{ '男' if post.author.gender=='male' else '女' }}</span>{% endif %} · {{ post.school }} · <span data-i18n="cm.host">发起人</span></li>{% endif %}
         {% for member in members %}
-        <li><span class="seat{% if member.state=='going' %} is-in{% endif %}" aria-hidden="true">{% if member.state=='going' %}{{ icon('person') }}{% endif %}</span><strong>{{ member.user.name or '校园同学' }}</strong>{% if member.user.gender in ('male','female') %} · <span data-i18n="g.{{ member.user.gender }}">{{ '男' if member.user.gender=='male' else '女' }}</span>{% endif %} · {{ member.user.school }}{% if squad and post.category in plan_categories and member.state=='going' %} · {{ member.user.email }}{% endif %} · {{ '候补' if member.state=='waitlist' else '已加入' }}
+        <li><span class="seat{% if member.state=='going' %} is-in{% endif %}" aria-hidden="true">{% if member.state=='going' %}{{ icon('person') }}{% endif %}</span><strong>{{ public_name(member.user) }}</strong>{% if member.user.gender in ('male','female') %} · <span data-i18n="g.{{ member.user.gender }}">{{ '男' if member.user.gender=='male' else '女' }}</span>{% endif %} · {{ member.user.school }} · {{ '候补' if member.state=='waitlist' else '已加入' }}
             {% if community_user and post.author_id==community_user.id %}
             <form method="post" action="{{ url_for('community.remove_member', post_id=post.id, user_id=member.user_id) }}"><input type="hidden" name="csrf" value="{{ community_csrf }}"><button type="submit">移出</button></form>
             {% endif %}
@@ -56,11 +56,11 @@
 </article>
 <section class="community-card"><h2 data-i18n="cm.thread">留言</h2>
     {% if post.category in plan_categories and not squad %}
-    <p class="community-muted" data-i18n="cm.threadLocked">占到名额后才能看留言。候补还看不到。进入小队后，大家互相看得到学校邮箱。</p>
+    <p class="community-muted" data-i18n="cm.threadLocked">占到名额后才能看留言。候补还看不到。名单里只有昵称和学校，不公开学号和学校邮箱。</p>
     {% else %}
-    {% for item in comments %}<article class="community-comment"><div class="community-meta"><strong>{{ '匿名同学' if item.anonymous else (item.author.name or '校园同学') }}</strong><span>{{ item.school }} · {{ item.created_at|community_time }}</span>{% if item.status!='published' %}<span>{{ states[item.status] }}</span>{% endif %}</div><p class="community-body">{{ item.body }}</p>{% if item.status=='pending' %}<p class="community-muted">正在等待审核，其他同学暂不可见。</p>{% endif %}{% if community_user and item.author_id==community_user.id %}{{ delete_form(item) }}{% elif community_user and post.status=='published' and item.status=='published' %}{{ report_form(item) }}{% endif %}</article>{% else %}<p class="community-muted" data-i18n="cm.noComments">还没有留言。先问时间和地点，先不要留联系方式。</p>{% endfor %}
+    {% for item in comments %}<article class="community-comment"><div class="community-meta"><strong>{{ public_name(item.author, item.anonymous) }}</strong><span>{{ item.school }} · {{ item.created_at|community_time }}</span>{% if item.status!='published' %}<span>{{ states[item.status] }}</span>{% endif %}</div><p class="community-body">{{ item.body }}</p>{% if item.status=='pending' %}<p class="community-muted">正在等待审核，其他同学暂不可见。</p>{% endif %}{% if community_user and item.author_id==community_user.id %}{{ delete_form(item) }}{% elif community_user and post.status=='published' and item.status=='published' %}{{ report_form(item) }}{% endif %}</article>{% else %}<p class="community-muted" data-i18n="cm.noComments">还没有留言。先问时间和地点，先不要留联系方式。</p>{% endfor %}
     <nav class="community-pagination">{% if page>1 %}<a href="{{ url_for('community.detail',post_id=post.id,page=page-1) }}">上一页</a>{% endif %}{% if more %}<a href="{{ url_for('community.detail',post_id=post.id,page=page+1) }}">下一页</a>{% endif %}</nav>
-    {% if community_user and post.status=='published' %}<form method="post" action="{{ url_for('community.comment',post_id=post.id) }}" class="community-form"><input type="hidden" name="csrf" value="{{ community_csrf }}"><label><span data-i18n="cm.commentLabel">写下留言</span><textarea name="body" required maxlength="500" rows="3" placeholder="只有小队看得到。学校邮箱已在名单里，不必再留微信。" data-i18n-ph="cm.commentPh"></textarea></label><button type="submit" class="community-primary" data-i18n="cm.commentSend">发表留言</button></form>{% endif %}
+    {% if community_user and post.status=='published' %}<form method="post" action="{{ url_for('community.comment',post_id=post.id) }}" class="community-form"><input type="hidden" name="csrf" value="{{ community_csrf }}"><label><span data-i18n="cm.commentLabel">写下留言</span><textarea name="body" required maxlength="500" rows="3" placeholder="只有小队看得到。不要留学号、邮箱或微信。" data-i18n-ph="cm.commentPh"></textarea></label><button type="submit" class="community-primary" data-i18n="cm.commentSend">发表留言</button></form>{% endif %}
     {% endif %}
 </section>
 {% endblock %}

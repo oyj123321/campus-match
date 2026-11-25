@@ -1,7 +1,7 @@
 import unittest
 
 from models import User
-from match_pool import degree_compatible
+from match_pool import bachelor_compatible, degree_compatible
 
 
 def person(level=None, accept=None, cross=False):
@@ -44,6 +44,28 @@ class DegreePrefTests(unittest.TestCase):
         self.assertFalse(degree_compatible(unknown, narrow))
         self.assertTrue(degree_compatible(unknown, wide))
         self.assertTrue(degree_compatible(person(None), person(None)))
+
+    def test_graduate_undergraduate_bar_is_mutual_and_ranked(self):
+        picky = person("master", ["master"])
+        picky.bachelor_tier = "p985"
+        self.assertTrue(picky.set_bachelor_require(["p985"]))
+        c9 = person("master", ["master"])
+        c9.bachelor_tier = "c9"
+        plain = person("master", ["master"])
+        plain.bachelor_tier = "p211"
+        undergrad = person("bachelor", ["bachelor", "master"])
+        self.assertTrue(bachelor_compatible(picky, c9))
+        self.assertFalse(bachelor_compatible(picky, plain))
+        self.assertFalse(bachelor_compatible(picky, undergrad))
+        wide = person("doctorate", ["doctorate", "master"])
+        wide.bachelor_tier = "macau"
+        wide.set_bachelor_require(["p211"])
+        nei = person("master", ["master", "doctorate"])
+        nei.bachelor_tier = "p985"
+        self.assertTrue(bachelor_compatible(wide, nei))
+        unset = person("master", ["master"])
+        self.assertFalse(bachelor_compatible(picky, unset))
+        self.assertFalse(person("master").set_bachelor_require(["nope"]))
 
     def test_empty_selection_rejected(self):
         u = person("bachelor")

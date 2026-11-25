@@ -35,7 +35,7 @@ from config import (
     CROSS_DEGREE_LEGACY_BEFORE,
     festival_autumn_active, festival_halloween_active,
 )
-from models import db, User, UserTag, Match, Blocklist, AccountDeletion, EXPRESS_BIO_MIN, EDUCATION_LEVELS, EXIT_REASON_CODES
+from models import db, User, UserTag, Match, Blocklist, AccountDeletion, EXPRESS_BIO_MIN, EDUCATION_LEVELS, BACHELOR_TIERS, EXIT_REASON_CODES
 from models import PoolEvent, WeeklyParticipation
 from operations_analytics import set_pool_participation, record_exit_feedback
 
@@ -53,7 +53,7 @@ from batch_job import (
 )
 from match_pool import (
     eligible_candidates, previous_partner_ids, previous_pair_keys,
-    deactivate_filled_degree_violations, allocation_compatible,
+    deactivate_filled_degree_violations, deactivate_bachelor_violations, allocation_compatible,
 )
 
 # ---- App Factory ----
@@ -477,6 +477,32 @@ def apply_education_fields(user, data, required=False):
     return None
 
 
+def apply_bachelor_fields(user, data):
+    """研究生的本科档次和对对方本科的要求。本科生清掉这两项。失败返回 api_err。"""
+    level = (user.education_level or "").strip()
+    if "bachelor_tier" not in data and "bachelor_require" not in data:
+        if level not in ("master", "doctorate"):
+            user.bachelor_tier = None
+            user.bachelor_require_json = None
+        return None
+    if level not in ("master", "doctorate"):
+        user.bachelor_tier = None
+        user.bachelor_require_json = None
+        return None
+    if "bachelor_tier" in data:
+        tier = (data.get("bachelor_tier") or "").strip()
+        if tier and tier not in BACHELOR_TIERS:
+            return api_err("err.bachelor_tier")
+        user.bachelor_tier = tier or None
+    if "bachelor_require" in data:
+        raw = data.get("bachelor_require") or []
+        if not isinstance(raw, list) or not user.set_bachelor_require(raw):
+            return api_err("err.bachelor_require")
+    if user.bachelor_require_list() and not (user.bachelor_tier or "").strip():
+        return api_err("err.bachelor_self")
+    return None
+
+
 def match_quota_status(user):
     """计算冷却 / 本周额度 / 预约揭晓状态。"""
     from pool_rhythm import apply_ahead_opt_in, next_week_key
@@ -534,6 +560,8 @@ def match_quota_status(user):
         "education_level": user.education_level if (user.education_level or "") in EDUCATION_LEVELS else None,
         "allow_cross_degree": bool(user.allow_cross_degree),
         "accepted_degrees": user.accepted_degree_list(),
+        "bachelor_tier": user.bachelor_tier if (user.bachelor_tier or "") in BACHELOR_TIERS else None,
+        "bachelor_require": user.bachelor_require_list(),
         "open_to_match": user.is_open_to_match(),
         "want_match_followup": bool(getattr(user, "want_match_followup", False)),
         "explain": _match_explain_text(mode),
@@ -1141,8 +1169,13 @@ def api_express_profile():
     edu_err = apply_education_fields(user, data, required=True)
     if edu_err:
         return edu_err
+    bach_err = apply_bachelor_fields(user, data)
+    if bach_err:
+        return bach_err
     if "education_level" in data or "accepted_degrees" in data or "allow_cross_degree" in data:
         deactivate_filled_degree_violations(user)
+    if "bachelor_tier" in data or "bachelor_require" in data or "education_level" in data:
+        deactivate_bachelor_violations(user)
     user.name = name[:32]
     user.gender = gender
     user.looking_for = looking_for
@@ -1589,7 +1622,8 @@ def api_get_matches():
     show_all = request.args.get("all") in ("1", "true", "yes")
 
     n_deg = deactivate_filled_degree_violations(user)
-    if n_deg:
+    n_bach = deactivate_bachelor_violations(user)
+    if n_deg or n_bach:
         db.session.commit()
 
     q = Match.query.filter(
@@ -1672,8 +1706,13 @@ def api_me():
     edu_err = apply_education_fields(user, data, required=False)
     if edu_err:
         return edu_err
+    bach_err = apply_bachelor_fields(user, data)
+    if bach_err:
+        return bach_err
     if "education_level" in data or "allow_cross_degree" in data or "accepted_degrees" in data:
         deactivate_filled_degree_violations(user)
+    if "bachelor_tier" in data or "bachelor_require" in data or "education_level" in data:
+        deactivate_bachelor_violations(user)
     contact = (data.get("wechat_id") or "").strip()
     if "wechat_id" in data:
         if not contact and not user.is_express():
@@ -2128,6 +2167,18 @@ def ensure_schema():
         db.session.execute(text("ALTER TABLE users ADD COLUMN accepted_degrees_json TEXT"))
         db.session.commit()
         print("[CampusMatch] migrated: users.accepted_degrees_json")
+
+    if "bachelor_tier" not in user_cols:
+        db.session.execute(text("ALTER TABLE users ADD COLUMN bachelor_tier VARCHAR(16)"))
+        db.session.commit()
+        print("[CampusMatch] migrated: users.bachelor_tier")
+        user_cols.add("bachelor_tier")
+
+    if "bachelor_require_json" not in user_cols:
+        db.session.execute(text("ALTER TABLE users ADD COLUMN bachelor_require_json TEXT"))
+        db.session.commit()
+        print("[CampusMatch] migrated: users.bachelor_require_json")
+        user_cols.add("bachelor_require_json")
 
     if "want_match_followup" not in user_cols:
         db.session.execute(text("ALTER TABLE users ADD COLUMN want_match_followup BOOLEAN DEFAULT 0"))

@@ -7,6 +7,8 @@ import secrets, json
 db = SQLAlchemy()
 EXPRESS_BIO_MIN = 30
 EDUCATION_LEVELS = ("bachelor", "master", "doctorate")
+# 研究生自报的本科档次，以及「卡本科」时可接受的档次。211 含 985 和 C9，985 含 C9。
+BACHELOR_TIERS = ("macau", "c9", "p985", "p211", "overseas", "other")
 # 关闭参与匹配时的可选原因码（前端选择题）
 EXIT_REASON_CODES = (
     "busy",           # 最近太忙 / 学业压力
@@ -78,6 +80,10 @@ class User(db.Model):
     allow_cross_degree = db.Column(db.Boolean, default=False)
     # 愿意匹配的学历 JSON 列表。空则按 allow_cross_degree / 本人学历回退。
     accepted_degrees_json = db.Column(db.Text)
+    # 硕士/博士自报的本科档次。本科生不填，匹配时按澳门高校本科。
+    bachelor_tier = db.Column(db.String(16))
+    # 研究生愿意接受的对方本科档次 JSON。空 = 不卡本科。
+    bachelor_require_json = db.Column(db.Text)
     wechat_id = db.Column(db.String(128))  # 附加联系方式（必填，如微信）；学校邮箱配对成功后也会互见
     bio = db.Column(db.Text)
 
@@ -302,6 +308,45 @@ class User(db.Model):
         self.allow_cross_degree = out != [own]
         return True
 
+    def known_bachelor_tier(self):
+        """本科生按当前澳门高校。研究生用自报档次，没填则未知。"""
+        level = (self.education_level or "").strip()
+        if level == "bachelor":
+            return "macau"
+        if level in ("master", "doctorate"):
+            tier = (self.bachelor_tier or "").strip()
+            return tier if tier in BACHELOR_TIERS else ""
+        return ""
+
+    def bachelor_require_list(self):
+        """只有硕士和博士的名单会卡对方。空名单表示不卡。"""
+        if (self.education_level or "").strip() not in ("master", "doctorate"):
+            return []
+        if not self.bachelor_require_json:
+            return []
+        try:
+            raw = json.loads(self.bachelor_require_json)
+        except (TypeError, ValueError, json.JSONDecodeError):
+            return []
+        out = []
+        for item in raw or []:
+            name = str(item).strip()
+            if name in BACHELOR_TIERS and name not in out:
+                out.append(name)
+        return [x for x in BACHELOR_TIERS if x in out]
+
+    def set_bachelor_require(self, tiers):
+        """空列表表示不卡。出现未知档次则不写入。"""
+        picked = []
+        for item in tiers or []:
+            name = str(item).strip()
+            if name not in BACHELOR_TIERS:
+                return False
+            if name not in picked:
+                picked.append(name)
+        self.bachelor_require_json = json.dumps(picked) if picked else None
+        return True
+
     def ready_to_match(self):
         """资料是否齐全（不含是否愿意进池）。老用户未填学历仍可进池。"""
         if not (
@@ -370,6 +415,8 @@ class User(db.Model):
             "education_level": self.education_level if (self.education_level or "") in EDUCATION_LEVELS else None,
             "allow_cross_degree": bool(self.allow_cross_degree),
             "accepted_degrees": self.accepted_degree_list(),
+            "bachelor_tier": self.bachelor_tier if (self.bachelor_tier or "") in BACHELOR_TIERS else None,
+            "bachelor_require": self.bachelor_require_list(),
             "wechat_id": self.wechat_id,
             "bio": self.bio,
             "tags": [t.tag for t in self.tags],

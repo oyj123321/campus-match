@@ -223,6 +223,24 @@ M = {
         "en": "Select at least one degree you will match",
         "pt": "Escolhe pelo menos um grau que aceitas",
     },
+    "err.bachelor_tier": {
+        "zh": "请选择自己的本科档次",
+        "tw": "請選擇自己的本科檔次",
+        "en": "Select your undergraduate tier",
+        "pt": "Escolhe o nível da tua licenciatura",
+    },
+    "err.bachelor_require": {
+        "zh": "本科要求里有无法识别的档次",
+        "tw": "本科要求裡有無法識別的檔次",
+        "en": "The undergraduate requirement has an unknown tier",
+        "pt": "O requisito de licenciatura tem um nível desconhecido",
+    },
+    "err.bachelor_self": {
+        "zh": "要卡对方的本科，请先选自己的本科档次",
+        "tw": "要卡對方的本科，請先選自己的本科檔次",
+        "en": "Select your own undergraduate tier before you set a requirement",
+        "pt": "Escolhe o teu nível de licenciatura antes de pores um requisito",
+    },
     "err.search_q": {
         "zh": "请输入昵称或邮箱", "tw": "請輸入暱稱或電郵",
         "en": "Enter a nickname or email", "pt": "Indica uma alcunha ou email",
