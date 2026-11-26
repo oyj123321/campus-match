@@ -10,7 +10,7 @@ All notable changes to CampusMatch.
 - 书院每年大约选一次舍友，硕士也可以，站内没有地方先对上作息再互相确认。
 
 ### 改动
-- **Changed**：默认全站公告改为欢乐冰雪节、举报和停用 7 天（`config.py`、`static/i18n.js` 简中、繁中、英文、葡文）。`.env` 里若已设置 `SITE_ANNOUNCEMENT`，仍以环境变量为准。
+- **Changed**：默认全站公告改为「欢乐冰雪节开启啦。新增：匹配页可以举报骚扰、诈骗或虚假资料。超过 3 位不同同学举报后，账号停用 7 天。」（`config.py`、`static/i18n.js` 简中、繁中、英文、葡文）。`.env` 里若已设置 `SITE_ANNOUNCEMENT`，仍以环境变量为准。
 - **Changed**：停用不再看拉黑次数。同学可以在匹配页举报，写下 2 到 280 字。同一人只能举报一次。每一条都出现在管理后台 `/admin/reports`，可以认定或驳回。超过 3 位不同同学的未驳回举报，才会停用 7 天（`conduct.py`，`users.suspended_until`，新表 `user_reports`）。停用期间可以看页面、退出和删除账号，不能改资料、匹配、找搭子或找舍友。进行中的恋爱配对会失效。驳回不计入次数，也不会自动结束已经开始的 7 天；管理员可以点解除停用。到期自动恢复。
 - **Added**：欢乐冰雪节限定界面合进当前分支，11.25 – 01.01（澳门时间）自动开启，`.env` 里 `FESTIVAL_CHRISTMAS=on/off` 可强制开关（`config.py`）。全站主题在 `static/festival-christmas.css`：冰川蓝天空、暖金与冰青极光、檐下玻璃彩灯、红金糖果纹公告条、鎏金边框、卡片顶檐积雪、冰雪白卡片和红金按钮；底部是暖光雪顶木屋、雪坡，以及企鹅、北极熊、雪人、热可可、礼盒。首页连线画布在冰雪节期间改为冰海和鎏金星轨（`static/landing-stage.js`）。人格分享卡保持原色。素材来自 Microsoft Fluent UI Emoji 3D（MIT）、Game-Icons.net（CC-BY 3.0，Lorc & Delapouite），展示字体 Cinzel Decorative Bold（SIL OFL 1.1），许可见 `static/festival/christmas/LICENSE` 与 `static/fonts/CinzelDecorative-OFL.txt`。无数据库改动，拉代码重启即可。
 - **Added**：`/roommates` 找舍友，和恋爱匹配分开。住处按各校公开的宿舍安排，不互相套用：澳大本科生选书院，硕博住研究生宿舍；科大本科生是校园宿舍，硕博多在校外研究生宿舍；理工本科和研究生从同一批十二处宿舍里选；旅游大学选东亚楼或望厦迎宾馆，学校本身随机分室友；城大按学历和性别列出不同宿舍楼。只和同一住处、同性别的人互相看见。双方都点「想住一起」后确认一位，本学年不能再选，解除后才可以。确认后只互见学校邮箱。注销时一并删除卡片、意愿和确认记录。
