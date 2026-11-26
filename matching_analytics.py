@@ -6,7 +6,7 @@ from itertools import combinations
 
 from age_rules import age_compatible
 from config import MATCH_MIN_SCORE, SCHOOL_DOMAINS, CROSS_SCHOOL_MATCHING_ENABLED
-from match_pool import degree_compatible, school_compatible, vectors_aligned, pair_key
+from match_pool import bachelor_compatible, degree_compatible, school_compatible, vectors_aligned, pair_key
 from matcher import orientation_compatible, _dealbreaker_conflict, pair_score
 from models import Blocklist, Match, MatchingRound
 
@@ -14,6 +14,7 @@ LABELS = {
     'structure': '池内无人满足双向性别意愿',
     'age': '仅放宽年龄即可出现候选',
     'degree': '仅放宽学历即可出现候选',
+    'bachelor': '仅放宽本科要求即可出现候选',
     'school': '仅放宽学校即可出现候选',
     'multiple_options': '多种单项放宽均可出现候选',
     'combined': '多项限制或其他规则共同阻挡',
@@ -53,6 +54,7 @@ def diagnose(users, history=(), blocked=()):
             continue
         failures = [name for name, passes in (
             ('age', age_compatible(a, b)), ('degree', degree_compatible(a, b)),
+            ('bachelor', bachelor_compatible(a, b)),
             ('school', school_compatible(a, b))) if not passes]
         if key in history:
             if not failures:

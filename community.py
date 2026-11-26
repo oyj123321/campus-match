@@ -176,7 +176,10 @@ def _is_student_number(name, local):
         return False
     folded = re.sub(r"[\s._\-]", "", name).lower()
     local_folded = re.sub(r"[\s._\-]", "", local)
-    if local_folded and folded == local_folded:
+    if local_folded and (folded == local_folded or local_folded in folded):
+        if re.search(r"\d{4,}", local_folded) or folded == local_folded:
+            return True
+    if re.search(r"\d{5,}", folded):
         return True
     letters = re.sub(r"[\d\s._\-]", "", name)
     digits = re.sub(r"\D", "", name)

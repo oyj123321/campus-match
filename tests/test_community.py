@@ -561,3 +561,8 @@ class CommunityTests(unittest.TestCase):
         self.assertNotIn(self.user.email, html)
         self.assertNotIn(self.other.email, html)
         self.assertIn(">同学<", html)
+        self.user.name = "李四202312345"
+        db.session.commit()
+        html = self.client.get(f"/community/posts/{post.id}").get_data(as_text=True)
+        self.assertNotIn("202312345", html)
+        self.assertNotIn("李四", html)

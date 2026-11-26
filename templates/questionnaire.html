@@ -101,7 +101,7 @@
     </div>
     <div class="form-group" style="margin-top:12px;" id="bachelor-box" {% if user.education_level not in ('master', 'doctorate') %}hidden{% endif %}>
         <label for="bachelor-tier" data-i18n="qn.bachelor">我的本科</label>
-        <p class="hint" data-i18n="qn.bachelor.hint">硕士和博士填写。对方如果卡本科，就用这一档判断你过不过。本科生不用填。</p>
+        <p class="hint" data-i18n="qn.bachelor.hint">硕士和博士填写，选最高的一档。985 不要选成 211，否则卡 985 的人对不上你。本科生不用填。</p>
         <select id="bachelor-tier">
             <option value="" data-i18n="qn.bachelor.pick">请选择</option>
             <option value="macau" {% if user.bachelor_tier == 'macau' %}selected{% endif %} data-i18n="bach.macau">澳门高校</option>
