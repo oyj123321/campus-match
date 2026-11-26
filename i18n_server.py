@@ -255,6 +255,12 @@ M = {
         "zh": "不能拉黑自己", "tw": "不能封鎖自己",
         "en": "You cannot block yourself", "pt": "Não podes bloquear-te a ti",
     },
+    "err.suspended": {
+        "zh": "你被超过 3 位同学拉黑，账号停用至 {until}（澳门时间）。这段时间不能匹配、找搭子或找舍友。到期后自动恢复。",
+        "tw": "你被超過 3 位同學封鎖，帳號停用至 {until}（澳門時間）。這段時間不能配對、找搭子或找室友。到期後自動恢復。",
+        "en": "More than 3 students have blocked you. Your account is paused until {until} (Macau time). Matching, buddy plans, and roommate matching stay off, then resume automatically.",
+        "pt": "Mais de 3 estudantes bloquearam-te. A conta fica suspensa até {until} (hora de Macau). Matching, companhia e quarto ficam desligados e voltam sozinhos.",
+    },
     "err.admin_secret_missing": {
         "zh": "未配置 ADMIN_SECRET，拒绝执行", "tw": "未設定 ADMIN_SECRET，拒絕執行",
         "en": "ADMIN_SECRET is not configured", "pt": "ADMIN_SECRET não está configurado",

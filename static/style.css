@@ -203,6 +203,23 @@ body {
 .site-announcement[open] .ann-more { display: none; }
 .site-announcement[open] .ann-less { display: inline; }
 
+/* ── 被多位同学拉黑后的停用提示 ── */
+.suspend-banner {
+    background: #1c1b19;
+    color: #f3efe6;
+    position: relative;
+    z-index: 28;
+}
+.suspend-banner-inner {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 12px 16px;
+    font-size: 0.95em;
+    font-weight: 700;
+    line-height: 1.5;
+    text-align: center;
+}
+
 /* ── 未完成问卷催填条 ── */
 .incomplete-banner {
     background: rgba(28, 27, 25, 0.05);

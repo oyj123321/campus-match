@@ -234,4 +234,5 @@ def allocation_compatible(a, b):
     """Filter pair constraints before allocation, not only after choosing partners."""
     return (age_compatible(a, b) and school_compatible(a, b)
             and degree_compatible(a, b) and bachelor_compatible(a, b)
-            and vectors_aligned(a, b) and not is_blocked_pair(a.id, b.id))
+            and vectors_aligned(a, b) and not is_blocked_pair(a.id, b.id)
+            and not a.is_suspended() and not b.is_suspended())

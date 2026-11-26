@@ -15,7 +15,7 @@
     {% block extra_css %}{% endblock %}
     {% if festival_halloween %}<link rel="stylesheet" href="/static/festival-halloween.css?v=4">{% endif %}
     {% if festival_christmas %}<link rel="stylesheet" href="/static/festival-christmas.css?v=4">{% endif %}
-    <script src="/static/i18n.js?v=roommate-20261126d"></script>
+    <script src="/static/i18n.js?v=roommate-20261126e"></script>
     <script src="/static/love_personality_i18n.js?v=1968"></script>
     <script src="/static/vendor/html2canvas.min.js"></script>
     <script src="/static/vendor/qrcode-generator.min.js"></script>
@@ -402,6 +402,12 @@
             </span>
         </summary>
     </details>
+    {% endif %}
+
+    {% if account_suspended %}
+    <div class="suspend-banner" role="alert">
+        <p class="suspend-banner-inner" data-i18n-tf="suspend.banner" data-i18n-vars="{{ {'until': account_suspended_until}|tojson }}">{{ account_suspended_text }}</p>
+    </div>
     {% endif %}
 
     {% if questionnaire_incomplete %}

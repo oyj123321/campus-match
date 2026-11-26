@@ -147,7 +147,10 @@ def confirm_mutual(season, user_id):
         if pair_for(other_id, season) or not db.session.get(Wish, (season, other_id, user_id)):
             continue
         theirs = db.session.get(Profile, (other_id, season))
-        if not same_pool(mine.user, mine, theirs.user if theirs else None, theirs):
+        other = theirs.user if theirs else None
+        if mine.user.is_suspended() or (other and other.is_suspended()):
+            continue
+        if not same_pool(mine.user, mine, other, theirs):
             continue
         low, high = sorted((user_id, other_id))
         pair = Pair(season=season, low_id=low, high_id=high)
@@ -213,7 +216,8 @@ def board():
         query = Profile.query.filter(Profile.season == season, Profile.user_id != user.id)
         rows = [row for row in query.all()
                 if row.user.school == user.school and row.user.gender == user.gender
-                and housing(row) == housing(mine) and not pair_for(row.user_id, season)]
+                and housing(row) == housing(mine) and not pair_for(row.user_id, season)
+                and not row.user.is_suspended()]
         undergrad_only = user.school in (UM, MUST) and mine.degree == "bachelor"
         if undergrad_only or degree == "same":
             rows = [row for row in rows if row.degree == mine.degree]
@@ -320,6 +324,8 @@ def wish(user_id):
         abort(404, "找不到这位同学的舍友卡片。")
     if theirs.user.school != user.school or theirs.user.gender != user.gender or housing(theirs) != housing(mine):
         abort(403, "只能在同一处宿舍、同性别里选舍友。")
+    if theirs.user.is_suspended():
+        abort(403, "这位同学这周暂停使用，暂时不能选择。")
     if confirm_mutual(season, user.id):
         flash("双方都想住一起，本学年的舍友已确认。学校邮箱只在这里互见。")
         return redirect(url_for("roommates.board"))

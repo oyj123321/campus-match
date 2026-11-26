@@ -133,6 +133,8 @@ class User(db.Model):
     # 关闭参与匹配时的可选退出原因（code + 备注）
     exit_reason_code = db.Column(db.String(32))
     exit_reason_note = db.Column(db.String(280))
+    # 被超过 3 位不同同学拉黑后停用到这个时间（UTC）。到期自动恢复，中途解除拉黑也不提前结束。
+    suspended_until = db.Column(db.DateTime, nullable=True)
     exit_reason_at = db.Column(db.DateTime, nullable=True)
     # 问卷推演 MBTI 报告 JSON（娱乐向，不参与匹配）
     mbti_json = db.Column(db.Text)
@@ -367,8 +369,14 @@ class User(db.Model):
         """是否愿意进入匹配池；NULL/缺省视为 True（兼容旧数据）。"""
         return self.open_to_match is not False
 
+    def is_suspended(self, now=None):
+        until = self.suspended_until
+        if not until:
+            return False
+        return until > (now or datetime.utcnow())
+
     def in_match_pool(self):
-        return self.ready_to_match() and self.is_open_to_match()
+        return self.ready_to_match() and self.is_open_to_match() and not self.is_suspended()
 
     def get_cross_schools(self):
         """愿意跨配的学校列表（不含本校）。旧数据仅 allow_cross_school=True 时视为「其它全部学校」。"""

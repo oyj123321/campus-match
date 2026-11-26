@@ -11,7 +11,7 @@ from collections import defaultdict, deque
 from datetime import datetime, timedelta, date
 from functools import wraps
 
-from flask import Flask, request, session, jsonify, render_template, redirect, url_for
+from flask import Flask, flash, request, session, jsonify, render_template, redirect, url_for
 from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
 from sqlalchemy import inspect, text
 
@@ -40,6 +40,7 @@ from models import PoolEvent, WeeklyParticipation
 from operations_analytics import set_pool_participation, record_exit_feedback
 
 from age_rules import apply_age_fields
+from conduct import macau_stamp, suspend_if_widely_blocked, write_is_frozen
 from questionnaire import QUESTIONS, build_feature_vector, build_express_vector, get_compatibility_insight, get_open_letter
 from personality import build_love_personality
 from matcher import real_time_match, batch_match_school
@@ -95,7 +96,31 @@ def inject_globals():
         "festival_autumn": festival_autumn_active(),
         "festival_halloween": festival_halloween_active(),
         "festival_christmas": festival_christmas_active(),
+        "account_suspended": bool(user and user.is_suspended()),
+        "account_suspended_until": macau_stamp(user.suspended_until) if user and user.is_suspended() else "",
+        "account_suspended_text": (
+            t_api("err.suspended", until=macau_stamp(user.suspended_until))
+            if user and user.is_suspended() else ""
+        ),
     }
+
+
+@app.before_request
+def freeze_suspended_account():
+    """停用期间可以看页面、退出和删除账号，不能再改资料、匹配、找搭子或找舍友。"""
+    if request.method in ("GET", "HEAD", "OPTIONS") or request.path.startswith("/static/"):
+        return None
+    user_id = session.get("user_id")
+    if not user_id:
+        return None
+    user = db.session.get(User, user_id)
+    if not user or not write_is_frozen(request.method, request.path, user.is_suspended()):
+        return None
+    until = macau_stamp(user.suspended_until)
+    if request.path.startswith("/api/") or request.is_json:
+        return api_err("err.suspended", 403, until=until)
+    flash(t_api("err.suspended", until=until))
+    return redirect(request.referrer or url_for("index"))
 
 
 # 邮箱 → 近期请求时间戳（进程内限流，MVP 够用）
@@ -1900,8 +1925,11 @@ def api_blocklist():
         return jsonify({"ok": True, "blocked": False})
 
     existing = Blocklist.query.filter_by(user_id=user.id, blocked_user_id=target_id).first()
-    if not existing:
+    created = existing is None
+    if created:
         db.session.add(Blocklist(user_id=user.id, blocked_user_id=target_id))
+        db.session.flush()
+        suspend_if_widely_blocked(target)
 
     # 若有有效配对，降为 inactive（不再展示对方微信）
     active = Match.query.filter(
@@ -2201,6 +2229,11 @@ def ensure_schema():
         db.session.execute(text("ALTER TABLE users ADD COLUMN exit_reason_at DATETIME"))
         db.session.commit()
         print("[CampusMatch] migrated: users.exit_reason_at")
+
+    if "suspended_until" not in user_cols:
+        db.session.execute(text("ALTER TABLE users ADD COLUMN suspended_until DATETIME"))
+        db.session.commit()
+        print("[CampusMatch] migrated: users.suspended_until")
 
     if "icebreaker_followup_sent" not in match_cols:
         db.session.execute(text("ALTER TABLE matches ADD COLUMN icebreaker_followup_sent BOOLEAN DEFAULT 0"))
