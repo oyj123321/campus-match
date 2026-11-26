@@ -427,6 +427,7 @@ function renderMatchCards(matches, headerHtml) {
         html += '<p class="hint" style="margin-top:6px;">' + t('card.opener') + '</p>';
         if (m.id) {
             html += '<button type="button" class="btn btn-secondary" style="margin-top:8px;" onclick="blockUser(' + m.id + ', this)">' + t('btn.noMore') + '</button>';
+            html += '<button type="button" class="btn btn-secondary" style="margin-top:8px;margin-left:8px;" onclick="reportUser(' + m.id + ', this)">' + t('btn.report') + '</button>';
         }
         if (m.matched_at) {
             html += '<div class="hint" style="font-size:0.75em;margin-top:4px;">' + new Date(m.matched_at).toLocaleString() + '</div>';
@@ -744,10 +745,14 @@ async function searchBlock() {
         html += '<li class="list-row">'
             + '<span><strong>' + esc(u.name) + '</strong> · ' + esc(tSchool(u.school))
             + ' · ' + (u.gender === 'male' ? t('g.male') : u.gender === 'female' ? t('g.female') : '') + '</span>'
+            + '<span style="margin-left:auto;display:flex;gap:8px;">'
             + (u.already_blocked
-                ? '<span class="hint" style="margin-left:auto;">' + t('bl.blocked') + '</span>'
-                : '<button type="button" class="btn btn-secondary" style="margin-left:auto;" onclick="blockUser(' + u.id + ')">' + t('btn.block') + '</button>')
-            + '</li>';
+                ? '<span class="hint">' + t('bl.blocked') + '</span>'
+                : '<button type="button" class="btn btn-secondary" onclick="blockUser(' + u.id + ')">' + t('btn.block') + '</button>')
+            + (u.already_reported
+                ? '<span class="hint">' + t('report.done') + '</span>'
+                : '<button type="button" class="btn btn-secondary" onclick="reportUser(' + u.id + ')">' + t('btn.report') + '</button>')
+            + '</span></li>';
     }
     html += '</ul>';
     box.innerHTML = html;
@@ -781,6 +786,17 @@ async function blockUser(id, btn) {
     alert(d.message || t('bl.blocked'));
     await loadBlocklist();
     await loadHistory();
+}
+
+async function reportUser(id, btn) {
+    var reason = window.prompt(t('report.prompt') || '');
+    if (reason == null) return;
+    reason = reason.trim();
+    if (reason.length < 2) { alert(t('report.short')); return; }
+    var d = await api('POST', '/api/reports', { user_id: id, reason: reason });
+    if (!d.ok) { alert(d.error || t('al.fail')); return; }
+    if (btn) btn.disabled = true;
+    alert(d.message || t('report.done'));
 }
 
 async function unblockUser(id) {

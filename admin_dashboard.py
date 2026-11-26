@@ -13,7 +13,7 @@ from collections import Counter, defaultdict, deque
 from datetime import date, datetime, time as dt_time, timedelta
 from functools import wraps
 
-from flask import Blueprint, g, redirect, render_template, request, session, url_for
+from flask import Blueprint, flash, g, redirect, render_template, request, session, url_for
 from sqlalchemy import update
 from sqlalchemy.exc import IntegrityError
 
@@ -28,7 +28,8 @@ from config import (
     RESEND_DAILY_LIMIT,
     SECRET_KEY,
 )
-from models import AccountDeletion, Match, PoolEvent, TrafficDay, TrafficVisitor, User, db
+from conduct import lift_suspension, macau_stamp, review_report
+from models import AccountDeletion, Match, PoolEvent, TrafficDay, TrafficVisitor, User, UserReport, db
 from operations_analytics import operations_data
 
 
@@ -188,6 +189,65 @@ def login():
             session.permanent = True
             return redirect(url_for("admin_dashboard.dashboard"))
     return render_template("admin_login.html", error=error, admin_csrf=_csrf_token()), status
+
+
+@bp.route("/admin/reports")
+@admin_required
+def reports():
+    state = request.args.get("state", "open")
+    if state not in ("open", "all"):
+        state = "open"
+    query = UserReport.query.order_by(UserReport.created_at.desc(), UserReport.id.desc())
+    if state == "open":
+        query = query.filter_by(status="open")
+    rows = query.limit(100).all()
+    target_ids = {row.target_id for row in rows}
+    counts = {}
+    suspended = {}
+    for target_id in target_ids:
+        counts[target_id] = UserReport.query.filter(
+            UserReport.target_id == target_id,
+            UserReport.status != "dismissed",
+        ).count()
+        person = db.session.get(User, target_id)
+        suspended[target_id] = macau_stamp(person.suspended_until) if person and person.is_suspended() else ""
+    open_count = UserReport.query.filter_by(status="open").count()
+    return render_template(
+        "admin_reports.html",
+        rows=rows,
+        state=state,
+        counts=counts,
+        suspended=suspended,
+        open_count=open_count,
+        admin_csrf=_csrf_token(),
+        macau_stamp=macau_stamp,
+    )
+
+
+@bp.route("/admin/reports/<int:report_id>", methods=["POST"])
+@admin_required
+def review_user_report(report_id):
+    if not _valid_csrf(request.form.get("csrf")):
+        flash("页面已过期，请刷新后重试。")
+        return redirect(url_for("admin_dashboard.reports"))
+    report = db.session.get(UserReport, report_id)
+    if not report:
+        flash("这条举报已经不在了。")
+        return redirect(url_for("admin_dashboard.reports"))
+    action = request.form.get("action")
+    if action == "lift":
+        if report.target:
+            lift_suspension(report.target)
+        db.session.commit()
+        flash("已解除停用。举报记录还在。")
+        return redirect(url_for("admin_dashboard.reports", state=request.args.get("state", "open")))
+    if action not in ("upheld", "dismissed"):
+        flash("无效的审核操作。")
+        return redirect(url_for("admin_dashboard.reports"))
+    review_report(report, action, request.form.get("note"))
+    db.session.commit()
+    flash("已认定这条举报。" if action == "upheld" else "已驳回。驳回不计入自动停用；已经开始的 7 天要另外点解除。")
+    return redirect(url_for("admin_dashboard.reports", state=request.args.get("state", "open")))
 
 
 @bp.route("/admin/logout", methods=["POST"])

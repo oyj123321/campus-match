@@ -492,6 +492,28 @@ class Blocklist(db.Model):
     )
 
 
+class UserReport(db.Model):
+    """同学之间的举报。拉黑只表示不想匹配；超过 3 位不同同学的未驳回举报才会停用账号。"""
+    __tablename__ = "user_reports"
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    reporter_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
+    target_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
+    reason = db.Column(db.String(280), nullable=False)
+    # open 待审，upheld 认定，dismissed 驳回。驳回的不计入自动停用。
+    status = db.Column(db.String(16), nullable=False, default="open", index=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    reviewed_at = db.Column(db.DateTime, nullable=True)
+    review_note = db.Column(db.String(280), nullable=True)
+
+    reporter = db.relationship("User", foreign_keys=[reporter_id])
+    target = db.relationship("User", foreign_keys=[target_id])
+
+    __table_args__ = (
+        db.UniqueConstraint("reporter_id", "target_id", name="uq_user_report_pair"),
+    )
+
+
 class ProductJourney(db.Model):
     """First observed milestones for new registrations; no answers/contact data."""
     __tablename__ = "product_journeys"

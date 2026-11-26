@@ -35,12 +35,12 @@ from config import (
     CROSS_DEGREE_LEGACY_BEFORE,
     festival_autumn_active, festival_halloween_active, festival_christmas_active,
 )
-from models import db, User, UserTag, Match, Blocklist, AccountDeletion, EXPRESS_BIO_MIN, EDUCATION_LEVELS, BACHELOR_TIERS, EXIT_REASON_CODES
+from models import db, User, UserTag, Match, Blocklist, UserReport, AccountDeletion, EXPRESS_BIO_MIN, EDUCATION_LEVELS, BACHELOR_TIERS, EXIT_REASON_CODES
 from models import PoolEvent, WeeklyParticipation
 from operations_analytics import set_pool_participation, record_exit_feedback
 
 from age_rules import apply_age_fields
-from conduct import macau_stamp, suspend_if_widely_blocked, write_is_frozen
+from conduct import ReportError, file_report, macau_stamp, write_is_frozen
 from questionnaire import QUESTIONS, build_feature_vector, build_express_vector, get_compatibility_insight, get_open_letter
 from personality import build_love_personality
 from matcher import real_time_match, batch_match_school
@@ -1792,6 +1792,9 @@ def _purge_user_account(user):
     Blocklist.query.filter(
         (Blocklist.user_id == uid) | (Blocklist.blocked_user_id == uid)
     ).delete(synchronize_session=False)
+    UserReport.query.filter(
+        (UserReport.reporter_id == uid) | (UserReport.target_id == uid)
+    ).delete(synchronize_session=False)
     UserTag.query.filter_by(user_id=uid).delete(synchronize_session=False)
     db.session.delete(user)
 
@@ -1870,6 +1873,12 @@ def api_users_search():
 
     rows = query.order_by(User.school, User.name).limit(20).all()
     blocked = {r.blocked_user_id for r in Blocklist.query.filter_by(user_id=user.id).all()}
+    reported = {
+        r.target_id for r in UserReport.query.filter(
+            UserReport.reporter_id == user.id,
+            UserReport.status != "dismissed",
+        ).all()
+    }
     return jsonify({
         "ok": True,
         "results": [
@@ -1879,6 +1888,7 @@ def api_users_search():
                 "school": u.school,
                 "gender": u.gender,
                 "already_blocked": u.id in blocked,
+                "already_reported": u.id in reported,
             }
             for u in rows
         ],
@@ -1925,11 +1935,8 @@ def api_blocklist():
         return jsonify({"ok": True, "blocked": False})
 
     existing = Blocklist.query.filter_by(user_id=user.id, blocked_user_id=target_id).first()
-    created = existing is None
-    if created:
+    if not existing:
         db.session.add(Blocklist(user_id=user.id, blocked_user_id=target_id))
-        db.session.flush()
-        suspend_if_widely_blocked(target)
 
     # 若有有效配对，降为 inactive（不再展示对方微信）
     active = Match.query.filter(
@@ -1947,6 +1954,30 @@ def api_blocklist():
         "message": t_api("ok.blocked", name=target.name or target.email),
         "deactivated_matches": len(active),
     })
+
+
+@app.route("/api/reports", methods=["POST"])
+@login_required
+def api_reports():
+    """举报一位同学。每次都会出现在管理后台；超过 3 位不同同学的未驳回举报会停用 7 天。"""
+    user = get_current_user()
+    if not user.email_verified:
+        return api_err("err.login", 403)
+    data = request.get_json(silent=True) or {}
+    try:
+        target_id = int(data.get("user_id"))
+    except (TypeError, ValueError):
+        return api_err("err.report_pick")
+    target = User.query.get(target_id)
+    if not target:
+        return api_err("err.user_missing", 404)
+    try:
+        file_report(user, target, data.get("reason"))
+    except ReportError as exc:
+        status = 404 if exc.key == "err.user_missing" else 400
+        return api_err(exc.key, status)
+    db.session.commit()
+    return jsonify({"ok": True, "message": t_api("ok.reported")})
 
 
 @app.route("/api/logout", methods=["POST"])

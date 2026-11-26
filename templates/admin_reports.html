@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="robots" content="noindex,nofollow">
+    <title>举报 · CampusMatch</title>
+    <link rel="icon" href="/static/brand/logo.svg?v=1" type="image/svg+xml">
+    <link rel="stylesheet" href="/static/admin.css?v=analytics-20261018">
+    <link rel="stylesheet" href="/static/community.css?v=8">
+</head>
+<body>
+<header class="admin-topbar">
+    <div><strong>CampusMatch</strong><span>举报</span></div>
+    <div class="admin-actions">
+        <a href="/admin">运营总览</a>
+        <a href="/admin/community">社区</a>
+        <a href="/admin/live">实时屏</a>
+    </div>
+</header>
+<main class="admin-shell">
+    <div class="admin-heading">
+        <div>
+            <h1>同学举报</h1>
+            <p>每一条都会留在这里。超过 3 位不同同学的未驳回举报，会自动停用 7 天。驳回不计入次数；已经开始的 7 天要另外点解除。</p>
+        </div>
+    </div>
+    {% for message in get_flashed_messages() %}<p role="status" class="community-notice">{{ message }}</p>{% endfor %}
+    <nav class="community-tabs">
+        <a href="{{ url_for('admin_dashboard.reports', state='open') }}" {% if state == 'open' %}aria-current="page"{% endif %}>待审 · {{ open_count }}</a>
+        <a href="{{ url_for('admin_dashboard.reports', state='all') }}" {% if state == 'all' %}aria-current="page"{% endif %}>全部</a>
+    </nav>
+    {% if not rows %}
+    <p class="hint">这一栏是空的。</p>
+    {% else %}
+    <div class="report-list">
+        {% for row in rows %}
+        <article class="report-card">
+            <header>
+                <strong>{{ macau_stamp(row.created_at) }}</strong>
+                <span>{{ {'open': '待审', 'upheld': '已认定', 'dismissed': '已驳回'}[row.status] }}</span>
+                <span>未驳回 {{ counts.get(row.target_id, 0) }} 次</span>
+                {% if suspended.get(row.target_id) %}<span>停用至 {{ suspended[row.target_id] }}</span>{% endif %}
+            </header>
+            <p><strong>被举报</strong> {{ row.target.name if row.target else '（已注销）' }} · {{ row.target.school if row.target else '' }} · {{ row.target.email if row.target else '' }}</p>
+            <p><strong>举报人</strong> {{ row.reporter.name if row.reporter else '（已注销）' }} · {{ row.reporter.school if row.reporter else '' }} · {{ row.reporter.email if row.reporter else '' }}</p>
+            <p class="report-reason">{{ row.reason }}</p>
+            {% if row.review_note %}<p class="hint">审核备注：{{ row.review_note }}</p>{% endif %}
+            <form method="post" action="{{ url_for('admin_dashboard.review_user_report', report_id=row.id, state=state) }}">
+                <input type="hidden" name="csrf" value="{{ admin_csrf }}">
+                <input name="note" maxlength="280" placeholder="审核备注，可空" value="{{ row.review_note or '' }}">
+                <button type="submit" name="action" value="upheld">认定</button>
+                <button type="submit" name="action" value="dismissed">驳回</button>
+                {% if suspended.get(row.target_id) %}<button type="submit" name="action" value="lift">解除停用</button>{% endif %}
+            </form>
+        </article>
+        {% endfor %}
+    </div>
+    {% endif %}
+</main>
+</body>
+</html>
