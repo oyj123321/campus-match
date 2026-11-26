@@ -75,7 +75,7 @@ def degree_compatible(user_a, user_b):
 
 
 def _tier_meets(tier, require):
-    """211 含 985 和 C9，985 含 C9。澳门、海外、其他三档不互相包含。"""
+    """211 含 985 和 C9，985 含 C9。海外本科含澳门高校。只勾澳门高校时不含其他海外本科。"""
     if not tier:
         return False
     expanded = set(require)
@@ -83,6 +83,8 @@ def _tier_meets(tier, require):
         expanded.update(("p985", "c9"))
     if "p985" in expanded:
         expanded.add("c9")
+    if "overseas" in expanded:
+        expanded.add("macau")
     return tier in expanded
 
 

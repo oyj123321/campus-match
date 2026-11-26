@@ -66,6 +66,19 @@ class DegreePrefTests(unittest.TestCase):
         unset = person("master", ["master"])
         self.assertFalse(bachelor_compatible(picky, unset))
         self.assertFalse(person("master").set_bachelor_require(["nope"]))
+        wants_overseas = person("master", ["master"])
+        wants_overseas.bachelor_tier = "p985"
+        wants_overseas.set_bachelor_require(["overseas"])
+        macau_grad = person("master", ["master"])
+        macau_grad.bachelor_tier = "macau"
+        self.assertTrue(bachelor_compatible(wants_overseas, macau_grad))
+        self.assertTrue(bachelor_compatible(wants_overseas, undergrad))
+        wants_macau = person("master", ["master"])
+        wants_macau.bachelor_tier = "macau"
+        wants_macau.set_bachelor_require(["macau"])
+        abroad = person("master", ["master"])
+        abroad.bachelor_tier = "overseas"
+        self.assertFalse(bachelor_compatible(wants_macau, abroad))
 
     def test_empty_selection_rejected(self):
         u = person("bachelor")

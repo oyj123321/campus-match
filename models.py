@@ -7,7 +7,7 @@ import secrets, json
 db = SQLAlchemy()
 EXPRESS_BIO_MIN = 30
 EDUCATION_LEVELS = ("bachelor", "master", "doctorate")
-# 研究生自报的本科档次，以及「卡本科」时可接受的档次。211 含 985 和 C9，985 含 C9。
+# 研究生自报的本科档次，以及「卡本科」时可接受的档次。211 含 985 和 C9，985 含 C9。海外本科含澳门高校。
 BACHELOR_TIERS = ("macau", "c9", "p985", "p211", "overseas", "other")
 # 关闭参与匹配时的可选原因码（前端选择题）
 EXIT_REASON_CODES = (

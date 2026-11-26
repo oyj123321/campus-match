@@ -173,7 +173,7 @@
                 <option value="other" {% if user.bachelor_tier == 'other' %}selected{% endif %} data-i18n="bach.other">其他</option>
             </select>
             <label style="display:block;margin-top:12px;" data-i18n="qn.bachelorRequire">对对方本科的要求</label>
-            <p class="hint" data-i18n="qn.bachelorRequire.hint">不勾 = 不卡。勾了 211 会同时接受 985 和 C9；勾了 985 会同时接受 C9。对方没填，或档次不在范围内，就不会配上。正在读本科的同学按澳门高校算。</p>
+            <p class="hint" data-i18n="qn.bachelorRequire.hint">不勾 = 不卡。勾了 211 会同时接受 985 和 C9；勾了 985 会同时接受 C9；勾了海外本科也会接受澳门高校。只勾澳门高校时，不含其他海外本科。对方没填，或档次不在范围内，就不会配上。正在读本科的同学按澳门高校算。</p>
             <div id="match-bachelor-require" class="choice-chips"></div>
         </div>
         <button type="button" class="btn btn-secondary" id="degree-save-btn" onclick="saveDegreePrefs()" style="margin-top:10px;" data-i18n="btn.saveDegree">保存学历偏好</button>
