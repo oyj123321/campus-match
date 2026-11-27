@@ -2,7 +2,7 @@
 {% block content %}
 <link rel="stylesheet" href="/static/community.css?v=8">
 <link rel="stylesheet" href="/static/roommates.css?v=2">
-<script src="/static/roommates.js?v=3" defer></script>
+<script src="/static/roommates.js?v=4" defer></script>
 <div class="community-shell">
     <header class="community-hero">
         <div>
@@ -47,6 +47,10 @@
                         <span data-i18n="rm.dorm">宿舍名称</span>
                         <input name="college" minlength="2" maxlength="32" value="{{ mine.college if mine and not options else '' }}" placeholder="你们学校的宿舍名称" {% if options %}disabled{% endif %}>
                     </label>
+                    <label id="housing-area" {% if not mine or mine.college != off_campus %}hidden{% endif %}>
+                        <span data-i18n="rm.area">合租区域</span>
+                        <input name="area" id="housing-area-input" minlength="2" maxlength="24" value="{{ mine.area if mine else '' }}" placeholder="例如氹仔、横琴、澳门半岛" data-i18n-ph="rm.areaPh" {% if not mine or mine.college != off_campus %}disabled{% endif %}>
+                    </label>
                 </div>
                 {% if roommate_user.gender not in ('male','female') %}
                 <label><span data-i18n="rm.gender">我的性别</span>
@@ -78,12 +82,12 @@
             {% elif not mine %}
             <article class="community-card community-empty"><h2 data-i18n="rm.emptyTitle">先写下住处和作息</h2><p data-i18n="rm.emptyBody">保存后，只和同一处宿舍、同性别的同学互相看见。</p></article>
             {% else %}
-            {% if roommate_user.school not in (um_school, must_school) or mine.degree != 'bachelor' %}
+            {% if mine.college == off_campus or roommate_user.school not in (um_school, must_school) or mine.degree != 'bachelor' %}
             <form class="community-filters" method="get">
                 <label><span data-i18n="rm.filterDegree">学历</span>
                     <select name="degree" onchange="this.form.requestSubmit()">
                         <option value="same" {% if degree=='same' %}selected{% endif %} data-i18n="rm.sameDegree">只看同学历</option>
-                        <option value="all" {% if degree=='all' %}selected{% endif %} data-i18n="{{ 'rm.allDegrees' if roommate_user.school in (um_school, must_school) else 'rm.allInPlace' }}">{% if roommate_user.school in (um_school, must_school) %}硕士和博士都看{% else %}这处宿舍里的其他学历也看{% endif %}</option>
+                        <option value="all" {% if degree=='all' %}selected{% endif %} data-i18n="{{ 'rm.allRent' if mine.college == off_campus else ('rm.allDegrees' if roommate_user.school in (um_school, must_school) else 'rm.allInPlace') }}">{% if mine.college == off_campus %}本科和研究生都看{% elif roommate_user.school in (um_school, must_school) %}硕士和博士都看{% else %}这处宿舍里的其他学历也看{% endif %}</option>
                     </select>
                 </label>
                 <button type="submit" data-i18n="rm.apply">应用</button>

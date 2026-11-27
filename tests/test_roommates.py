@@ -145,6 +145,25 @@ class RoommateTests(unittest.TestCase):
         self.assertEqual(self.save(self.man, college="南园").status_code, 400)
         self.assertEqual(self.save(self.man, college="伟兴").status_code, 302)
 
+    def test_off_campus_renters_match_by_area_across_degrees(self):
+        self.assertEqual(self.save(self.user, college="校外合租").status_code, 400)
+        self.assertEqual(self.save(self.user, college="校外合租", area="氹").status_code, 400)
+        self.assertEqual(self.save(self.user, college="校外合租", area="氹仔").status_code, 302)
+        saved = Profile.query.filter_by(user_id=self.user.id).one()
+        self.assertEqual(saved.college, "校外合租")
+        self.assertEqual(saved.area, "氹仔")
+        self.save(self.undergrad, degree="bachelor", college="校外合租", area="氹仔")
+        self.save(self.other, college="校外合租", area="澳门半岛")
+        self.login(self.user)
+        html = self.client.get("/roommates").get_data(as_text=True)
+        self.assertIn("丁", html)
+        self.assertNotIn("乙", html)
+        self.assertIn("本科和研究生都看", html)
+        self.login(self.undergrad)
+        same = self.client.get("/roommates?degree=same").get_data(as_text=True)
+        self.assertNotIn("甲", same)
+        self.assertIn("甲", self.client.get("/roommates").get_data(as_text=True))
+
     def test_degree_place_and_mutual_wish_stay_consistent(self):
         self.assertEqual(self.save(self.user, degree="bachelor", college="满珍纪念书院").status_code, 400)
         self.assertEqual(Profile.query.count(), 0)

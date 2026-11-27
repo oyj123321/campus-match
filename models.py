@@ -619,6 +619,7 @@ class RoommateProfile(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"), primary_key=True)
     season = db.Column(db.String(16), primary_key=True)
     college = db.Column(db.String(32), nullable=False)
+    area = db.Column(db.String(32), nullable=False, default="")
     degree = db.Column(db.String(16), nullable=False)
     sleep = db.Column(db.String(16), nullable=False)
     tidy = db.Column(db.String(16), nullable=False)

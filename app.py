@@ -2085,7 +2085,9 @@ def ensure_schema():
     """create_all + 轻量迁移（looking_for / active）并清理旧 Top-N 多配对。"""
     db.create_all()
     from community import ensure_community_columns
+    from roommates import ensure_roommate_columns
     ensure_community_columns()
+    ensure_roommate_columns()
     try:
         user_cols = {c["name"] for c in inspect(db.engine).get_columns("users")}
         match_cols = {c["name"] for c in inspect(db.engine).get_columns("matches")}

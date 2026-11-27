@@ -3,6 +3,7 @@ import secrets
 from datetime import datetime, timedelta, timezone
 
 from flask import Blueprint, abort, flash, g, redirect, render_template, request, session, url_for
+from sqlalchemy import inspect, text
 from sqlalchemy.exc import IntegrityError
 
 from models import (
@@ -31,6 +32,7 @@ COLLEGES = (
 )
 DEGREES = {"bachelor": "本科", "master": "硕士", "doctorate": "博士"}
 GRAD_DORM = "研究生宿舍"
+OFF_CAMPUS = "校外合租"
 MPU_DORMS = (
     "明德楼", "南岸", "南方", "利新", "成和阁", "南成",
     "帝景苑", "中山新邨", "公园大道", "晋海", "荷兰花园", "氹仔校区",
@@ -50,12 +52,12 @@ CITYU_PLACES = {
     },
 }
 LEADS = {
-    "um": "本科生按自己的书院。硕士和博士住研究生宿舍，不选书院。同性别。确认一位后，本学年不能再选，解除后才可以。",
-    "must": "科大没有书院。本科生住校园宿舍，由学校分配。硕士和博士多住校外的研究生宿舍。同性别。确认一位后，本学年不能再选，解除后才可以。",
-    "mpu": "理工没有书院。本科和研究生从同一批宿舍里选。只和同一宿舍、同性别的人互相看见。确认一位后，本学年不能再选，解除后才可以。",
-    "utm": "旅游大学没有书院。宿舍主要是东亚楼，另有望厦迎宾馆。学校写明房间和室友随机分配，这里只帮你先找到人。确认一位后，本学年不能再选，解除后才可以。",
-    "cityu": "城大没有书院。本科生和研究生住不同的宿舍，有的楼只住男生或女生。确认一位后，本学年不能再选，解除后才可以。",
-    "other": "按你填写的宿舍名称，只和同一宿舍、同性别的人互相看见。确认一位后，本学年不能再选，解除后才可以。",
+    "um": "本科生按自己的书院。硕士和博士住研究生宿舍，不选书院。不住宿舍就选校外合租，写下区域。同性别、同一区域互相看见，本科和研究生可以一起。确认一位后，本学年不能再选，解除后才可以。",
+    "must": "科大没有书院。本科生住校园宿舍，由学校分配。硕士和博士多住校外的研究生宿舍。不住宿舍就选校外合租，写下区域。同性别、同一区域互相看见，本科和研究生可以一起。确认一位后，本学年不能再选，解除后才可以。",
+    "mpu": "理工没有书院。本科和研究生从同一批宿舍里选。不住宿舍就选校外合租，写下区域。只和同一住处、同性别的人互相看见，校外合租时本科和研究生可以一起。确认一位后，本学年不能再选，解除后才可以。",
+    "utm": "旅游大学没有书院。宿舍主要是东亚楼，另有望厦迎宾馆。学校写明房间和室友随机分配，这里只帮你先找到人。不住宿舍就选校外合租，写下区域。确认一位后，本学年不能再选，解除后才可以。",
+    "cityu": "城大没有书院。本科生和研究生住不同的宿舍，有的楼只住男生或女生。不住宿舍就选校外合租，写下区域，本科和研究生可以一起。确认一位后，本学年不能再选，解除后才可以。",
+    "other": "按你填写的宿舍名称，或选校外合租并写下区域。只和同一住处、同性别的人互相看见。确认一位后，本学年不能再选，解除后才可以。",
 }
 SLEEPS = {"early": "23 点前睡", "flex": "不固定", "late": "24 点后睡"}
 TIDIES = {"high": "喜欢整齐", "mid": "普通", "low": "不太收拾"}
@@ -69,8 +71,8 @@ def lead_key(school):
     return {UM: "um", MUST: "must", MPU: "mpu", UTM: "utm", CITYU: "cityu"}.get(school, "other")
 
 
-def place_options(school, degree, gender):
-    """Official place names for this school, degree, and gender. Empty means a free-text dorm."""
+def official_places(school, degree, gender):
+    """Dorms the school actually assigns. Empty means a free-text dorm name."""
     if degree not in DEGREES:
         return ()
     if school == UM:
@@ -84,6 +86,24 @@ def place_options(school, degree, gender):
     if school == CITYU and gender in CITYU_PLACES:
         return CITYU_PLACES[gender].get(degree, ())
     return ()
+
+
+def place_options(school, degree, gender):
+    """Official dorms, plus off-campus sharing for people who do not live in one."""
+    official = official_places(school, degree, gender)
+    if not official:
+        return ()
+    return official + (OFF_CAMPUS,)
+
+
+def ensure_roommate_columns():
+    try:
+        cols = {column["name"] for column in inspect(db.engine).get_columns("roommate_profiles")}
+    except Exception:
+        return
+    if "area" not in cols:
+        db.session.execute(text("ALTER TABLE roommate_profiles ADD COLUMN area VARCHAR(32) DEFAULT ''"))
+        db.session.commit()
 
 
 def housing_catalog(school):
@@ -191,7 +211,7 @@ def shared():
         roommate_user=user, roommate_csrf=session.get("roommate_csrf", ""),
         colleges=COLLEGES, degrees=DEGREES, sleeps=SLEEPS, tidies=TIDIES,
         socials=SOCIALS, smokes=SMOKES, guests=GUESTS, um_school=UM, must_school=MUST,
-        grad_dorm=GRAD_DORM, housing=housing, leads=LEADS,
+        grad_dorm=GRAD_DORM, off_campus=OFF_CAMPUS, housing=housing, leads=LEADS,
     )
 
 
@@ -206,7 +226,7 @@ def board():
     partner = None
     if pair:
         partner = db.session.get(User, pair.high_id if pair.low_id == user.id else pair.low_id)
-    degree = request.args.get("degree", "same")
+    degree = request.args.get("degree", "all" if mine and mine.college == OFF_CAMPUS else "same")
     if degree not in ("same", "all"):
         abort(400, "无效筛选条件。")
     cards = []
@@ -218,7 +238,7 @@ def board():
                 if row.user.school == user.school and row.user.gender == user.gender
                 and housing(row) == housing(mine) and not pair_for(row.user_id, season)
                 and not row.user.is_suspended()]
-        undergrad_only = user.school in (UM, MUST) and mine.degree == "bachelor"
+        undergrad_only = mine.college != OFF_CAMPUS and user.school in (UM, MUST) and mine.degree == "bachelor"
         if undergrad_only or degree == "same":
             rows = [row for row in rows if row.degree == mine.degree]
         wished = {row.to_id for row in Wish.query.filter_by(season=season, from_id=user.id)}
@@ -234,12 +254,15 @@ def housing(profile):
     """Use the one official place when the school does not let students pick among several."""
     if not profile:
         return ""
+    if profile.college == OFF_CAMPUS:
+        area = (profile.area or "").strip()
+        return f"{OFF_CAMPUS}·{area}" if area else ""
     user = profile.user
     gender = user.gender if user and user.gender in ("male", "female") else ""
     school = user.school if user else ""
-    options = place_options(school, profile.degree, gender)
-    if len(options) == 1:
-        return options[0]
+    official = official_places(school, profile.degree, gender)
+    if len(official) == 1:
+        return official[0]
     return profile.college
 
 
@@ -275,16 +298,26 @@ def save():
             abort(400, "宿舍按性别分，请先选择你的性别。")
         user.gender = picked
     options = place_options(user.school, degree, user.gender)
-    if len(options) == 1:
-        college = options[0]
-    elif options:
-        college = request.form.get("college", "").strip()
-        if college not in options:
+    official = tuple(name for name in options if name != OFF_CAMPUS)
+    posted = request.form.get("college", "").strip()
+    if posted == OFF_CAMPUS:
+        college = OFF_CAMPUS
+    elif len(official) == 1:
+        college = official[0]
+    elif official:
+        college = posted
+        if college not in official:
             abort(400, "请选择宿舍。")
     else:
-        college = request.form.get("college", "").strip()
+        college = posted
         if not 2 <= len(college) <= 32:
             abort(400, "请填写宿舍名称。")
+    area = request.form.get("area", "").strip()
+    if college == OFF_CAMPUS:
+        if not 2 <= len(area) <= 24:
+            abort(400, "校外合租请写下大概区域，例如氹仔、横琴或澳门半岛。")
+    else:
+        area = ""
     account_degree = user.education_level if user.education_level in DEGREES else ""
     if account_degree and degree != account_degree:
         abort(400, "学历和账号里的不一致。要改学历，先到个人资料里改。")
@@ -295,9 +328,12 @@ def save():
         abort(400, "补充请控制在 200 字以内。")
     profile = db.session.get(Profile, (user.id, season)) or Profile(user_id=user.id, season=season)
     paired = pair_for(user.id, season)
-    if paired and profile.degree and (profile.degree != degree or profile.college != college):
+    if paired and profile.degree and (
+        profile.degree != degree or profile.college != college or (profile.area or "") != area
+    ):
         abort(400, "本学年已确认舍友。要换住处，先解除。")
     profile.college = college
+    profile.area = area
     profile.degree = degree
     for field in CHOICES:
         setattr(profile, field, clean_choice(field))
@@ -310,7 +346,8 @@ def save():
     if paired:
         flash("作息已更新。本学年的舍友确认还在。")
     else:
-        flash(f"作息已保存。同性别、同在{college}的同学能看到这张卡片。")
+        where = housing(profile) or college
+        flash(f"作息已保存。同性别、同在{where}的同学能看到这张卡片。")
     return redirect(url_for("roommates.board"))
 
 
