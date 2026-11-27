@@ -608,3 +608,194 @@ def live_deck():
 @admin_required
 def live_deck_json():
     return {"ok": True, "data": _live_snapshot()}
+
+
+def _short_stamp(moment):
+    if not moment:
+        return "—"
+    return (moment + timedelta(hours=8)).strftime("%m-%d %H:%M")
+
+
+def _gather_snapshot():
+    """找搭子和找舍友的当前数量与最新动作。不含邮箱、学号和补充说明。"""
+    from community import (
+        PLAN_CATEGORIES, active_clause, plan_when, public_name,
+    )
+    from roommates import DEGREES, OFF_CAMPUS, current_season, housing, sleep_text
+    from sqlalchemy import distinct as sa_distinct
+
+    from models import (
+        CommunityEntry, CommunityMember, CommunityReport,
+        RoommatePair, RoommateProfile, RoommateWish,
+    )
+
+    now = datetime.utcnow()
+    today = _macau_today()
+    today_start = datetime.combine(today, dt_time.min) - timedelta(hours=8)
+    season = current_season()
+    plan_filter = (
+        CommunityEntry.parent_id.is_(None),
+        CommunityEntry.category.in_(tuple(PLAN_CATEGORIES)),
+    )
+    open_plans = CommunityEntry.query.filter(
+        *plan_filter,
+        CommunityEntry.status == "published",
+        CommunityEntry.cancelled.is_(False),
+        active_clause(now),
+    ).order_by(CommunityEntry.created_at.desc()).all()
+    open_ids = [plan.id for plan in open_plans]
+    going = {}
+    if open_ids:
+        for plan_id, count in db.session.query(
+            CommunityMember.plan_id, db.func.count(CommunityMember.user_id)
+        ).filter(
+            CommunityMember.plan_id.in_(open_ids), CommunityMember.state == "going",
+        ).group_by(CommunityMember.plan_id):
+            going[plan_id] = int(count)
+    hosts = {
+        row[0] for row in db.session.query(CommunityEntry.author_id).filter(*plan_filter)
+    }
+    goers = {
+        row[0] for row in db.session.query(CommunityMember.user_id).filter(
+            CommunityMember.state == "going")
+    }
+    reports_open = CommunityReport.query.filter_by(resolved=False).count()
+    profiles = RoommateProfile.query.filter_by(season=season).order_by(
+        RoommateProfile.updated_at.desc()).all()
+    school_counts = Counter()
+    off_campus = 0
+    for profile in profiles:
+        school_counts[profile.user.school if profile.user else "账号已注销"] += 1
+        if profile.college == OFF_CAMPUS:
+            off_campus += 1
+
+    plans = []
+    for plan in open_plans[:16]:
+        filled = going.get(plan.id, 0) + 1
+        room = f"{filled}/{plan.capacity}" if plan.capacity else str(filled)
+        plans.append({
+            "title": plan.title or "未写标题",
+            "meta": " · ".join(part for part in (
+                PLAN_CATEGORIES.get(plan.category, plan.category),
+                plan.school,
+                plan_when(plan),
+                plan.place,
+                f"{room} 人",
+                public_name(plan.author),
+            ) if part),
+        })
+    cards = []
+    for profile in profiles[:16]:
+        user = profile.user
+        cards.append({
+            "title": public_name(user) if user else "账号已注销",
+            "meta": " · ".join(part for part in (
+                user.school if user else "",
+                DEGREES.get(profile.degree, profile.degree),
+                housing(profile) or profile.college,
+                sleep_text(profile.sleep),
+            ) if part),
+        })
+
+    feed = []
+    for plan in CommunityEntry.query.filter(*plan_filter).order_by(
+            CommunityEntry.created_at.desc()).limit(10):
+        feed.append((plan.created_at or datetime.min, {
+            "time": _short_stamp(plan.created_at),
+            "title": "新的局" if not plan.cancelled else "已取消的局",
+            "meta": f"{plan.school} · {plan.title or PLAN_CATEGORIES.get(plan.category, '找搭子')}",
+            "tone": "warn" if plan.cancelled else "ok",
+        }))
+    recent_members = CommunityMember.query.filter(
+        CommunityMember.state == "going").order_by(
+        CommunityMember.created_at.desc()).limit(10).all()
+    member_plans = {}
+    if recent_members:
+        member_plans = {
+            row.id: row for row in CommunityEntry.query.filter(
+                CommunityEntry.id.in_({row.plan_id for row in recent_members})).all()
+        }
+    for member in recent_members:
+        plan = member_plans.get(member.plan_id)
+        feed.append((member.created_at or datetime.min, {
+            "time": _short_stamp(member.created_at),
+            "title": "有人加入",
+            "meta": f"{public_name(member.user)} · {(plan.title if plan else '一个局')}",
+            "tone": "ok",
+        }))
+    for profile in profiles[:8]:
+        user = profile.user
+        feed.append((profile.updated_at or datetime.min, {
+            "time": _short_stamp(profile.updated_at),
+            "title": "舍友卡片",
+            "meta": f"{(user.school if user else '—')} · {housing(profile) or profile.college}",
+            "tone": "ok",
+        }))
+    for wish in RoommateWish.query.filter_by(season=season).order_by(
+            RoommateWish.created_at.desc()).limit(8):
+        feed.append((wish.created_at or datetime.min, {
+            "time": _short_stamp(wish.created_at),
+            "title": "想住一起",
+            "meta": "本学年有一位同学点了想住一起",
+            "tone": "ok",
+        }))
+    for pair in RoommatePair.query.filter_by(season=season).order_by(
+            RoommatePair.created_at.desc()).limit(8):
+        feed.append((pair.created_at or datetime.min, {
+            "time": _short_stamp(pair.created_at),
+            "title": "舍友已确认",
+            "meta": f"{season} 确认了一对",
+            "tone": "ok",
+        }))
+    feed.sort(key=lambda row: row[0], reverse=True)
+
+    alerts = []
+    if reports_open:
+        alerts.append({"level": "warn", "text": f"找搭子还有 {reports_open} 条未处理举报。"})
+    if not open_plans and not profiles:
+        alerts.append({"level": "info", "text": "找搭子和找舍友目前都还没有人。"})
+    if not alerts:
+        alerts.append({"level": "ok", "text": "数字每 8 秒更新。这里不显示邮箱。"})
+    return {
+        "now": (now + timedelta(hours=8)).strftime("%Y-%m-%d %H:%M:%S"),
+        "season": season,
+        "metrics": {
+            "buddy_open": len(open_plans),
+            "buddy_people": len(hosts | goers),
+            "buddy_today": CommunityEntry.query.filter(
+                *plan_filter, CommunityEntry.created_at >= today_start).count(),
+            "buddy_joined_today": CommunityMember.query.filter(
+                CommunityMember.state == "going",
+                CommunityMember.created_at >= today_start,
+            ).count(),
+            "buddy_reports": reports_open,
+            "roommate_people": len(profiles),
+            "roommate_offcampus": off_campus,
+            "roommate_today": sum(
+                1 for profile in profiles if profile.updated_at and profile.updated_at >= today_start),
+            "roommate_wished": db.session.query(
+                db.func.count(sa_distinct(RoommateWish.from_id))
+            ).filter(RoommateWish.season == season).scalar() or 0,
+            "roommate_pairs": RoommatePair.query.filter_by(season=season).count(),
+        },
+        "schools": [
+            {"school": school, "people": count}
+            for school, count in school_counts.most_common()
+        ],
+        "plans": plans,
+        "cards": cards,
+        "feed": [row[1] for row in feed[:18]],
+        "alerts": alerts,
+    }
+
+
+@bp.route("/admin/gather")
+@admin_required
+def gather_deck():
+    return render_template("admin_gather.html", snapshot=_gather_snapshot(), admin_csrf=_csrf_token())
+
+
+@bp.route("/admin/gather.json")
+@admin_required
+def gather_deck_json():
+    return {"ok": True, "data": _gather_snapshot()}
