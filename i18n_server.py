@@ -223,6 +223,24 @@ M = {
         "en": "Select at least one degree you will match",
         "pt": "Escolhe pelo menos um grau que aceitas",
     },
+    "err.bachelor_tier": {
+        "zh": "请选择自己的本科档次",
+        "tw": "請選擇自己的本科檔次",
+        "en": "Select your undergraduate tier",
+        "pt": "Escolhe o nível da tua licenciatura",
+    },
+    "err.bachelor_require": {
+        "zh": "本科要求里有无法识别的档次",
+        "tw": "本科要求裡有無法識別的檔次",
+        "en": "The undergraduate requirement has an unknown tier",
+        "pt": "O requisito de licenciatura tem um nível desconhecido",
+    },
+    "err.bachelor_self": {
+        "zh": "要卡对方的本科，请先选自己的本科档次",
+        "tw": "要卡對方的本科，請先選自己的本科檔次",
+        "en": "Select your own undergraduate tier before you set a requirement",
+        "pt": "Escolhe o teu nível de licenciatura antes de pores um requisito",
+    },
     "err.search_q": {
         "zh": "请输入昵称或邮箱", "tw": "請輸入暱稱或電郵",
         "en": "Enter a nickname or email", "pt": "Indica uma alcunha ou email",
@@ -236,6 +254,42 @@ M = {
     "err.block_self": {
         "zh": "不能拉黑自己", "tw": "不能封鎖自己",
         "en": "You cannot block yourself", "pt": "Não podes bloquear-te a ti",
+    },
+    "err.suspended": {
+        "zh": "你被超过 3 位同学举报，账号停用至 {until}（澳门时间）。这段时间不能匹配、找搭子或找舍友。到期后自动恢复。",
+        "tw": "你被超過 3 位同學舉報，帳號停用至 {until}（澳門時間）。這段時間不能配對、找搭子或找室友。到期後自動恢復。",
+        "en": "More than 3 students have reported you. Your account is paused until {until} (Macau time). Matching, buddy plans, and roommate matching stay off, then resume automatically.",
+        "pt": "Mais de 3 estudantes denunciaram-te. A conta fica suspensa até {until} (hora de Macau). Matching, companhia e quarto ficam desligados e voltam sozinhos.",
+    },
+    "err.report_pick": {
+        "zh": "请指定要举报的同学", "tw": "請指定要舉報的同學",
+        "en": "Choose the student to report", "pt": "Escolhe o estudante a denunciar",
+    },
+    "err.report_self": {
+        "zh": "不能举报自己", "tw": "不能舉報自己",
+        "en": "You cannot report yourself", "pt": "Não podes denunciar-te a ti",
+    },
+    "err.report_reason": {
+        "zh": "请写 2 到 280 字，说明发生了什么",
+        "tw": "請寫 2 到 280 字，說明發生了什麼",
+        "en": "Write 2 to 280 characters about what happened",
+        "pt": "Escreve 2 a 280 caracteres sobre o que aconteceu",
+    },
+    "err.report_dup": {
+        "zh": "你已经举报过这位同学，管理员会看到",
+        "tw": "你已經舉報過這位同學，管理員會看到",
+        "en": "You already reported this student. An admin will see it",
+        "pt": "Já denunciaste este estudante. Um administrador vai ver",
+    },
+    "err.report_review": {
+        "zh": "无效的审核操作", "tw": "無效的審核操作",
+        "en": "Invalid review action", "pt": "Ação de revisão inválida",
+    },
+    "ok.reported": {
+        "zh": "已收到举报。管理员会查看，对方不会知道是你举报的。",
+        "tw": "已收到舉報。管理員會查看，對方不會知道是你舉報的。",
+        "en": "Report received. An admin will review it. The other person is not told it was you.",
+        "pt": "Denúncia recebida. Um administrador revê. A outra pessoa não fica a saber que foste tu.",
     },
     "err.admin_secret_missing": {
         "zh": "未配置 ADMIN_SECRET，拒绝执行", "tw": "未設定 ADMIN_SECRET，拒絕執行",

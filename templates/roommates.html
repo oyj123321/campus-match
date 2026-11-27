@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+{% block content %}
+<link rel="stylesheet" href="/static/community.css?v=8">
+<link rel="stylesheet" href="/static/roommates.css?v=2">
+<script src="/static/roommates.js?v=4" defer></script>
+<div class="community-shell">
+    <header class="community-hero">
+        <div>
+            <span class="community-eyebrow" data-i18n="rm.eyebrow">本学年选一次</span>
+            <h1 data-i18n="nav.roommate">找舍友</h1>
+            <p><span data-i18n="rm.lead.{{ lead_key }}">{{ leads[lead_key] }}</span> {{ season }}</p>
+        </div>
+    </header>
+    {% for message in get_flashed_messages() %}<p class="community-notice" role="status">{{ message }}</p>{% endfor %}
+    <div class="community-grid">
+        <section class="community-card community-compose">
+            <h2 data-i18n="rm.formTitle">我的作息</h2>
+            <form method="post" action="{{ url_for('roommates.save') }}" class="community-form">
+                {% set chosen = roommate_user.education_level if roommate_user.education_level in degrees else (mine.degree if mine else 'bachelor') %}
+                <input type="hidden" name="csrf" value="{{ roommate_csrf }}">
+                {% if roommate_user.education_level in degrees %}
+                <p class="community-muted"><span data-i18n="rm.degree">学历</span> <span data-i18n="rm.deg.{{ chosen }}">{{ degrees[chosen] }}</span>。<span data-i18n="rm.degreeLocked">和账号里的学历一致。要改，先到个人资料里改。</span></p>
+                <input type="hidden" name="degree" value="{{ chosen }}">
+                {% else %}
+                <label><span data-i18n="rm.degree">学历</span>
+                    <select name="degree" required>
+                        {% for key, label in degrees.items() %}<option value="{{ key }}" {% if chosen==key %}selected{% endif %} data-i18n="rm.deg.{{ key }}">{{ label }}</option>{% endfor %}
+                    </select>
+                </label>
+                {% endif %}
+                {% set shown_gender = roommate_user.gender if roommate_user.gender in ('male','female') else 'female' %}
+                {% set options = housing_catalog[shown_gender][chosen] %}
+                <div id="housing-field" data-gender="{{ roommate_user.gender or '' }}">
+                    <script type="application/json" id="housing-catalog">{{ housing_catalog|tojson }}</script>
+                    <label id="housing-select-wrap" {% if options|length <= 1 %}hidden{% endif %}>
+                        <span data-i18n="rm.place">住处</span>
+                        <select name="college" id="housing-select" {% if options|length <= 1 %}disabled{% endif %}>
+                            <option value="" data-i18n="rm.pick">请选择</option>
+                            {% for name in options %}<option value="{{ name }}" {% if mine and mine.college==name %}selected{% endif %}>{{ name }}</option>{% endfor %}
+                        </select>
+                    </label>
+                    <div id="housing-fixed" {% if options|length != 1 %}hidden{% endif %}>
+                        <span data-i18n="rm.place">住处</span>
+                        <p class="community-muted" id="housing-fixed-name">{{ options[0] if options|length == 1 else '' }}</p>
+                    </div>
+                    <label id="housing-free" {% if options %}hidden{% endif %}>
+                        <span data-i18n="rm.dorm">宿舍名称</span>
+                        <input name="college" minlength="2" maxlength="32" value="{{ mine.college if mine and not options else '' }}" placeholder="你们学校的宿舍名称" {% if options %}disabled{% endif %}>
+                    </label>
+                    <label id="housing-area" {% if not mine or mine.college != off_campus %}hidden{% endif %}>
+                        <span data-i18n="rm.area">合租区域</span>
+                        <input name="area" id="housing-area-input" minlength="2" maxlength="24" value="{{ mine.area if mine else '' }}" placeholder="例如氹仔、横琴、澳门半岛" data-i18n-ph="rm.areaPh" {% if not mine or mine.college != off_campus %}disabled{% endif %}>
+                    </label>
+                </div>
+                {% if roommate_user.gender not in ('male','female') %}
+                <label><span data-i18n="rm.gender">我的性别</span>
+                    <select name="my_gender" required><option value="male" data-i18n="g.male">男</option><option value="female" data-i18n="g.female">女</option></select>
+                </label>
+                {% else %}
+                <p class="community-muted"><span data-i18n="rm.genderSet">宿舍按性别分。你的性别是</span> <span data-i18n="g.{{ roommate_user.gender }}">{{ '男' if roommate_user.gender=='male' else '女' }}</span></p>
+                {% endif %}
+                <label><span data-i18n="rm.sleep">睡觉</span><input name="sleep" required minlength="2" maxlength="24" value="{{ sleep_text(mine.sleep) if mine else '' }}" placeholder="例如 23:30" data-i18n-ph="rm.sleepPh"></label>
+                <label><span data-i18n="rm.tidy">整洁</span><select name="tidy">{% for key, label in tidies.items() %}<option value="{{ key }}" {% if mine and mine.tidy==key %}selected{% endif %} data-i18n="rm.tidy.{{ key }}">{{ label }}</option>{% endfor %}</select></label>
+                <label><span data-i18n="rm.social">房间里</span><select name="social">{% for key, label in socials.items() %}<option value="{{ key }}" {% if mine and mine.social==key %}selected{% endif %} data-i18n="rm.social.{{ key }}">{{ label }}</option>{% endfor %}</select></label>
+                <label><span data-i18n="rm.smoke">抽烟</span><select name="smoke">{% for key, label in smokes.items() %}<option value="{{ key }}" {% if mine and mine.smoke==key %}selected{% endif %} data-i18n="rm.smoke.{{ key }}">{{ label }}</option>{% endfor %}</select></label>
+                <label><span data-i18n="rm.guests">带人回来</span><select name="guests">{% for key, label in guests.items() %}<option value="{{ key }}" {% if mine and mine.guests==key %}selected{% endif %} data-i18n="rm.guests.{{ key }}">{{ label }}</option>{% endfor %}</select></label>
+                <label><span data-i18n="rm.note">补充</span><textarea name="note" maxlength="200" rows="3" placeholder="作息、专业或想说的一句。可以留空。" data-i18n-ph="rm.notePh">{{ mine.note if mine else '' }}</textarea></label>
+                {% if pair %}<p class="community-muted" data-i18n="rm.placeLocked">本学年已经确认。作息可以改，住处要先解除才能换。</p>{% endif %}
+                <p class="community-muted" data-i18n="rm.noteRule">这里只交换学校邮箱，不公开微信。宿位仍以学校当年的通知为准。</p>
+                <button class="community-primary" type="submit" data-i18n="rm.save">保存作息</button>
+            </form>
+        </section>
+        <section>
+            {% if pair and partner %}
+            <article class="community-card">
+                <span class="community-eyebrow" data-i18n="rm.confirmed">本学年已确认</span>
+                <h2>{{ partner.name or '校园同学' }}</h2>
+                <p>{{ partner.email }}</p>
+                <p class="community-muted" data-i18n="rm.mailOnly">这是对方的学校邮箱。请用它联系，确认申请里要填的名字。</p>
+                <form method="post" action="{{ url_for('roommates.cancel') }}"><input type="hidden" name="csrf" value="{{ roommate_csrf }}"><button type="submit" data-i18n="rm.cancel">解除，重新选</button></form>
+            </article>
+            {% elif not mine %}
+            <article class="community-card community-empty"><h2 data-i18n="rm.emptyTitle">先写下住处和作息</h2><p data-i18n="rm.emptyBody">保存后，只和同一处宿舍、同性别的同学互相看见。</p></article>
+            {% else %}
+            {% if mine.college == off_campus or roommate_user.school not in (um_school, must_school) or mine.degree != 'bachelor' %}
+            <form class="community-filters" method="get">
+                <label><span data-i18n="rm.filterDegree">学历</span>
+                    <select name="degree" onchange="this.form.requestSubmit()">
+                        <option value="same" {% if degree=='same' %}selected{% endif %} data-i18n="rm.sameDegree">只看同学历</option>
+                        <option value="all" {% if degree=='all' %}selected{% endif %} data-i18n="{{ 'rm.allRent' if mine.college == off_campus else ('rm.allDegrees' if roommate_user.school in (um_school, must_school) else 'rm.allInPlace') }}">{% if mine.college == off_campus %}本科和研究生都看{% elif roommate_user.school in (um_school, must_school) %}硕士和博士都看{% else %}这处宿舍里的其他学历也看{% endif %}</option>
+                    </select>
+                </label>
+                <button type="submit" data-i18n="rm.apply">应用</button>
+            </form>
+            {% endif %}
+            {% for card in cards %}
+            <article class="community-card">
+                <div class="community-meta"><span class="community-tag" data-i18n="rm.deg.{{ card.degree }}">{{ degrees[card.degree] }}</span><span>{{ housing(card) }}</span></div>
+                <h2>{{ card.user.name or '校园同学' }}</h2>
+                <ul class="roommate-habits">
+                    <li>{{ sleep_text(card.sleep) }}</li>
+                    <li data-i18n="rm.tidy.{{ card.tidy }}">{{ tidies[card.tidy] }}</li>
+                    <li data-i18n="rm.social.{{ card.social }}">{{ socials[card.social] }}</li>
+                    <li data-i18n="rm.smoke.{{ card.smoke }}">{{ smokes[card.smoke] }}</li>
+                    <li data-i18n="rm.guests.{{ card.guests }}">{{ guests[card.guests] }}</li>
+                </ul>
+                {% if card.note %}<p>{{ card.note }}</p>{% endif %}
+                {% if card.user_id in incoming %}<p class="community-notice" data-i18n="rm.incoming">对方也想和你住。</p>{% endif %}
+                <form method="post" action="{{ url_for('roommates.wish', user_id=card.user_id) }}">
+                    <input type="hidden" name="csrf" value="{{ roommate_csrf }}">
+                    <button type="submit" class="community-primary">{{ '收回' if card.user_id in wished else '想住一起' }}</button>
+                </form>
+            </article>
+            {% else %}
+            <article class="community-card community-empty"><h2 data-i18n="rm.noneTitle">这个范围里还没有同学</h2><p data-i18n="rm.noneBody">等同一处宿舍、同性别的同学保存作息。</p></article>
+            {% endfor %}
+            {% endif %}
+        </section>
+    </div>
+</div>
+{% endblock %}

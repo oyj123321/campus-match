@@ -11,7 +11,7 @@ from collections import defaultdict, deque
 from datetime import datetime, timedelta, date
 from functools import wraps
 
-from flask import Flask, request, session, jsonify, render_template, redirect, url_for
+from flask import Flask, flash, request, session, jsonify, render_template, redirect, url_for
 from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
 from sqlalchemy import inspect, text
 
@@ -33,13 +33,14 @@ from config import (
     LOGIN_ONCE_PER_DAY, SITE_ANNOUNCEMENT, SITE_ANNOUNCEMENT_I18N,
     SESSION_REMEMBER_DAYS, DEVICE_COOKIE_NAME,
     CROSS_DEGREE_LEGACY_BEFORE,
-    festival_autumn_active, festival_halloween_active,
+    festival_autumn_active, festival_halloween_active, festival_christmas_active,
 )
-from models import db, User, UserTag, Match, Blocklist, AccountDeletion, EXPRESS_BIO_MIN, EDUCATION_LEVELS, EXIT_REASON_CODES
+from models import db, User, UserTag, Match, Blocklist, UserReport, AccountDeletion, EXPRESS_BIO_MIN, EDUCATION_LEVELS, BACHELOR_TIERS, EXIT_REASON_CODES
 from models import PoolEvent, WeeklyParticipation
 from operations_analytics import set_pool_participation, record_exit_feedback
 
 from age_rules import apply_age_fields
+from conduct import ReportError, file_report, macau_stamp, write_is_frozen
 from questionnaire import QUESTIONS, build_feature_vector, build_express_vector, get_compatibility_insight, get_open_letter
 from personality import build_love_personality
 from matcher import real_time_match, batch_match_school
@@ -53,7 +54,7 @@ from batch_job import (
 )
 from match_pool import (
     eligible_candidates, previous_partner_ids, previous_pair_keys,
-    deactivate_filled_degree_violations, allocation_compatible,
+    deactivate_filled_degree_violations, deactivate_bachelor_violations, allocation_compatible,
 )
 
 # ---- App Factory ----
@@ -71,6 +72,8 @@ from admin_dashboard import bp as admin_dashboard_bp
 app.register_blueprint(admin_dashboard_bp)
 from community import bp as community_bp, purge_community
 app.register_blueprint(community_bp)
+from roommates import bp as roommates_bp, purge_roommates
+app.register_blueprint(roommates_bp)
 from product_analytics import enroll_new_user, observe_response
 app.after_request(observe_response)
 _DEVICE_SERIALIZER = URLSafeTimedSerializer(SECRET_KEY, salt="cm-device-v1")
@@ -92,7 +95,32 @@ def inject_globals():
         "questionnaire_incomplete": incomplete,
         "festival_autumn": festival_autumn_active(),
         "festival_halloween": festival_halloween_active(),
+        "festival_christmas": festival_christmas_active(),
+        "account_suspended": bool(user and user.is_suspended()),
+        "account_suspended_until": macau_stamp(user.suspended_until) if user and user.is_suspended() else "",
+        "account_suspended_text": (
+            t_api("err.suspended", until=macau_stamp(user.suspended_until))
+            if user and user.is_suspended() else ""
+        ),
     }
+
+
+@app.before_request
+def freeze_suspended_account():
+    """停用期间可以看页面、退出和删除账号，不能再改资料、匹配、找搭子或找舍友。"""
+    if request.method in ("GET", "HEAD", "OPTIONS") or request.path.startswith("/static/"):
+        return None
+    user_id = session.get("user_id")
+    if not user_id:
+        return None
+    user = db.session.get(User, user_id)
+    if not user or not write_is_frozen(request.method, request.path, user.is_suspended()):
+        return None
+    until = macau_stamp(user.suspended_until)
+    if request.path.startswith("/api/") or request.is_json:
+        return api_err("err.suspended", 403, until=until)
+    flash(t_api("err.suspended", until=until))
+    return redirect(request.referrer or url_for("index"))
 
 
 # 邮箱 → 近期请求时间戳（进程内限流，MVP 够用）
@@ -475,6 +503,32 @@ def apply_education_fields(user, data, required=False):
     return None
 
 
+def apply_bachelor_fields(user, data):
+    """研究生的本科档次和对对方本科的要求。本科生清掉这两项。失败返回 api_err。"""
+    level = (user.education_level or "").strip()
+    if "bachelor_tier" not in data and "bachelor_require" not in data:
+        if level not in ("master", "doctorate"):
+            user.bachelor_tier = None
+            user.bachelor_require_json = None
+        return None
+    if level not in ("master", "doctorate"):
+        user.bachelor_tier = None
+        user.bachelor_require_json = None
+        return None
+    if "bachelor_tier" in data:
+        tier = (data.get("bachelor_tier") or "").strip()
+        if tier and tier not in BACHELOR_TIERS:
+            return api_err("err.bachelor_tier")
+        user.bachelor_tier = tier or None
+    if "bachelor_require" in data:
+        raw = data.get("bachelor_require") or []
+        if not isinstance(raw, list) or not user.set_bachelor_require(raw):
+            return api_err("err.bachelor_require")
+    if user.bachelor_require_list() and not (user.bachelor_tier or "").strip():
+        return api_err("err.bachelor_self")
+    return None
+
+
 def match_quota_status(user):
     """计算冷却 / 本周额度 / 预约揭晓状态。"""
     from pool_rhythm import apply_ahead_opt_in, next_week_key
@@ -532,6 +586,8 @@ def match_quota_status(user):
         "education_level": user.education_level if (user.education_level or "") in EDUCATION_LEVELS else None,
         "allow_cross_degree": bool(user.allow_cross_degree),
         "accepted_degrees": user.accepted_degree_list(),
+        "bachelor_tier": user.bachelor_tier if (user.bachelor_tier or "") in BACHELOR_TIERS else None,
+        "bachelor_require": user.bachelor_require_list(),
         "open_to_match": user.is_open_to_match(),
         "want_match_followup": bool(getattr(user, "want_match_followup", False)),
         "explain": _match_explain_text(mode),
@@ -1139,8 +1195,13 @@ def api_express_profile():
     edu_err = apply_education_fields(user, data, required=True)
     if edu_err:
         return edu_err
+    bach_err = apply_bachelor_fields(user, data)
+    if bach_err:
+        return bach_err
     if "education_level" in data or "accepted_degrees" in data or "allow_cross_degree" in data:
         deactivate_filled_degree_violations(user)
+    if "bachelor_tier" in data or "bachelor_require" in data or "education_level" in data:
+        deactivate_bachelor_violations(user)
     user.name = name[:32]
     user.gender = gender
     user.looking_for = looking_for
@@ -1587,7 +1648,8 @@ def api_get_matches():
     show_all = request.args.get("all") in ("1", "true", "yes")
 
     n_deg = deactivate_filled_degree_violations(user)
-    if n_deg:
+    n_bach = deactivate_bachelor_violations(user)
+    if n_deg or n_bach:
         db.session.commit()
 
     q = Match.query.filter(
@@ -1670,8 +1732,13 @@ def api_me():
     edu_err = apply_education_fields(user, data, required=False)
     if edu_err:
         return edu_err
+    bach_err = apply_bachelor_fields(user, data)
+    if bach_err:
+        return bach_err
     if "education_level" in data or "allow_cross_degree" in data or "accepted_degrees" in data:
         deactivate_filled_degree_violations(user)
+    if "bachelor_tier" in data or "bachelor_require" in data or "education_level" in data:
+        deactivate_bachelor_violations(user)
     contact = (data.get("wechat_id") or "").strip()
     if "wechat_id" in data:
         if not contact and not user.is_express():
@@ -1715,6 +1782,7 @@ def _purge_user_account(user):
     """删除用户及其配对、拉黑、标签。调用方负责 commit / 清 session。"""
     uid = user.id
     purge_community(uid)
+    purge_roommates(uid)
     PoolEvent.query.filter_by(user_id=uid).delete(synchronize_session=False)
     WeeklyParticipation.query.filter_by(user_id=uid).delete(synchronize_session=False)
 
@@ -1723,6 +1791,9 @@ def _purge_user_account(user):
     Match.query.filter((Match.user1_id == uid) | (Match.user2_id == uid)).delete(synchronize_session=False)
     Blocklist.query.filter(
         (Blocklist.user_id == uid) | (Blocklist.blocked_user_id == uid)
+    ).delete(synchronize_session=False)
+    UserReport.query.filter(
+        (UserReport.reporter_id == uid) | (UserReport.target_id == uid)
     ).delete(synchronize_session=False)
     UserTag.query.filter_by(user_id=uid).delete(synchronize_session=False)
     db.session.delete(user)
@@ -1802,6 +1873,12 @@ def api_users_search():
 
     rows = query.order_by(User.school, User.name).limit(20).all()
     blocked = {r.blocked_user_id for r in Blocklist.query.filter_by(user_id=user.id).all()}
+    reported = {
+        r.target_id for r in UserReport.query.filter(
+            UserReport.reporter_id == user.id,
+            UserReport.status != "dismissed",
+        ).all()
+    }
     return jsonify({
         "ok": True,
         "results": [
@@ -1811,6 +1888,7 @@ def api_users_search():
                 "school": u.school,
                 "gender": u.gender,
                 "already_blocked": u.id in blocked,
+                "already_reported": u.id in reported,
             }
             for u in rows
         ],
@@ -1876,6 +1954,30 @@ def api_blocklist():
         "message": t_api("ok.blocked", name=target.name or target.email),
         "deactivated_matches": len(active),
     })
+
+
+@app.route("/api/reports", methods=["POST"])
+@login_required
+def api_reports():
+    """举报一位同学。每次都会出现在管理后台；超过 3 位不同同学的未驳回举报会停用 7 天。"""
+    user = get_current_user()
+    if not user.email_verified:
+        return api_err("err.login", 403)
+    data = request.get_json(silent=True) or {}
+    try:
+        target_id = int(data.get("user_id"))
+    except (TypeError, ValueError):
+        return api_err("err.report_pick")
+    target = User.query.get(target_id)
+    if not target:
+        return api_err("err.user_missing", 404)
+    try:
+        file_report(user, target, data.get("reason"))
+    except ReportError as exc:
+        status = 404 if exc.key == "err.user_missing" else 400
+        return api_err(exc.key, status)
+    db.session.commit()
+    return jsonify({"ok": True, "message": t_api("ok.reported")})
 
 
 @app.route("/api/logout", methods=["POST"])
@@ -1983,7 +2085,9 @@ def ensure_schema():
     """create_all + 轻量迁移（looking_for / active）并清理旧 Top-N 多配对。"""
     db.create_all()
     from community import ensure_community_columns
+    from roommates import ensure_roommate_columns
     ensure_community_columns()
+    ensure_roommate_columns()
     try:
         user_cols = {c["name"] for c in inspect(db.engine).get_columns("users")}
         match_cols = {c["name"] for c in inspect(db.engine).get_columns("matches")}
@@ -2126,6 +2230,18 @@ def ensure_schema():
         db.session.commit()
         print("[CampusMatch] migrated: users.accepted_degrees_json")
 
+    if "bachelor_tier" not in user_cols:
+        db.session.execute(text("ALTER TABLE users ADD COLUMN bachelor_tier VARCHAR(16)"))
+        db.session.commit()
+        print("[CampusMatch] migrated: users.bachelor_tier")
+        user_cols.add("bachelor_tier")
+
+    if "bachelor_require_json" not in user_cols:
+        db.session.execute(text("ALTER TABLE users ADD COLUMN bachelor_require_json TEXT"))
+        db.session.commit()
+        print("[CampusMatch] migrated: users.bachelor_require_json")
+        user_cols.add("bachelor_require_json")
+
     if "want_match_followup" not in user_cols:
         db.session.execute(text("ALTER TABLE users ADD COLUMN want_match_followup BOOLEAN DEFAULT 0"))
         db.session.execute(text("UPDATE users SET want_match_followup = 0 WHERE want_match_followup IS NULL"))
@@ -2146,6 +2262,11 @@ def ensure_schema():
         db.session.execute(text("ALTER TABLE users ADD COLUMN exit_reason_at DATETIME"))
         db.session.commit()
         print("[CampusMatch] migrated: users.exit_reason_at")
+
+    if "suspended_until" not in user_cols:
+        db.session.execute(text("ALTER TABLE users ADD COLUMN suspended_until DATETIME"))
+        db.session.commit()
+        print("[CampusMatch] migrated: users.suspended_until")
 
     if "icebreaker_followup_sent" not in match_cols:
         db.session.execute(text("ALTER TABLE matches ADD COLUMN icebreaker_followup_sent BOOLEAN DEFAULT 0"))

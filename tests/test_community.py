@@ -1,6 +1,6 @@
 import time
 import unittest
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from unittest.mock import patch
 
@@ -87,7 +87,7 @@ class CommunityTests(unittest.TestCase):
         self.assertEqual(self.client.get("/community").status_code, 200)
         response = self.client.get(f"/community/posts/{public.id}")
         self.assertEqual(response.status_code, 200)
-        self.assertIn("登录后想去", response.get_data(as_text=True))
+        self.assertIn("登录后收藏", response.get_data(as_text=True))
         self.assertNotIn('data-community-action="reaction"', response.get_data(as_text=True))
         for post in (hidden, pending):
             self.assertEqual(self.client.get(f"/community/posts/{post.id}").status_code, 404)
@@ -114,7 +114,7 @@ class CommunityTests(unittest.TestCase):
         self.assertIn("Preview 2", html)
         self.assertNotIn("Preview 1", html)
         self.assertNotIn("Preview 0", html)
-        self.assertRegex(html, r"还有</span>\s*2\s*<span[^>]*>场即将开始")
+        self.assertRegex(html, r"还有</span>\s*2\s*<span[^>]*>场正在找人")
         self.assertNotIn("下一页", html)
         self.assertNotIn("School C", html)
         newest = Entry.query.filter_by(title="Preview 4").one()
@@ -164,6 +164,21 @@ class CommunityTests(unittest.TestCase):
                        dict(category="study", title="Title", body="Hello world", capacity="1")):
             self.assertEqual(self.submit("/community/new", **self.plan_form(**fields)).status_code, 400)
         self.assertEqual(Entry.query.count(),0)
+
+    def test_start_time_is_compared_in_macau(self):
+        macau = datetime.now(timezone(timedelta(hours=8))).replace(second=0, microsecond=0, tzinfo=None)
+        past_at = macau - timedelta(hours=2)
+        rejected = self.submit("/community/new", **self.plan_form(starts_at=past_at.strftime("%Y-%m-%dT%H:%M")))
+        self.assertEqual(rejected.status_code, 400)
+        text = rejected.get_data(as_text=True)
+        self.assertIn("澳门时间", text)
+        self.assertIn(past_at.strftime("%m-%d %H:%M"), text)
+        self.assertIn(macau.strftime("%m-%d %H:%M"), text)
+        this_minute = macau.strftime("%Y-%m-%dT%H:%M:%S")
+        self.assertEqual(self.submit("/community/new", **self.plan_form(
+            title="这一分钟", starts_at=this_minute)).status_code, 302)
+        stored = Entry.query.filter_by(title="这一分钟").one().starts_at
+        self.assertEqual(stored.replace(tzinfo=None), macau - timedelta(hours=8))
 
     def test_plan_publishes_immediately_and_shows_host_name(self):
         self.assertEqual(self.submit("/community/new", **self.plan_form(
@@ -425,16 +440,23 @@ class CommunityTests(unittest.TestCase):
         self.assertNotIn("Still open", self.client.get("/community").get_data(as_text=True))
         self.assertIn("已取消", self.client.get(f"/community/posts/{live.id}").get_data(as_text=True))
 
-    def test_cross_school_requires_mutual_opt_in(self):
+    def test_ongoing_plan_stays_on_the_open_list(self):
+        self.assertEqual(self.submit("/community/new", **self.plan_form(
+            title="长期开黑", ongoing="1", starts_at="")).status_code, 302)
+        post = Entry.query.filter_by(title="长期开黑").one()
+        self.assertTrue(post.ongoing)
+        self.assertIsNone(post.starts_at)
+        html = self.client.get("/community").get_data(as_text=True)
+        self.assertIn("长期开黑", html)
+        self.assertIn("一直找人", html)
+
+    def test_other_school_joins_without_the_dating_cross_list(self):
         self.user.school = "澳门大学"
         self.other.school = "澳门科技大学"
+        self.user.set_cross_schools([])
+        self.other.set_cross_schools([])
         post = self.post(school="澳门大学")
         self.login(self.other)
-        self.assertEqual(self.submit(f"/community/posts/{post.id}/join").status_code, 403)
-        self.assertEqual(Member.query.count(), 0)
-        self.user.set_cross_schools(["澳门科技大学"])
-        self.other.set_cross_schools(["澳门大学"])
-        db.session.commit()
         self.assertEqual(self.submit(f"/community/posts/{post.id}/join").status_code, 302)
         self.assertEqual(Member.query.one().state, "going")
 
@@ -498,3 +520,49 @@ class CommunityTests(unittest.TestCase):
         self.assertEqual(self.submit(f"/community/posts/{post.id}/leave").status_code, 302)
         self.assertEqual(Member.query.filter_by(user_id=waiter.id).one().state, "waitlist")
         self.assertEqual(Member.query.filter_by(user_id=self.other.id).count(), 0)
+
+    def test_comments_and_emails_stay_inside_the_squad(self):
+        post = self.post(capacity=2)
+        self.other.school = "School A"
+        waiter = User(email="private-wait2@example.test", school="School A", name="候补生", email_verified=True)
+        outsider = User(email="private-out@example.test", school="School A", name="路人", email_verified=True)
+        db.session.add_all([waiter, outsider])
+        db.session.commit()
+        self.assertEqual(self.submit(f"/community/posts/{post.id}/comments", body="图书馆三楼靠窗").status_code, 302)
+        self.login(outsider)
+        self.assertEqual(self.submit(f"/community/posts/{post.id}/comments", body="我也要去").status_code, 403)
+        html = self.client.get(f"/community/posts/{post.id}").get_data(as_text=True)
+        self.assertNotIn("图书馆三楼靠窗", html)
+        self.assertNotIn(self.user.email, html)
+        self.assertIn("占到名额后才能看留言", html)
+        self.login(self.other)
+        self.assertEqual(self.submit(f"/community/posts/{post.id}/join").status_code, 302)
+        html = self.client.get(f"/community/posts/{post.id}").get_data(as_text=True)
+        self.assertIn("图书馆三楼靠窗", html)
+        self.assertNotIn(self.user.email, html)
+        self.assertNotIn(self.other.email, html)
+        self.assertIn("Hidden Name", html)
+        self.login(waiter)
+        self.assertEqual(self.submit(f"/community/posts/{post.id}/join").status_code, 302)
+        html = self.client.get(f"/community/posts/{post.id}").get_data(as_text=True)
+        self.assertNotIn("图书馆三楼靠窗", html)
+        self.assertNotIn(self.user.email, html)
+        self.assertEqual(Member.query.filter_by(user_id=waiter.id).one().state, "waitlist")
+
+    def test_student_numbers_are_not_shown_on_a_plan(self):
+        self.user.name = "202312345"
+        self.other.school = "School A"
+        db.session.commit()
+        post = self.post()
+        self.login(self.other)
+        self.assertEqual(self.submit(f"/community/posts/{post.id}/join").status_code, 302)
+        html = self.client.get(f"/community/posts/{post.id}").get_data(as_text=True)
+        self.assertNotIn("202312345", html)
+        self.assertNotIn(self.user.email, html)
+        self.assertNotIn(self.other.email, html)
+        self.assertIn(">同学<", html)
+        self.user.name = "李四202312345"
+        db.session.commit()
+        html = self.client.get(f"/community/posts/{post.id}").get_data(as_text=True)
+        self.assertNotIn("202312345", html)
+        self.assertNotIn("李四", html)

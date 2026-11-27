@@ -7,6 +7,8 @@ import secrets, json
 db = SQLAlchemy()
 EXPRESS_BIO_MIN = 30
 EDUCATION_LEVELS = ("bachelor", "master", "doctorate")
+# 研究生自报的本科档次，以及「卡本科」时可接受的档次。211 含 985 和 C9，985 含 C9。海外本科含澳门高校。
+BACHELOR_TIERS = ("macau", "c9", "p985", "p211", "overseas", "other")
 # 关闭参与匹配时的可选原因码（前端选择题）
 EXIT_REASON_CODES = (
     "busy",           # 最近太忙 / 学业压力
@@ -78,6 +80,10 @@ class User(db.Model):
     allow_cross_degree = db.Column(db.Boolean, default=False)
     # 愿意匹配的学历 JSON 列表。空则按 allow_cross_degree / 本人学历回退。
     accepted_degrees_json = db.Column(db.Text)
+    # 硕士/博士自报的本科档次。本科生不填，匹配时按澳门高校本科。
+    bachelor_tier = db.Column(db.String(16))
+    # 研究生愿意接受的对方本科档次 JSON。空 = 不卡本科。
+    bachelor_require_json = db.Column(db.Text)
     wechat_id = db.Column(db.String(128))  # 附加联系方式（必填，如微信）；学校邮箱配对成功后也会互见
     bio = db.Column(db.Text)
 
@@ -127,6 +133,8 @@ class User(db.Model):
     # 关闭参与匹配时的可选退出原因（code + 备注）
     exit_reason_code = db.Column(db.String(32))
     exit_reason_note = db.Column(db.String(280))
+    # 被超过 3 位不同同学拉黑后停用到这个时间（UTC）。到期自动恢复，中途解除拉黑也不提前结束。
+    suspended_until = db.Column(db.DateTime, nullable=True)
     exit_reason_at = db.Column(db.DateTime, nullable=True)
     # 问卷推演 MBTI 报告 JSON（娱乐向，不参与匹配）
     mbti_json = db.Column(db.Text)
@@ -302,6 +310,45 @@ class User(db.Model):
         self.allow_cross_degree = out != [own]
         return True
 
+    def known_bachelor_tier(self):
+        """本科生按当前澳门高校。研究生用自报档次，没填则未知。"""
+        level = (self.education_level or "").strip()
+        if level == "bachelor":
+            return "macau"
+        if level in ("master", "doctorate"):
+            tier = (self.bachelor_tier or "").strip()
+            return tier if tier in BACHELOR_TIERS else ""
+        return ""
+
+    def bachelor_require_list(self):
+        """只有硕士和博士的名单会卡对方。空名单表示不卡。"""
+        if (self.education_level or "").strip() not in ("master", "doctorate"):
+            return []
+        if not self.bachelor_require_json:
+            return []
+        try:
+            raw = json.loads(self.bachelor_require_json)
+        except (TypeError, ValueError, json.JSONDecodeError):
+            return []
+        out = []
+        for item in raw or []:
+            name = str(item).strip()
+            if name in BACHELOR_TIERS and name not in out:
+                out.append(name)
+        return [x for x in BACHELOR_TIERS if x in out]
+
+    def set_bachelor_require(self, tiers):
+        """空列表表示不卡。出现未知档次则不写入。"""
+        picked = []
+        for item in tiers or []:
+            name = str(item).strip()
+            if name not in BACHELOR_TIERS:
+                return False
+            if name not in picked:
+                picked.append(name)
+        self.bachelor_require_json = json.dumps(picked) if picked else None
+        return True
+
     def ready_to_match(self):
         """资料是否齐全（不含是否愿意进池）。老用户未填学历仍可进池。"""
         if not (
@@ -322,8 +369,14 @@ class User(db.Model):
         """是否愿意进入匹配池；NULL/缺省视为 True（兼容旧数据）。"""
         return self.open_to_match is not False
 
+    def is_suspended(self, now=None):
+        until = self.suspended_until
+        if not until:
+            return False
+        return until > (now or datetime.utcnow())
+
     def in_match_pool(self):
-        return self.ready_to_match() and self.is_open_to_match()
+        return self.ready_to_match() and self.is_open_to_match() and not self.is_suspended()
 
     def get_cross_schools(self):
         """愿意跨配的学校列表（不含本校）。旧数据仅 allow_cross_school=True 时视为「其它全部学校」。"""
@@ -370,6 +423,8 @@ class User(db.Model):
             "education_level": self.education_level if (self.education_level or "") in EDUCATION_LEVELS else None,
             "allow_cross_degree": bool(self.allow_cross_degree),
             "accepted_degrees": self.accepted_degree_list(),
+            "bachelor_tier": self.bachelor_tier if (self.bachelor_tier or "") in BACHELOR_TIERS else None,
+            "bachelor_require": self.bachelor_require_list(),
             "wechat_id": self.wechat_id,
             "bio": self.bio,
             "tags": [t.tag for t in self.tags],
@@ -437,6 +492,28 @@ class Blocklist(db.Model):
     )
 
 
+class UserReport(db.Model):
+    """同学之间的举报。拉黑只表示不想匹配；超过 3 位不同同学的未驳回举报才会停用账号。"""
+    __tablename__ = "user_reports"
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    reporter_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
+    target_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
+    reason = db.Column(db.String(280), nullable=False)
+    # open 待审，upheld 认定，dismissed 驳回。驳回的不计入自动停用。
+    status = db.Column(db.String(16), nullable=False, default="open", index=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    reviewed_at = db.Column(db.DateTime, nullable=True)
+    review_note = db.Column(db.String(280), nullable=True)
+
+    reporter = db.relationship("User", foreign_keys=[reporter_id])
+    target = db.relationship("User", foreign_keys=[target_id])
+
+    __table_args__ = (
+        db.UniqueConstraint("reporter_id", "target_id", name="uq_user_report_pair"),
+    )
+
+
 class ProductJourney(db.Model):
     """First observed milestones for new registrations; no answers/contact data."""
     __tablename__ = "product_journeys"
@@ -478,6 +555,7 @@ class CommunityEntry(db.Model):
     audience = db.Column(db.String(16), nullable=False, default="any")  # any / male / female
     starts_at = db.Column(db.DateTime)
     flexible = db.Column(db.Boolean, nullable=False, default=False)
+    ongoing = db.Column(db.Boolean, nullable=False, default=False)
     cancelled = db.Column(db.Boolean, nullable=False, default=False)
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, index=True)
     author = db.relationship("User", foreign_keys=[author_id], lazy="joined")
@@ -533,6 +611,51 @@ class CommunityAudit(db.Model):
     action = db.Column(db.String(24), nullable=False)
     reason = db.Column(db.String(280), nullable=False)
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+
+
+class RoommateProfile(db.Model):
+    """One living card per user per academic year. Not used by romantic matching."""
+    __tablename__ = "roommate_profiles"
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), primary_key=True)
+    season = db.Column(db.String(16), primary_key=True)
+    college = db.Column(db.String(32), nullable=False)
+    area = db.Column(db.String(32), nullable=False, default="")
+    degree = db.Column(db.String(16), nullable=False)
+    sleep = db.Column(db.String(24), nullable=False)
+    tidy = db.Column(db.String(16), nullable=False)
+    social = db.Column(db.String(16), nullable=False)
+    smoke = db.Column(db.String(16), nullable=False)
+    guests = db.Column(db.String(16), nullable=False)
+    note = db.Column(db.String(200), nullable=False, default="")
+    updated_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    user = db.relationship("User", lazy="joined")
+
+
+class RoommateWish(db.Model):
+    __tablename__ = "roommate_wishes"
+    season = db.Column(db.String(16), primary_key=True)
+    from_id = db.Column(db.Integer, db.ForeignKey("users.id"), primary_key=True)
+    to_id = db.Column(db.Integer, db.ForeignKey("users.id"), primary_key=True)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+
+
+class RoommatePair(db.Model):
+    """One confirmed roommate per user per academic year. low_id < high_id."""
+    __tablename__ = "roommate_pairs"
+    __table_args__ = (db.UniqueConstraint("season", "low_id", "high_id"),)
+    id = db.Column(db.Integer, primary_key=True)
+    season = db.Column(db.String(16), nullable=False, index=True)
+    low_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
+    high_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+
+
+class RoommateSeat(db.Model):
+    """One seat per user per academic year, so two confirms cannot both succeed."""
+    __tablename__ = "roommate_seats"
+    season = db.Column(db.String(16), primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), primary_key=True)
+    pair_id = db.Column(db.Integer, db.ForeignKey("roommate_pairs.id"), nullable=False)
 
 
 class TrafficDay(db.Model):

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CampusMatch — 校园恋爱匹配</title>
+    <title data-i18n="meta.title">CampusMatch — 校园匹配</title>
     <link rel="icon" href="/static/brand/logo.svg?v=1" type="image/svg+xml">
     <link rel="icon" href="/static/brand/favicon-32.png?v=1" sizes="32x32" type="image/png">
     <link rel="apple-touch-icon" href="/static/brand/apple-touch-icon.png?v=1">
@@ -14,7 +14,8 @@
     {% if festival_autumn %}<link rel="stylesheet" href="/static/festival-autumn.css?v=2">{% endif %}
     {% block extra_css %}{% endblock %}
     {% if festival_halloween %}<link rel="stylesheet" href="/static/festival-halloween.css?v=4">{% endif %}
-    <script src="/static/i18n.js?v=buddy-20261122f"></script>
+    {% if festival_christmas %}<link rel="stylesheet" href="/static/festival-christmas.css?v=4">{% endif %}
+    <script src="/static/i18n.js?v=roommate-20261127b"></script>
     <script src="/static/love_personality_i18n.js?v=1968"></script>
     <script src="/static/vendor/html2canvas.min.js"></script>
     <script src="/static/vendor/qrcode-generator.min.js"></script>
@@ -59,7 +60,7 @@
         }
     </script>
 </head>
-<body class="{% block body_class %}{% endblock %}{% if festival_autumn %} fest-autumn{% endif %}{% if festival_halloween %} fest-halloween{% endif %}">
+<body class="{% block body_class %}{% endblock %}{% if festival_autumn %} fest-autumn{% endif %}{% if festival_halloween %} fest-halloween{% endif %}{% if festival_christmas %} fest-christmas{% endif %}">
     {% if festival_autumn %}
     <div class="fest-layer" aria-hidden="true">
         <div class="fest-moon"><span class="fest-moon-star"></span></div>
@@ -137,6 +138,122 @@
         <svg class="hw-skyline" viewBox="0 0 1440 140" preserveAspectRatio="none">
             <path fill="currentColor" d="M0 140 L0 108 L48 104 L68 78 L88 104 L140 108 L158 68 L175 44 L192 68 L210 106 L280 112 L310 92 L326 60 L342 92 L390 110 L460 114 L495 82 L515 36 L535 82 L565 74 L580 54 L595 74 L640 112 L740 116 L780 96 L810 114 L900 112 L925 64 L946 28 L967 64 L995 108 L1080 114 L1120 88 L1140 62 L1160 88 L1230 112 L1290 76 L1312 46 L1334 76 L1390 108 L1440 112 L1440 140 Z"/>
         </svg>
+    </div>
+    {% endif %}
+    {% if festival_christmas %}
+    <div class="fest-xm" aria-hidden="true">
+        <!-- 魔法极光与欢快暖金天光 -->
+        <div class="xm-aurora xm-aurora-cyan"></div>
+        <div class="xm-aurora xm-aurora-gold"></div>
+
+        <!-- 檐下冰雪节欢聚彩灯串 -->
+        <div class="xm-garland">
+            <svg viewBox="0 0 1440 64" preserveAspectRatio="none">
+                <path d="M0,8 Q180,42 360,12 T720,14 T1080,12 T1440,10" fill="none" stroke="rgba(255, 248, 220, 0.55)" stroke-width="1.6"/>
+                <g class="xm-bulbs-odd">
+                    <g transform="translate(90,22)"><rect x="-1.4" y="-8" width="2.8" height="6" rx="1" fill="#fde68a"/><circle r="6.2" fill="#fde047"/><circle cy="-1.6" r="2.2" fill="#fffef5" opacity="0.9"/></g>
+                    <g transform="translate(270,24)"><rect x="-1.4" y="-8" width="2.8" height="6" rx="1" fill="#fecdd3"/><circle r="6.2" fill="#fb7185"/><circle cy="-1.6" r="2.2" fill="#fff" opacity="0.85"/></g>
+                    <g transform="translate(450,23)"><rect x="-1.4" y="-8" width="2.8" height="6" rx="1" fill="#bae6fd"/><circle r="6.2" fill="#38bdf8"/><circle cy="-1.6" r="2.2" fill="#fff" opacity="0.9"/></g>
+                    <g transform="translate(630,24)"><rect x="-1.4" y="-8" width="2.8" height="6" rx="1" fill="#bbf7d0"/><circle r="6.2" fill="#4ade80"/><circle cy="-1.6" r="2.2" fill="#fff" opacity="0.9"/></g>
+                    <g transform="translate(810,23)"><rect x="-1.4" y="-8" width="2.8" height="6" rx="1" fill="#fde68a"/><circle r="6.2" fill="#fde047"/><circle cy="-1.6" r="2.2" fill="#fffef5" opacity="0.9"/></g>
+                    <g transform="translate(990,24)"><rect x="-1.4" y="-8" width="2.8" height="6" rx="1" fill="#fecdd3"/><circle r="6.2" fill="#fb7185"/><circle cy="-1.6" r="2.2" fill="#fff" opacity="0.85"/></g>
+                    <g transform="translate(1170,23)"><rect x="-1.4" y="-8" width="2.8" height="6" rx="1" fill="#bae6fd"/><circle r="6.2" fill="#38bdf8"/><circle cy="-1.6" r="2.2" fill="#fff" opacity="0.9"/></g>
+                    <g transform="translate(1350,22)"><rect x="-1.4" y="-8" width="2.8" height="6" rx="1" fill="#bbf7d0"/><circle r="6.2" fill="#4ade80"/><circle cy="-1.6" r="2.2" fill="#fff" opacity="0.9"/></g>
+                </g>
+                <g class="xm-bulbs-even">
+                    <g transform="translate(180,30)"><rect x="-1.2" y="-7" width="2.4" height="5" rx="1" fill="#bbf7d0"/><circle r="5.4" fill="#86efac"/><circle cy="-1.4" r="1.8" fill="#fff" opacity="0.9"/></g>
+                    <g transform="translate(360,12)"><rect x="-1.2" y="-7" width="2.4" height="5" rx="1" fill="#fde68a"/><circle r="5.4" fill="#facc15"/><circle cy="-1.4" r="1.8" fill="#fffef5" opacity="0.95"/></g>
+                    <g transform="translate(540,30)"><rect x="-1.2" y="-7" width="2.4" height="5" rx="1" fill="#fecdd3"/><circle r="5.4" fill="#f43f5e"/><circle cy="-1.4" r="1.8" fill="#fff" opacity="0.85"/></g>
+                    <g transform="translate(720,14)"><rect x="-1.2" y="-7" width="2.4" height="5" rx="1" fill="#bae6fd"/><circle r="5.4" fill="#7dd3fc"/><circle cy="-1.4" r="1.8" fill="#fff" opacity="0.95"/></g>
+                    <g transform="translate(900,30)"><rect x="-1.2" y="-7" width="2.4" height="5" rx="1" fill="#bbf7d0"/><circle r="5.4" fill="#4ade80"/><circle cy="-1.4" r="1.8" fill="#fff" opacity="0.9"/></g>
+                    <g transform="translate(1080,12)"><rect x="-1.2" y="-7" width="2.4" height="5" rx="1" fill="#fde68a"/><circle r="5.4" fill="#fde047"/><circle cy="-1.4" r="1.8" fill="#fffef5" opacity="0.95"/></g>
+                    <g transform="translate(1260,28)"><rect x="-1.2" y="-7" width="2.4" height="5" rx="1" fill="#fecdd3"/><circle r="5.4" fill="#fb7185"/><circle cy="-1.4" r="1.8" fill="#fff" opacity="0.85"/></g>
+                </g>
+            </svg>
+        </div>
+
+        <!-- 两侧海克斯冰晶雕花暗纹 -->
+        <img class="xm-crest-bg xm-crest-bg-l" src="/static/festival/christmas/gi-snowflake.svg" alt="">
+        <img class="xm-crest-bg xm-crest-bg-r" src="/static/festival/christmas/gi-snowflake.svg" alt="">
+
+        <!-- 漫天欢快纷飞雪花与星光 -->
+        <div class="xm-snowfield">
+            <span class="xm-snow xm-s1"></span>
+            <span class="xm-snow xm-s2"></span>
+            <span class="xm-snow xm-s3"></span>
+            <span class="xm-snow xm-s4"></span>
+            <span class="xm-snow xm-s5"></span>
+            <span class="xm-snow xm-s6"></span>
+            <span class="xm-snow xm-s7"></span>
+            <span class="xm-snow xm-s8"></span>
+            <span class="xm-snow xm-s9"></span>
+            <span class="xm-snow xm-s10"></span>
+            <span class="xm-snow xm-s11"></span>
+            <span class="xm-snow xm-s12"></span>
+            <span class="xm-snow xm-s13"></span>
+            <span class="xm-snow xm-s14"></span>
+            <img class="xm-flake3d xm-f1" src="/static/festival/christmas/3d-snowflake.png" alt="">
+            <img class="xm-flake3d xm-f2" src="/static/festival/christmas/3d-star.png" alt="">
+            <img class="xm-flake3d xm-f3" src="/static/festival/christmas/3d-snowflake.png" alt="">
+            <span class="xm-star xm-star-1"></span>
+            <span class="xm-star xm-star-2"></span>
+            <span class="xm-star xm-star-3"></span>
+            <span class="xm-star xm-star-4"></span>
+            <span class="xm-star xm-star-5"></span>
+            <span class="xm-star xm-star-6"></span>
+        </div>
+
+        <!-- 底部弗雷尔卓德冰雪节暖灯木屋与皑皑雪坡 -->
+        <svg class="xm-snowhills" viewBox="0 0 1440 210" preserveAspectRatio="none">
+            <defs>
+                <linearGradient id="xmHillFar" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="#bae6fd" stop-opacity="0.72"/>
+                    <stop offset="100%" stop-color="#e0f2fe" stop-opacity="0.92"/>
+                </linearGradient>
+                <linearGradient id="xmHillNear" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="#ffffff"/>
+                    <stop offset="100%" stop-color="#dbeafe"/>
+                </linearGradient>
+            </defs>
+            <!-- 远层冰川雪岭 -->
+            <path fill="url(#xmHillFar)" d="M0 210 L0 128 C160 86 310 132 490 104 C670 76 830 130 1020 96 C1190 66 1330 106 1440 90 L1440 210 Z"/>
+            <!-- 暖光雪顶小木屋（左） -->
+            <g transform="translate(185, 86)">
+                <rect x="8" y="24" width="38" height="28" rx="2" fill="#5c3a28"/>
+                <polygon points="2,26 27,4 52,26" fill="#991b1b"/>
+                <path d="M2,26 Q27,18 52,26 L48,20 L27,2 L6,20 Z" fill="#ffffff"/>
+                <ellipse class="xm-window" cx="20" cy="36" rx="9" ry="7" fill="#fde047" opacity="0.55"/>
+                <ellipse class="xm-window" cx="34" cy="36" rx="9" ry="7" fill="#fde047" opacity="0.45"/>
+                <rect class="xm-window" x="15" y="31" width="10" height="10" rx="1.5" fill="#fef9c3"/>
+                <rect class="xm-window" x="29" y="31" width="10" height="10" rx="1.5" fill="#fde047"/>
+            </g>
+            <!-- 暖光雪顶酒馆小屋（右） -->
+            <g transform="translate(1196, 80)">
+                <rect x="36" y="6" width="8" height="16" fill="#6b4226"/>
+                <rect x="6" y="24" width="46" height="30" rx="2" fill="#5c3a28"/>
+                <polygon points="0,26 29,2 58,26" fill="#1e3a5f"/>
+                <path d="M0,26 Q29,17 58,26 L53,19 L29,0 L5,19 Z" fill="#ffffff"/>
+                <ellipse class="xm-window" cx="19" cy="36" rx="10" ry="8" fill="#fde047" opacity="0.55"/>
+                <ellipse class="xm-window" cx="39" cy="36" rx="10" ry="8" fill="#fde047" opacity="0.45"/>
+                <rect class="xm-window" x="13" y="31" width="12" height="11" rx="1.5" fill="#fef9c3"/>
+                <rect class="xm-window" x="33" y="31" width="12" height="11" rx="1.5" fill="#fde047"/>
+            </g>
+            <!-- 前景厚积雪坡 -->
+            <path fill="url(#xmHillNear)" d="M0 210 L0 144 C200 122 390 162 620 146 C860 130 1100 164 1440 136 L1440 210 Z"/>
+        </svg>
+
+        <!-- 左右雪坡角落的冰雪节3D萌宠与礼物 -->
+        <div class="xm-corner-cast xm-cast-left">
+            <img class="xm-cast-tree" src="/static/festival/christmas/3d-tree.png" alt="">
+            <img class="xm-cast-snowman" src="/static/festival/christmas/3d-snowman.png" alt="">
+            <img class="xm-cast-gift" src="/static/festival/christmas/3d-gift.png" alt="">
+        </div>
+        <div class="xm-corner-cast xm-cast-right">
+            <img class="xm-cast-bear" src="/static/festival/christmas/3d-polar-bear.png" alt="">
+            <img class="xm-cast-penguin" src="/static/festival/christmas/3d-penguin.png" alt="">
+            <img class="xm-cast-cocoa" src="/static/festival/christmas/3d-cocoa.png" alt="">
+            <img class="xm-cast-sled" src="/static/festival/christmas/3d-sled.png" alt="">
+        </div>
     </div>
     {% endif %}
     <!-- 动态背景：柔光晕 + 网格 -->
@@ -252,6 +369,7 @@
             <a href="/" class="nav-brand">CampusMatch</a>
             <div class="nav-right">
                 <a href="/community" class="nav-link" data-i18n="nav.community">找搭子</a>
+                <a href="/roommates" class="nav-link" data-i18n="nav.roommate">找舍友</a>
                 {% if not session.user_id and request.endpoint == 'index' %}
                 <a href="#step1-card" class="nav-cta" data-i18n="nav.start">开始</a>
                 {% endif %}
@@ -286,6 +404,12 @@
     </details>
     {% endif %}
 
+    {% if account_suspended %}
+    <div class="suspend-banner" role="alert">
+        <p class="suspend-banner-inner" data-i18n-tf="suspend.banner" data-i18n-vars="{{ {'until': account_suspended_until}|tojson }}">{{ account_suspended_text }}</p>
+    </div>
+    {% endif %}
+
     {% if questionnaire_incomplete %}
     <div class="incomplete-banner" role="status">
         <a href="/questionnaire" class="incomplete-banner-inner">
@@ -299,7 +423,7 @@
     </main>
 
     <footer class="footer">
-        <p data-i18n="footer.line1">CampusMatch — 深度问卷 · 算法匹配 · 每周揭晓</p>
+        <p data-i18n="footer.line1">CampusMatch — 恋爱匹配 · 找搭子 · 找舍友</p>
         <p style="margin-top:6px;">
             <a href="/privacy" data-i18n="footer.privacy">隐私政策</a>
             <span aria-hidden="true"> · </span>

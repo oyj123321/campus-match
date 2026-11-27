@@ -1,6 +1,7 @@
 """Verified-campus buddy plans. Writes require CSRF. No private messages."""
+import re
 import secrets
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from flask import Blueprint, abort, flash, g, jsonify, redirect, render_template, request, session, url_for
 from sqlalchemy import inspect, text
@@ -39,6 +40,7 @@ COLUMN_ADDS = (
     ("fee", "VARCHAR(16) DEFAULT ''"),
     ("starts_at", "DATETIME"),
     ("flexible", "BOOLEAN DEFAULT 0"),
+    ("ongoing", "BOOLEAN DEFAULT 0"),
     ("cancelled", "BOOLEAN DEFAULT 0"),
     ("audience", "VARCHAR(16) DEFAULT 'any'"),
 )
@@ -96,13 +98,20 @@ def private_headers(response):
     return response
 
 
+def macau_now():
+    return datetime.now(timezone(timedelta(hours=8))).replace(tzinfo=None)
+
+
 @bp.context_processor
 def shared():
+    now = macau_now().replace(second=0, microsecond=0)
     return dict(categories=CATEGORIES, plan_categories=PLAN_CATEGORIES, fees=FEES, audiences=AUDIENCES,
                 states=STATES, actions=ACTIONS,
                 community_user=getattr(g, "community_user", None),
                 community_csrf=session.get("community_csrf", ""),
-                plan_active=plan_active, plan_when=plan_when)
+                plan_active=plan_active, plan_when=plan_when, public_name=public_name,
+                macau_clock=now.strftime("%m-%d %H:%M"),
+                macau_min=now.strftime("%Y-%m-%dT%H:%M"))
 
 
 @bp.app_template_filter("community_time")
@@ -151,28 +160,60 @@ def rate_limit(action, seconds):
         abort(429, f"操作太频繁，请间隔 {seconds} 秒后再试。")
 
 
+def public_name(user, anonymous=False):
+    """Nicknames only. Student numbers and mailbox local-parts stay off the plan."""
+    if anonymous:
+        return "匿名同学"
+    name = (getattr(user, "name", None) or "").strip()
+    local = ((getattr(user, "email", None) or "").split("@", 1)[0]).strip().lower()
+    if _is_student_number(name, local):
+        return "同学"
+    return name or "校园同学"
+
+
+def _is_student_number(name, local):
+    if not name:
+        return False
+    folded = re.sub(r"[\s._\-]", "", name).lower()
+    local_folded = re.sub(r"[\s._\-]", "", local)
+    if local_folded and (folded == local_folded or local_folded in folded):
+        if re.search(r"\d{4,}", local_folded) or folded == local_folded:
+            return True
+    if re.search(r"\d{5,}", folded):
+        return True
+    letters = re.sub(r"[\d\s._\-]", "", name)
+    digits = re.sub(r"\D", "", name)
+    return len(digits) >= 5 and len(letters) <= 2
+
+
 def plan_active(post, now=None):
     if not post or post.cancelled or post.status != "published" or post.category not in PLAN_CATEGORIES:
         return False
     now = now or datetime.utcnow()
+    if post.ongoing:
+        return True
     if post.flexible:
         return post.created_at >= now - timedelta(days=7)
     return bool(post.starts_at and post.starts_at >= now)
 
 
 def plan_when(post):
+    if post.ongoing:
+        return "一直找人"
     if post.flexible:
         return "7 天内再议"
     if post.starts_at:
-        return local_time(post.starts_at)
+        return "截止 " + local_time(post.starts_at)
     return local_time(post.created_at)
 
 
 def active_clause(now=None):
     now = now or datetime.utcnow()
     return db.or_(
-        db.and_(Entry.flexible.is_(False), Entry.starts_at.isnot(None), Entry.starts_at >= now),
+        Entry.ongoing.is_(True),
         db.and_(Entry.flexible.is_(True), Entry.created_at >= now - timedelta(days=7)),
+        db.and_(Entry.flexible.is_(False), Entry.ongoing.is_(False),
+                Entry.starts_at.isnot(None), Entry.starts_at >= now),
     )
 
 
@@ -186,12 +227,13 @@ def going_count_query():
         Member.plan_id == Entry.id, Member.state == "going").correlate(Entry).scalar_subquery()
 
 
-def schools_can_meet(left, right):
-    if not left or not right:
+def in_squad(user, post):
+    """Host and people holding a spot. Waitlist has not entered the group yet."""
+    if not user or not post:
         return False
-    if left.school == right.school:
+    if user.id == post.author_id:
         return True
-    return right.school in left.get_cross_schools() and left.school in right.get_cross_schools()
+    return Member.query.filter_by(plan_id=post.id, user_id=user.id, state="going").first() is not None
 
 
 def visible_post(post_id):
@@ -243,14 +285,23 @@ def card_data(posts):
 
 
 def parse_start(raw):
-    try:
-        local = datetime.strptime((raw or "").strip(), "%Y-%m-%dT%H:%M")
-    except ValueError:
-        abort(400, "请填写开始时间。")
-    utc = local - timedelta(hours=8)
-    if utc <= datetime.utcnow():
-        abort(400, "开始时间需要晚于现在。")
-    return utc
+    text = (raw or "").strip()
+    local = None
+    for fmt in ("%Y-%m-%dT%H:%M", "%Y-%m-%dT%H:%M:%S"):
+        try:
+            local = datetime.strptime(text, fmt)
+            break
+        except ValueError:
+            continue
+    if local is None:
+        abort(400, "请填写截止时间。")
+    local = local.replace(second=0, microsecond=0)
+    now = macau_now().replace(second=0, microsecond=0)
+    if local < now:
+        abort(400, "截止时间要晚于现在。你填的是 "
+              f"{local.strftime('%m-%d %H:%M')}，现在是 {now.strftime('%m-%d %H:%M')}（澳门时间）。"
+              "已经过了的话，把时间改晚，或勾选「一直找人」。")
+    return local - timedelta(hours=8)
 
 
 def promote(plan):
@@ -294,7 +345,8 @@ def feed():
         query = query.filter(Entry.category.in_(PLAN_CATEGORIES), Entry.cancelled.is_(False), active_clause())
         if when == "week":
             soon = datetime.utcnow() + timedelta(days=7)
-            query = query.filter(db.or_(Entry.flexible.is_(True), Entry.starts_at <= soon))
+            query = query.filter(db.or_(
+                Entry.ongoing.is_(True), Entry.flexible.is_(True), Entry.starts_at <= soon))
         if spots == "open":
             query = query.filter(Entry.capacity > 1 + going_count_query())
         if who == "mine":
@@ -367,32 +419,40 @@ def create():
     raw_cap = request.form.get("capacity", "").strip()
     if not raw_cap.isdigit() or not 2 <= int(raw_cap) <= 12:
         abort(400, "人数上限须在 2–12 人之间（含发起人）。")
-    flexible = request.form.get("flexible") == "1"
-    starts_at = None if flexible else parse_start(request.form.get("starts_at", ""))
+    ongoing = request.form.get("ongoing") == "1"
+    flexible = request.form.get("flexible") == "1" and not ongoing
+    starts_at = None if ongoing or flexible else parse_start(request.form.get("starts_at", ""))
     rate_limit("post", 60)
     post = Entry(author_id=g.community_user.id, school=g.community_user.school, category=category,
                  title=title, body=body, place=place, capacity=int(raw_cap),
                  fee=fee, audience=audience, starts_at=starts_at, flexible=flexible,
+                 ongoing=ongoing,
                  anonymous=False, status="published")
     db.session.add(post)
     db.session.commit()
-    flash("局已发布。同校同学可以直接占名额。")
+    flash("局已发布。同校和其他学校的同学点加入就能占名额。")
     return redirect(url_for("community.detail", post_id=post.id))
 
 
 @bp.get("/community/posts/<int:post_id>")
 def detail(post_id):
     post = visible_post(post_id)
-    query = Entry.query.filter_by(parent_id=post.id).filter(Entry.status != "deleted")
-    if g.community_user:
-        query = query.filter(db.or_(Entry.status == "published", Entry.author_id == g.community_user.id))
+    squad = post.category not in PLAN_CATEGORIES or in_squad(g.community_user, post)
+    if not squad:
+        comments, page, more = [], 1, False
     else:
-        query = query.filter(Entry.status == "published")
-    page = page_number()
-    comments = query.order_by(Entry.created_at, Entry.id).offset((page - 1) * 30).limit(31).all()
+        query = Entry.query.filter_by(parent_id=post.id).filter(Entry.status != "deleted")
+        if g.community_user:
+            query = query.filter(db.or_(Entry.status == "published", Entry.author_id == g.community_user.id))
+        else:
+            query = query.filter(Entry.status == "published")
+        page = page_number()
+        comments = query.order_by(Entry.created_at, Entry.id).offset((page - 1) * 30).limit(31).all()
+        more = len(comments) > 30
+        comments = comments[:30]
     members = Member.query.filter_by(plan_id=post.id).order_by(Member.state, Member.created_at, Member.user_id).all()
-    return render_template("community_detail.html", post=post, comments=comments[:30], page=page,
-                           more=len(comments) > 30, members=members, **card_data([post]))
+    return render_template("community_detail.html", post=post, comments=comments, page=page,
+                           more=more, members=members, squad=squad, **card_data([post]))
 
 
 @bp.post("/community/posts/<int:post_id>/comments")
@@ -400,6 +460,8 @@ def comment(post_id):
     post = visible_post(post_id)
     if post.status != "published":
         abort(403, "这场局尚未公开，暂不能留言。")
+    if post.category in PLAN_CATEGORIES and not in_squad(g.community_user, post):
+        abort(403, "占到名额后才能留言。")
     guard_muted()
     body = text_field("body", 500)
     rate_limit("comment", 15)
@@ -408,7 +470,7 @@ def comment(post_id):
                          category=post.category, body=body, anonymous=False,
                          status="pending" if pending else "published"))
     db.session.commit()
-    flash("留言已提交审核，通过后会显示。" if pending else "留言已发布。确认参加前请不要留下联系方式。")
+    flash("留言已提交审核，通过后会显示。" if pending else "留言已发布。只有占到名额的人看得到。")
     return redirect(url_for("community.detail", post_id=post.id))
 
 
@@ -416,11 +478,9 @@ def comment(post_id):
 def join(post_id):
     post = visible_post(post_id)
     if not plan_active(post):
-        abort(403, "这场局已结束或已取消，不能再加入。")
+        abort(403, "这场局已截止或已取消，不能再加入。")
     if post.author_id == g.community_user.id:
         abort(400, "你是发起人，名额里已经算上你。")
-    if not schools_can_meet(g.community_user, post.author):
-        abort(403, "跨校组局需要双方都在资料里勾选了对方的学校。")
     limit = post.audience if post.audience in ("male", "female") else ""
     picked = request.form.get("my_gender", "").strip()
     gender = g.community_user.gender if g.community_user.gender in ("male", "female") else ""

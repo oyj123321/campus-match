@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="robots" content="noindex,nofollow">
+    <title>找搭子 / 找舍友 · CampusMatch</title>
+    <link rel="icon" href="/static/brand/logo.svg?v=1" type="image/svg+xml">
+    <link rel="stylesheet" href="/static/admin_live.css?v=gather-1">
+</head>
+<body class="live-deck">
+    <header class="live-top">
+        <div class="live-brand">CampusMatch <span>LIVE</span></div>
+        <div class="live-clock" id="live-now">{{ snapshot.now }}</div>
+        <div class="live-actions">
+            <span class="live-pulse" id="live-pulse">同步中</span>
+            <a href="/admin">运营总览</a>
+            <a href="/admin/reports">举报</a>
+            <a href="/admin/live">匹配屏</a>
+        </div>
+    </header>
+    <main class="live-grid">
+        <section class="live-hero">
+            <p class="live-kicker">找搭子</p>
+            <div class="live-count" id="m-open">{{ snapshot.metrics.buddy_open }}</div>
+            <p class="live-next">正在找人的局</p>
+            <div class="live-hero-metrics">
+                <div><span>发起或加入过</span><strong id="m-people">{{ snapshot.metrics.buddy_people }}</strong></div>
+                <div><span>今日新局</span><strong id="m-today">{{ snapshot.metrics.buddy_today }}</strong></div>
+                <div><span>今日加入</span><strong id="m-joined">{{ snapshot.metrics.buddy_joined_today }}</strong></div>
+            </div>
+        </section>
+        <section class="live-hero">
+            <p class="live-kicker">找舍友 · {{ snapshot.season }}</p>
+            <div class="live-count" id="m-room">{{ snapshot.metrics.roommate_people }}</div>
+            <p class="live-next">本学年写过卡片</p>
+            <div class="live-hero-metrics">
+                <div><span>校外合租</span><strong id="m-off">{{ snapshot.metrics.roommate_offcampus }}</strong></div>
+                <div><span>想住一起</span><strong id="m-wish">{{ snapshot.metrics.roommate_wished }}</strong></div>
+                <div><span>已确认</span><strong id="m-pairs">{{ snapshot.metrics.roommate_pairs }}</strong></div>
+            </div>
+        </section>
+        <section class="live-panel live-span-all" id="live-alerts-wrap">
+            <h2>提示</h2>
+            <div id="live-alerts">
+                {% for a in snapshot.alerts %}<p class="live-alert {{ a.level }}">{{ a.text }}</p>{% endfor %}
+            </div>
+        </section>
+        <section class="live-span-all gather-cols">
+            <section class="live-panel">
+                <h2>正在找人</h2>
+                <ol class="gather-list" id="gather-plans"></ol>
+            </section>
+            <section class="live-panel">
+                <h2>本学年舍友卡片</h2>
+                <ol class="gather-list" id="gather-cards"></ol>
+            </section>
+        </section>
+        <section class="live-panel live-span-2">
+            <h2>舍友按学校</h2>
+            <div class="live-schools" id="gather-schools"></div>
+        </section>
+        <section class="live-panel live-feed-panel">
+            <h2>最新动作</h2>
+            <ol class="live-feed" id="gather-feed"></ol>
+        </section>
+    </main>
+    <script>
+    const state = {{ snapshot | tojson }};
+    function esc(s) {
+        return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+    function rows(items) {
+        return (items || []).map(function (row) {
+            return '<li><strong>' + esc(row.title) + '</strong><span>' + esc(row.meta) + '</span></li>';
+        }).join('') || '<li><span>暂时没有</span></li>';
+    }
+    function render(data) {
+        document.getElementById('live-now').textContent = data.now;
+        const m = data.metrics;
+        document.getElementById('m-open').textContent = m.buddy_open;
+        document.getElementById('m-people').textContent = m.buddy_people;
+        document.getElementById('m-today').textContent = m.buddy_today;
+        document.getElementById('m-joined').textContent = m.buddy_joined_today;
+        document.getElementById('m-room').textContent = m.roommate_people;
+        document.getElementById('m-off').textContent = m.roommate_offcampus;
+        document.getElementById('m-wish').textContent = m.roommate_wished;
+        document.getElementById('m-pairs').textContent = m.roommate_pairs;
+        document.getElementById('live-alerts').innerHTML = (data.alerts || []).map(function (a) {
+            return '<p class="live-alert ' + esc(a.level) + '">' + esc(a.text) + '</p>';
+        }).join('');
+        document.getElementById('gather-plans').innerHTML = rows(data.plans);
+        document.getElementById('gather-cards').innerHTML = rows(data.cards);
+        const smax = Math.max.apply(null, (data.schools || []).map(function (s) { return s.people; }).concat([1]));
+        document.getElementById('gather-schools').innerHTML = (data.schools || []).map(function (s) {
+            return '<div class="s-row"><span>' + esc(s.school) + '</span><div class="s-track"><i style="width:' + (100 * s.people / smax) + '%"></i></div><b>' + s.people + '</b></div>';
+        }).join('') || '<p class="live-empty">本学年还没有舍友卡片</p>';
+        document.getElementById('gather-feed').innerHTML = (data.feed || []).map(function (row) {
+            return '<li class="' + esc(row.tone) + '"><time>' + esc(row.time) + '</time><strong>' + esc(row.title) + '</strong><span>' + esc(row.meta) + '</span></li>';
+        }).join('') || '<li class="muted">还没有动作</li>';
+    }
+    render(state);
+    async function tick() {
+        const pulse = document.getElementById('live-pulse');
+        try {
+            const r = await fetch('/admin/gather.json', { credentials: 'same-origin' });
+            if (r.redirected) { location.href = r.url; return; }
+            const d = await r.json();
+            if (d.ok) { render(d.data); pulse.textContent = '已同步'; pulse.className = 'live-pulse on'; }
+        } catch (e) {
+            pulse.textContent = '同步失败'; pulse.className = 'live-pulse off';
+        }
+    }
+    setInterval(tick, 8000);
+    </script>
+</body>
+</html>

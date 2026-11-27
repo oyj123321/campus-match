@@ -99,6 +99,22 @@
         <p class="hint" data-i18n="qn.acceptDegree.hint">可多选。默认只含你自己的学历，也可以取消自己的、只选更高或更低。对方的学历要在你勾选的范围内，你的学历也要在对方勾选的范围内。</p>
         <div id="accept-degrees-list" class="choice-chips"></div>
     </div>
+    <div class="form-group" style="margin-top:12px;" id="bachelor-box" {% if user.education_level not in ('master', 'doctorate') %}hidden{% endif %}>
+        <label for="bachelor-tier" data-i18n="qn.bachelor">我的本科</label>
+        <p class="hint" data-i18n="qn.bachelor.hint">硕士和博士填写，选最高的一档。985 不要选成 211，否则卡 985 的人对不上你。本科生不用填。</p>
+        <select id="bachelor-tier">
+            <option value="" data-i18n="qn.bachelor.pick">请选择</option>
+            <option value="macau" {% if user.bachelor_tier == 'macau' %}selected{% endif %} data-i18n="bach.macau">澳门高校</option>
+            <option value="c9" {% if user.bachelor_tier == 'c9' %}selected{% endif %} data-i18n="bach.c9">C9</option>
+            <option value="p985" {% if user.bachelor_tier == 'p985' %}selected{% endif %} data-i18n="bach.p985">985</option>
+            <option value="p211" {% if user.bachelor_tier == 'p211' %}selected{% endif %} data-i18n="bach.p211">211</option>
+            <option value="overseas" {% if user.bachelor_tier == 'overseas' %}selected{% endif %} data-i18n="bach.overseas">海外本科</option>
+            <option value="other" {% if user.bachelor_tier == 'other' %}selected{% endif %} data-i18n="bach.other">其他</option>
+        </select>
+        <label style="margin-top:12px;" data-i18n="qn.bachelorRequire">对对方本科的要求</label>
+        <p class="hint" data-i18n="qn.bachelorRequire.hint">不勾 = 不卡。勾了 211 会同时接受 985 和 C9；勾了 985 会同时接受 C9；勾了海外本科也会接受澳门高校。只勾澳门高校时，不含其他海外本科。对方没填，或档次不在范围内，就不会配上。正在读本科的同学按澳门高校算。</p>
+        <div id="bachelor-require-list" class="choice-chips"></div>
+    </div>
 </div>
 
 <!-- 进度条 -->
@@ -183,6 +199,8 @@ const MY_SCHOOL = {{ user.school | tojson }};
 const EXISTING_CROSS = {{ user.get_cross_schools() | tojson }};
 const CROSS_ENABLED = {{ cross_school_enabled | default(true) | tojson }};
 const INITIAL_ACCEPT = {{ user.accepted_degree_list() | tojson }};
+const INITIAL_BACHELOR_REQUIRE = {{ user.bachelor_require_list() | tojson }};
+const BACHELOR_TIERS = ['macau', 'c9', 'p985', 'p211', 'overseas', 'other'];
 const DEGREE_LEVELS = ['bachelor', 'master', 'doctorate'];
 
 const dimColors = {
@@ -288,6 +306,65 @@ function syncAcceptWithEducation() {
     if (!(initial.length === 1 && initial[0] === edu)) acceptTouched = initial.length > 0;
     if (eduEl) eduEl.addEventListener('change', syncAcceptWithEducation);
     window.addEventListener('cm:lang', function () { renderAcceptDegrees(selectedAcceptDegrees()); });
+})();
+
+function renderBachelorRequire(selected) {
+    var list = document.getElementById('bachelor-require-list');
+    if (!list) return;
+    var set = {};
+    (selected || []).forEach(function (x) { set[x] = true; });
+    var html = '';
+    BACHELOR_TIERS.forEach(function (tier) {
+        html += '<label class="choice-chip"><input type="checkbox" class="bachelor-require-cb" value="' + tier + '"'
+            + (set[tier] ? ' checked' : '') + '> <span data-i18n="bach.' + tier + '">' + t('bach.' + tier) + '</span></label>';
+    });
+    list.innerHTML = html;
+}
+
+function selectedBachelorRequire() {
+    var out = [];
+    document.querySelectorAll('#bachelor-require-list .bachelor-require-cb:checked').forEach(function (el) {
+        out.push(el.value);
+    });
+    return out;
+}
+
+function syncBachelorBox() {
+    var eduEl = document.getElementById('education_level');
+    var box = document.getElementById('bachelor-box');
+    if (!eduEl || !box) return;
+    var grad = eduEl.value === 'master' || eduEl.value === 'doctorate';
+    box.hidden = !grad;
+}
+
+function bachelorPayload() {
+    var eduEl = document.getElementById('education_level');
+    var grad = eduEl && (eduEl.value === 'master' || eduEl.value === 'doctorate');
+    if (!grad) return { bachelor_tier: '', bachelor_require: [] };
+    return {
+        bachelor_tier: document.getElementById('bachelor-tier').value,
+        bachelor_require: selectedBachelorRequire()
+    };
+}
+
+function bachelorReady() {
+    var eduEl = document.getElementById('education_level');
+    var grad = eduEl && (eduEl.value === 'master' || eduEl.value === 'doctorate');
+    if (!grad) return true;
+    if (selectedBachelorRequire().length && !document.getElementById('bachelor-tier').value) {
+        alert(t('qn.needBachelorSelf'));
+        document.getElementById('bachelor-tier').focus();
+        return false;
+    }
+    return true;
+}
+
+renderBachelorRequire(INITIAL_BACHELOR_REQUIRE);
+(function initBachelor() {
+    var eduEl = document.getElementById('education_level');
+    syncBachelorBox();
+    if (eduEl) eduEl.addEventListener('change', syncBachelorBox);
+    window.addEventListener('cm:lang', function () { renderBachelorRequire(selectedBachelorRequire()); });
 })();
 
 function isAnswered(q) {
@@ -559,6 +636,7 @@ async function submitAll() {
         document.getElementById('accept-degrees-list').scrollIntoView({ behavior: 'smooth', block: 'center' });
         return;
     }
+    if (!bachelorReady()) return;
     if (!wechat && window.CM_PROFILE_UI !== 'express') {
         alert(t('qn.needWechat'));
         document.getElementById('wechat_id').focus();
@@ -584,6 +662,7 @@ async function submitAll() {
         ...ageData,
         education_level: education,
         accepted_degrees: selectedAcceptDegrees(),
+        ...bachelorPayload(),
         open_to_match: document.getElementById('open_to_match').checked,
         cross_schools: selectedCrossSchools()
     });
@@ -774,6 +853,7 @@ async function submitExpress() {
         alert(t('qn.needAcceptDegree'));
         return;
     }
+    if (!bachelorReady()) return;
     if (bio.length < EXPRESS_BIO_MIN) {
         alert(tf('qn.express.needBio', { n: EXPRESS_BIO_MIN }));
         document.getElementById('bio').focus();
@@ -786,6 +866,7 @@ async function submitExpress() {
         ...ageData,
         education_level: education,
         accepted_degrees: selectedAcceptDegrees(),
+        ...bachelorPayload(),
         open_to_match: document.getElementById('open_to_match').checked,
         cross_schools: selectedCrossSchools()
     });

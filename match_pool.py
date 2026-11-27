@@ -74,6 +74,51 @@ def degree_compatible(user_a, user_b):
     return True
 
 
+def _tier_meets(tier, require):
+    """211 含 985 和 C9，985 含 C9。海外本科含澳门高校。只勾澳门高校时不含其他海外本科。"""
+    if not tier:
+        return False
+    expanded = set(require)
+    if "p211" in expanded:
+        expanded.update(("p985", "c9"))
+    if "p985" in expanded:
+        expanded.add("c9")
+    if "overseas" in expanded:
+        expanded.add("macau")
+    return tier in expanded
+
+
+def bachelor_compatible(user_a, user_b):
+    """研究生若勾了本科要求，对方的本科档次必须落在里面。没勾则不拦。"""
+    return _bachelor_side_ok(user_a, user_b) and _bachelor_side_ok(user_b, user_a)
+
+
+def _bachelor_side_ok(seeker, other):
+    require = seeker.bachelor_require_list()
+    if not require:
+        return True
+    return _tier_meets(other.known_bachelor_tier(), require)
+
+
+def deactivate_bachelor_violations(user):
+    """这位用户当前有效配对里，本科要求对不上的改为失效。返回条数。"""
+    if user is None:
+        return 0
+    q = Match.query.filter(
+        Match.active.is_(True),
+        (Match.user1_id == user.id) | (Match.user2_id == user.id),
+    )
+    n = 0
+    for row in q.all():
+        other_id = row.user2_id if row.user1_id == user.id else row.user1_id
+        other = User.query.get(other_id)
+        if other and bachelor_compatible(user, other):
+            continue
+        row.active = False
+        n += 1
+    return n
+
+
 def deactivate_filled_degree_violations(user=None):
     """双方都已填学历、按当前规则不可配的有效配对 → active=False。
     任一方未填学历的不拆（对方可能只是还没打开新表单，不能当成跨学历）。
@@ -171,6 +216,8 @@ def eligible_candidates(user, exclude_ids=None):
             continue
         if not degree_compatible(user, c):
             continue
+        if not bachelor_compatible(user, c):
+            continue
         if not orientation_compatible(user, c):
             continue
         if not vectors_aligned(user, c):
@@ -186,5 +233,6 @@ def eligible_candidates(user, exclude_ids=None):
 def allocation_compatible(a, b):
     """Filter pair constraints before allocation, not only after choosing partners."""
     return (age_compatible(a, b) and school_compatible(a, b)
-            and degree_compatible(a, b) and vectors_aligned(a, b)
-            and not is_blocked_pair(a.id, b.id))
+            and degree_compatible(a, b) and bachelor_compatible(a, b)
+            and vectors_aligned(a, b) and not is_blocked_pair(a.id, b.id)
+            and not a.is_suspended() and not b.is_suspended())

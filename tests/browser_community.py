@@ -68,7 +68,7 @@ try:
             guest.goto(base+"/community")
             expect(guest.get_by_role("link",name="注册 / 登录参与",exact=True)).to_be_visible()
             guest.get_by_role("link",name="图书馆窗边的晚霞",exact=True).click()
-            expect(guest.get_by_role("link",name="登录后想去",exact=True)).to_be_visible()
+            expect(guest.get_by_role("link",name="登录后收藏",exact=True)).to_be_visible()
             assert guest.locator('form[data-community-action]').count() == 0
             assert guest.locator("body").evaluate("el => el.scrollWidth <= innerWidth")
             guest.close()
@@ -83,10 +83,10 @@ try:
             page.screenshot(path=str(output/f"community-{width}.png"),full_page=True)
             page.get_by_role("link",name="图书馆窗边的晚霞",exact=True).click()
             page.evaluate("window.communityNavigationMarker = 42")
-            page.get_by_role("button",name="想去",exact=True).click()
-            expect(page.get_by_role("button",name="取消想去",exact=True)).to_be_visible()
+            page.get_by_role("button",name="收藏",exact=True).click()
+            expect(page.get_by_role("button",name="取消收藏",exact=True)).to_be_visible()
             assert page.evaluate("window.communityNavigationMarker") == 42
-            page.get_by_role("link",name="想去",exact=True).click()
+            page.get_by_role("link",name="收藏",exact=True).click()
             assert page.get_by_role("heading",name="图书馆窗边的晚霞").count()==1
             if width==1440:
                 page.get_by_role("link",name="＋ 发起一场局",exact=True).click()

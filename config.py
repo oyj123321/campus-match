@@ -118,7 +118,8 @@ BATCH_SCHEDULER_ENABLED = os.environ.get("BATCH_SCHEDULER_ENABLED", "false").low
 ADMIN_SECRET = os.environ.get("ADMIN_SECRET", "")
 # 揭晓仪式：需本周 opt-in 才进批量池；冷启动仍可开即时匹配
 REVEAL_REQUIRE_OPT_IN = os.environ.get("REVEAL_REQUIRE_OPT_IN", "true").lower() == "true"
-INSTANT_MATCH_ENABLED = os.environ.get("INSTANT_MATCH_ENABLED", "true").lower() == "true"
+# 提前揭晓已关闭。每周预约后统一揭晓。环境变量不能再打开。
+INSTANT_MATCH_ENABLED = False
 # 跨校总闸：true 时，允许按「双方互相勾选对方学校」做跨校配对
 CROSS_SCHOOL_MATCHING_ENABLED = os.environ.get("CROSS_SCHOOL_MATCHING_ENABLED", "true").lower() == "true"
 # 配对成功后第 N 天发破冰随访（催打招呼；避开整周揭晓日）
@@ -147,8 +148,7 @@ DEVICE_COOKIE_NAME = "cm_device"
 CROSS_DEGREE_LEGACY_BEFORE = datetime(2026, 9, 4, 0, 0, 0)
 # 全站公告：.env 设 SITE_ANNOUNCEMENT= 可强制清空；未设置则用默认运营文案
 _DEFAULT_SITE_ANNOUNCEMENT = (
-    "【更新】校园广场改为找搭子。可以约学习、运动、吃饭或看演出，按学校、时间、性别、费用和空位筛选还没开始的局。"
-    "同校直接占名额，满了候补。确认参加前只在留言里说话，不交换联系方式。"
+    "欢乐冰雪节开启啦。新增：匹配页可以举报骚扰、诈骗或虚假资料。超过 3 位不同同学举报后，账号停用 7 天。"
 )
 if "SITE_ANNOUNCEMENT" in os.environ:
     SITE_ANNOUNCEMENT = os.environ.get("SITE_ANNOUNCEMENT", "").strip()
@@ -185,6 +185,21 @@ def festival_halloween_active():
         return False
     today = datetime.now(timezone(timedelta(hours=8))).date()
     return FESTIVAL_HALLOWEEN_START <= today <= FESTIVAL_HALLOWEEN_END
+
+
+# 圣诞冰雪季（11 月底到元旦）：澳门时区。FESTIVAL_CHRISTMAS=on/off 可强制开关。
+FESTIVAL_CHRISTMAS_START = date(2026, 11, 25)
+FESTIVAL_CHRISTMAS_END = date(2027, 1, 1)
+
+
+def festival_christmas_active():
+    flag = (os.environ.get("FESTIVAL_CHRISTMAS") or "").strip().lower()
+    if flag in ("1", "true", "on", "yes"):
+        return True
+    if flag in ("0", "false", "off", "no"):
+        return False
+    today = datetime.now(timezone(timedelta(hours=8))).date()
+    return FESTIVAL_CHRISTMAS_START <= today <= FESTIVAL_CHRISTMAS_END
 
 
 # weekday 显示名（供前端）

@@ -81,6 +81,55 @@ class AdminDashboardTests(unittest.TestCase):
         self.assertNotIn("student@um.edu.mo", blob)
         self.assertIn("open_pool", payload["data"]["metrics"])
 
+    def test_gather_deck_counts_plans_and_roommates_without_emails(self):
+        from models import CommunityEntry, CommunityMember, RoommateProfile, RoommateWish
+        from roommates import current_season
+
+        season = current_season()
+        with self.app.app_context():
+            host = User.query.filter_by(email="student@um.edu.mo").one()
+            host.name = "12345678"
+            joiner = User(school="澳门科技大学", email="joiner@must.edu.mo", email_verified=True, name="乙", gender="female")
+            db.session.add(joiner)
+            db.session.flush()
+            plan = CommunityEntry(
+                author_id=host.id, category="game", school="澳门大学", title="长期开黑",
+                body="线上", status="published", ongoing=True, place="线上", capacity=4,
+            )
+            db.session.add(plan)
+            db.session.flush()
+            db.session.add(CommunityMember(plan_id=plan.id, user_id=joiner.id, state="going"))
+            db.session.add(RoommateProfile(
+                user_id=joiner.id, season=season, college="校外合租", area="氹仔",
+                degree="master", sleep="23:30", tidy="mid", social="quiet", smoke="no", guests="rare",
+            ))
+            db.session.add(RoommateWish(season=season, from_id=joiner.id, to_id=host.id))
+            db.session.commit()
+        self.assertEqual(self.client.get("/admin/gather").status_code, 302)
+        self._login()
+        page = self.client.get("/admin/gather")
+        self.assertEqual(page.status_code, 200)
+        html = page.get_data(as_text=True)
+        self.assertIn("找搭子", html)
+        self.assertIn("找舍友", html)
+        self.assertNotIn("student@um.edu.mo", html)
+        self.assertNotIn("joiner@must.edu.mo", html)
+        self.assertNotIn("12345678", html)
+        payload = self.client.get("/admin/gather.json").get_json()
+        self.assertTrue(payload["ok"])
+        blob = json.dumps(payload, ensure_ascii=False)
+        self.assertNotIn("student@um.edu.mo", blob)
+        self.assertNotIn("joiner@must.edu.mo", blob)
+        self.assertNotIn("12345678", blob)
+        metrics = payload["data"]["metrics"]
+        self.assertEqual(metrics["buddy_open"], 1)
+        self.assertEqual(metrics["buddy_people"], 2)
+        self.assertEqual(metrics["roommate_people"], 1)
+        self.assertEqual(metrics["roommate_offcampus"], 1)
+        self.assertEqual(metrics["roommate_wished"], 1)
+        self.assertIn("长期开黑", blob)
+        self.assertIn("同学", blob)
+
     def test_admin_requires_login_and_accepts_configured_secret(self):
         self.assertEqual(self.client.get("/admin").status_code, 302)
         response = self._login()

@@ -160,6 +160,22 @@
             </select>
         </div>
         <div id="match-accept-degrees" class="choice-chips"></div>
+        <div id="match-bachelor-box" style="margin-top:14px;" {% if user.education_level not in ('master', 'doctorate') %}hidden{% endif %}>
+            <label for="match-bachelor-tier" data-i18n="qn.bachelor">我的本科</label>
+            <p class="hint" data-i18n="qn.bachelor.hint">硕士和博士填写，选最高的一档。985 不要选成 211，否则卡 985 的人对不上你。本科生不用填。</p>
+            <select id="match-bachelor-tier">
+                <option value="" data-i18n="qn.bachelor.pick">请选择</option>
+                <option value="macau" {% if user.bachelor_tier == 'macau' %}selected{% endif %} data-i18n="bach.macau">澳门高校</option>
+                <option value="c9" {% if user.bachelor_tier == 'c9' %}selected{% endif %} data-i18n="bach.c9">C9</option>
+                <option value="p985" {% if user.bachelor_tier == 'p985' %}selected{% endif %} data-i18n="bach.p985">985</option>
+                <option value="p211" {% if user.bachelor_tier == 'p211' %}selected{% endif %} data-i18n="bach.p211">211</option>
+                <option value="overseas" {% if user.bachelor_tier == 'overseas' %}selected{% endif %} data-i18n="bach.overseas">海外本科</option>
+                <option value="other" {% if user.bachelor_tier == 'other' %}selected{% endif %} data-i18n="bach.other">其他</option>
+            </select>
+            <label style="display:block;margin-top:12px;" data-i18n="qn.bachelorRequire">对对方本科的要求</label>
+            <p class="hint" data-i18n="qn.bachelorRequire.hint">不勾 = 不卡。勾了 211 会同时接受 985 和 C9；勾了 985 会同时接受 C9；勾了海外本科也会接受澳门高校。只勾澳门高校时，不含其他海外本科。对方没填，或档次不在范围内，就不会配上。正在读本科的同学按澳门高校算。</p>
+            <div id="match-bachelor-require" class="choice-chips"></div>
+        </div>
         <button type="button" class="btn btn-secondary" id="degree-save-btn" onclick="saveDegreePrefs()" style="margin-top:10px;" data-i18n="btn.saveDegree">保存学历偏好</button>
         <p id="degree-save-status" class="hint" style="margin-top:6px;"></p>
     </div>
@@ -170,7 +186,7 @@
         · <span data-i18n="q.cool">冷却</span> {{ quota.cooldown_hours }} <span data-i18n="q.hours">小时</span>
     </div>
 
-    <div style="margin-top:12px;" id="instant-wrap">
+    <div style="margin-top:12px;display:none;" id="instant-wrap">
         <button class="btn btn-match" id="match-btn" onclick="doMatch()" style="font-size:1.05em;padding:12px 40px;" data-i18n="btn.instant">提前揭晓</button>
     </div>
 </div>
@@ -210,6 +226,8 @@ var MATCH_DEGREE_LEVELS = ['bachelor', 'master', 'doctorate'];
 var matchAcceptTouched = false;
 var matchLastEdu = '';
 var MATCH_INITIAL_ACCEPT = {{ user.accepted_degree_list() | tojson }};
+var MATCH_BACHELOR_REQUIRE = {{ user.bachelor_require_list() | tojson }};
+var MATCH_BACHELOR_TIERS = ['macau', 'c9', 'p985', 'p211', 'overseas', 'other'];
 
 function esc(s) {
     return String(s == null ? '' : s)
@@ -409,6 +427,7 @@ function renderMatchCards(matches, headerHtml) {
         html += '<p class="hint" style="margin-top:6px;">' + t('card.opener') + '</p>';
         if (m.id) {
             html += '<button type="button" class="btn btn-secondary" style="margin-top:8px;" onclick="blockUser(' + m.id + ', this)">' + t('btn.noMore') + '</button>';
+            html += '<button type="button" class="btn btn-secondary" style="margin-top:8px;margin-left:8px;" onclick="reportUser(' + m.id + ', this)">' + t('btn.report') + '</button>';
         }
         if (m.matched_at) {
             html += '<div class="hint" style="font-size:0.75em;margin-top:4px;">' + new Date(m.matched_at).toLocaleString() + '</div>';
@@ -635,9 +654,45 @@ function syncMatchAcceptWithEducation() {
     renderMatchAcceptDegrees(initial);
     matchLastEdu = edu;
     if (!(initial.length === 1 && initial[0] === edu)) matchAcceptTouched = initial.length > 0;
-    if (eduEl) eduEl.addEventListener('change', syncMatchAcceptWithEducation);
+    if (eduEl) eduEl.addEventListener('change', function () {
+        syncMatchAcceptWithEducation();
+        syncMatchBachelor();
+    });
     window.addEventListener('cm:lang', function () { renderMatchAcceptDegrees(selectedMatchAcceptDegrees()); });
 })();
+
+function renderMatchBachelor(selected) {
+    var list = document.getElementById('match-bachelor-require');
+    if (!list) return;
+    var set = {};
+    (selected || []).forEach(function (x) { set[x] = true; });
+    var html = '';
+    MATCH_BACHELOR_TIERS.forEach(function (tier) {
+        html += '<label class="choice-chip"><input type="checkbox" class="match-bachelor-cb" value="' + tier + '"'
+            + (set[tier] ? ' checked' : '') + '> <span>' + esc(t('bach.' + tier)) + '</span></label>';
+    });
+    list.innerHTML = html;
+}
+
+function selectedMatchBachelor() {
+    var out = [];
+    document.querySelectorAll('#match-bachelor-require .match-bachelor-cb:checked').forEach(function (el) {
+        out.push(el.value);
+    });
+    return out;
+}
+
+function syncMatchBachelor() {
+    var eduEl = document.getElementById('match-education-level');
+    var box = document.getElementById('match-bachelor-box');
+    if (!eduEl || !box) return;
+    var grad = eduEl.value === 'master' || eduEl.value === 'doctorate';
+    box.hidden = !grad;
+}
+
+renderMatchBachelor(MATCH_BACHELOR_REQUIRE);
+syncMatchBachelor();
+window.addEventListener('cm:lang', function () { renderMatchBachelor(selectedMatchBachelor()); });
 
 async function saveDegreePrefs() {
     var level = document.getElementById('match-education-level').value;
@@ -651,10 +706,19 @@ async function saveDegreePrefs() {
         st.innerHTML = '<span class="error">' + esc(t('qn.needAcceptDegree')) + '</span>';
         return;
     }
+    var grad = level === 'master' || level === 'doctorate';
+    var bachelorTier = grad ? document.getElementById('match-bachelor-tier').value : '';
+    var bachelorRequire = grad ? selectedMatchBachelor() : [];
+    if (grad && bachelorRequire.length && !bachelorTier) {
+        st.innerHTML = '<span class="error">' + esc(t('qn.needBachelorSelf')) + '</span>';
+        return;
+    }
     st.textContent = t('qn.saving');
     var d = await api('PUT', '/api/me', {
         education_level: level,
-        accepted_degrees: accept
+        accepted_degrees: accept,
+        bachelor_tier: bachelorTier,
+        bachelor_require: bachelorRequire
     });
     if (!d.ok) {
         st.innerHTML = '<span class="error">' + esc(d.error || t('al.fail')) + '</span>';
@@ -681,10 +745,14 @@ async function searchBlock() {
         html += '<li class="list-row">'
             + '<span><strong>' + esc(u.name) + '</strong> · ' + esc(tSchool(u.school))
             + ' · ' + (u.gender === 'male' ? t('g.male') : u.gender === 'female' ? t('g.female') : '') + '</span>'
+            + '<span style="margin-left:auto;display:flex;gap:8px;">'
             + (u.already_blocked
-                ? '<span class="hint" style="margin-left:auto;">' + t('bl.blocked') + '</span>'
-                : '<button type="button" class="btn btn-secondary" style="margin-left:auto;" onclick="blockUser(' + u.id + ')">' + t('btn.block') + '</button>')
-            + '</li>';
+                ? '<span class="hint">' + t('bl.blocked') + '</span>'
+                : '<button type="button" class="btn btn-secondary" onclick="blockUser(' + u.id + ')">' + t('btn.block') + '</button>')
+            + (u.already_reported
+                ? '<span class="hint">' + t('report.done') + '</span>'
+                : '<button type="button" class="btn btn-secondary" onclick="reportUser(' + u.id + ')">' + t('btn.report') + '</button>')
+            + '</span></li>';
     }
     html += '</ul>';
     box.innerHTML = html;
@@ -718,6 +786,17 @@ async function blockUser(id, btn) {
     alert(d.message || t('bl.blocked'));
     await loadBlocklist();
     await loadHistory();
+}
+
+async function reportUser(id, btn) {
+    var reason = window.prompt(t('report.prompt') || '');
+    if (reason == null) return;
+    reason = reason.trim();
+    if (reason.length < 2) { alert(t('report.short')); return; }
+    var d = await api('POST', '/api/reports', { user_id: id, reason: reason });
+    if (!d.ok) { alert(d.error || t('al.fail')); return; }
+    if (btn) btn.disabled = true;
+    alert(d.message || t('report.done'));
 }
 
 async function unblockUser(id) {
