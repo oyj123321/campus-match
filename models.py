@@ -621,7 +621,7 @@ class RoommateProfile(db.Model):
     college = db.Column(db.String(32), nullable=False)
     area = db.Column(db.String(32), nullable=False, default="")
     degree = db.Column(db.String(16), nullable=False)
-    sleep = db.Column(db.String(16), nullable=False)
+    sleep = db.Column(db.String(24), nullable=False)
     tidy = db.Column(db.String(16), nullable=False)
     social = db.Column(db.String(16), nullable=False)
     smoke = db.Column(db.String(16), nullable=False)

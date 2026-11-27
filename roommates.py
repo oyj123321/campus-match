@@ -59,12 +59,17 @@ LEADS = {
     "cityu": "城大没有书院。本科生和研究生住不同的宿舍，有的楼只住男生或女生。不住宿舍就选校外合租，写下区域，本科和研究生可以一起。确认一位后，本学年不能再选，解除后才可以。",
     "other": "按你填写的宿舍名称，或选校外合租并写下区域。只和同一住处、同性别的人互相看见。确认一位后，本学年不能再选，解除后才可以。",
 }
-SLEEPS = {"early": "23 点前睡", "flex": "不固定", "late": "24 点后睡"}
+SLEEP_LABELS = {"early": "23 点前睡", "flex": "不固定", "late": "24 点后睡"}
 TIDIES = {"high": "喜欢整齐", "mid": "普通", "low": "不太收拾"}
 SOCIALS = {"quiet": "希望安静", "either": "都可以", "chatty": "喜欢聊天"}
 SMOKES = {"no": "不抽烟，也不想室友抽", "ok": "不介意"}
 GUESTS = {"rare": "很少带人回来", "sometimes": "偶尔", "often": "经常"}
-CHOICES = {"sleep": SLEEPS, "tidy": TIDIES, "social": SOCIALS, "smoke": SMOKES, "guests": GUESTS}
+CHOICES = {"tidy": TIDIES, "social": SOCIALS, "smoke": SMOKES, "guests": GUESTS}
+
+
+def sleep_text(value):
+    """Old cards stored a fixed key. New cards store the time the student wrote."""
+    return SLEEP_LABELS.get(value or "", value or "")
 
 
 def lead_key(school):
@@ -209,7 +214,7 @@ def shared():
     user = getattr(g, "roommate_user", None)
     return dict(
         roommate_user=user, roommate_csrf=session.get("roommate_csrf", ""),
-        colleges=COLLEGES, degrees=DEGREES, sleeps=SLEEPS, tidies=TIDIES,
+        colleges=COLLEGES, degrees=DEGREES, sleep_text=sleep_text, tidies=TIDIES,
         socials=SOCIALS, smokes=SMOKES, guests=GUESTS, um_school=UM, must_school=MUST,
         grad_dorm=GRAD_DORM, off_campus=OFF_CAMPUS, housing=housing, leads=LEADS,
     )
@@ -268,12 +273,21 @@ def housing(profile):
 
 def habit_score(mine, other):
     score = 0
+    if mine.sleep and mine.sleep == other.sleep:
+        score += 2
     for field in CHOICES:
         if getattr(mine, field) == getattr(other, field):
             score += 1 if field == "guests" else 2
         elif field == "smoke":
             score -= 2
     return score
+
+
+def clean_sleep():
+    value = request.form.get("sleep", "").strip()
+    if not 2 <= len(value) <= 24:
+        abort(400, "睡觉时间请自己填写，2 到 24 个字。")
+    return value
 
 
 def clean_choice(name):
@@ -335,6 +349,7 @@ def save():
     profile.college = college
     profile.area = area
     profile.degree = degree
+    profile.sleep = clean_sleep()
     for field in CHOICES:
         setattr(profile, field, clean_choice(field))
     profile.note = note

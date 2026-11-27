@@ -145,6 +145,20 @@ class RoommateTests(unittest.TestCase):
         self.assertEqual(self.save(self.man, college="南园").status_code, 400)
         self.assertEqual(self.save(self.man, college="伟兴").status_code, 302)
 
+    def test_sleep_time_is_written_by_the_student(self):
+        self.assertEqual(self.save(self.user, sleep="1").status_code, 400)
+        self.assertEqual(self.save(self.user, sleep="23:30").status_code, 302)
+        self.assertEqual(Profile.query.filter_by(user_id=self.user.id).one().sleep, "23:30")
+        page = self.client.get("/roommates").get_data(as_text=True)
+        self.assertIn('name="sleep"', page)
+        self.assertNotIn("<select name=\"sleep\"", page)
+        self.assertIn('value="23:30"', page)
+        self.save(self.other, sleep="early")
+        self.login(self.user)
+        shown = self.client.get("/roommates").get_data(as_text=True)
+        self.assertIn("23 点前睡", shown)
+        self.assertNotIn(">early<", shown)
+
     def test_off_campus_renters_match_by_area_across_degrees(self):
         self.assertEqual(self.save(self.user, college="校外合租").status_code, 400)
         self.assertEqual(self.save(self.user, college="校外合租", area="氹").status_code, 400)

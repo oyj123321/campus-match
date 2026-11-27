@@ -59,7 +59,7 @@
                 {% else %}
                 <p class="community-muted"><span data-i18n="rm.genderSet">宿舍按性别分。你的性别是</span> <span data-i18n="g.{{ roommate_user.gender }}">{{ '男' if roommate_user.gender=='male' else '女' }}</span></p>
                 {% endif %}
-                <label><span data-i18n="rm.sleep">睡觉</span><select name="sleep">{% for key, label in sleeps.items() %}<option value="{{ key }}" {% if mine and mine.sleep==key %}selected{% endif %} data-i18n="rm.sleep.{{ key }}">{{ label }}</option>{% endfor %}</select></label>
+                <label><span data-i18n="rm.sleep">睡觉</span><input name="sleep" required minlength="2" maxlength="24" value="{{ sleep_text(mine.sleep) if mine else '' }}" placeholder="例如 23:30" data-i18n-ph="rm.sleepPh"></label>
                 <label><span data-i18n="rm.tidy">整洁</span><select name="tidy">{% for key, label in tidies.items() %}<option value="{{ key }}" {% if mine and mine.tidy==key %}selected{% endif %} data-i18n="rm.tidy.{{ key }}">{{ label }}</option>{% endfor %}</select></label>
                 <label><span data-i18n="rm.social">房间里</span><select name="social">{% for key, label in socials.items() %}<option value="{{ key }}" {% if mine and mine.social==key %}selected{% endif %} data-i18n="rm.social.{{ key }}">{{ label }}</option>{% endfor %}</select></label>
                 <label><span data-i18n="rm.smoke">抽烟</span><select name="smoke">{% for key, label in smokes.items() %}<option value="{{ key }}" {% if mine and mine.smoke==key %}selected{% endif %} data-i18n="rm.smoke.{{ key }}">{{ label }}</option>{% endfor %}</select></label>
@@ -98,7 +98,7 @@
                 <div class="community-meta"><span class="community-tag" data-i18n="rm.deg.{{ card.degree }}">{{ degrees[card.degree] }}</span><span>{{ housing(card) }}</span></div>
                 <h2>{{ card.user.name or '校园同学' }}</h2>
                 <ul class="roommate-habits">
-                    <li data-i18n="rm.sleep.{{ card.sleep }}">{{ sleeps[card.sleep] }}</li>
+                    <li>{{ sleep_text(card.sleep) }}</li>
                     <li data-i18n="rm.tidy.{{ card.tidy }}">{{ tidies[card.tidy] }}</li>
                     <li data-i18n="rm.social.{{ card.social }}">{{ socials[card.social] }}</li>
                     <li data-i18n="rm.smoke.{{ card.smoke }}">{{ smokes[card.smoke] }}</li>
